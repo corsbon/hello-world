@@ -37,15 +37,18 @@ Source: ["The Center of Gravity: Still Relevant After All These Years?"](https:/
 | Step | The article's question | What your answer becomes on the map |
 |---|---|---|
 | 1 Goal | What is the system's goal or purpose? | The objective block, with measure, baseline, target, and due date |
-| 2 Ways | What probable ways or actions will the system use to achieve the goal? | One lane per way, each with an essential action. One way is the main effort. |
-| 3 Doers | What entity, actor, or node has the inherent ability to perform the action? | The doer of each way. The main effort's doer is the center of gravity. |
+| 2 Ways | What probable ways or actions will the system use to achieve the goal? | One lane per way, each with an essential action |
+| 3 Doers | What entity, actor, or node has the inherent ability to perform the action? | The doer of each way. The team then picks one doer as the center of gravity, and it stays fixed for the whole project. |
 | 4 Needs | What does the doer require, and which of those are vulnerable? | Needs linked to each doer. Vulnerable needs are flagged with your reason. |
 | Links | (Relationships, actors, function, tensions) | Depends-on, influences, and in-tension-with links between any items |
-| Review | | Your answers laid out as the four questions, a tier list, and open questions |
+| Phases | (Sequence the ways in main and supporting efforts) | Named, dated phases, each with one way as its main effort and a reason |
+| Review | | Your answers laid out as the four questions, the phases, a tier list, and open questions |
+
+**Main effort and center of gravity are separate.** The main effort is the way that matters most at a given point in time, so it can change from phase to phase. The center of gravity is tied to the objective, so it stays the same. When a phase's main effort is led by a doer other than the center of gravity, the coach asks what keeps the center of gravity ready while the focus is elsewhere. The map's phase menu highlights the main-effort lane for the phase you pick, and it opens on the phase whose dates include today.
 
 The article's definition, shown in step 3: "The center of gravity is the primary entity that possesses the inherent capability to achieve the objective."
 
-The tier list sorts every item the way the article describes. Critical items serve the center of gravity. Major items serve the supporting ways. Minor items connect to something. Peripheral items connect to nothing. The Focus button fades the minor and peripheral items so the map shows what the objective hinges on.
+The tier list sorts every item the way the article describes. Critical items serve the center of gravity. Major items serve the other doers. Minor items connect to something. Peripheral items connect to nothing. The Focus button fades the minor and peripheral items so the map shows what the objective hinges on.
 
 ## Using it
 
@@ -76,19 +79,20 @@ For a team on a personal account, invite each teammate by email as Editor and le
 
 ## Data
 
-The map lives in the artifact's shared database, in four collections.
+The map lives in the artifact's shared database, in five collections.
 
 ```
 project/main   title, objective, measure, baseline, target, dueDate,
-               objectiveRationale, cogRationale, relationshipsReviewed
-loes/{id}      name, order, color, effort (main | supporting), capability, doerNodeId
+               objectiveRationale, cogNodeId, cogRationale, relationshipsReviewed
+loes/{id}      name, order, color, capability, doerNodeId
 nodes/{id}     label, type (actor | system | process | resource), loeId, vulnerable,
                rationale, owner, notes
 links/{id}     source, target, type (uses | depends_on | influences | tension)
                id = type__source__target
+phases/{id}    name, order, start, end, mainLoeId, rationale
 ```
 
-Roles are computed from these records and never stored. That includes the center of gravity, needs, vulnerabilities, tiers, and which steps are open. The map therefore cannot drift out of step with the answers.
+Roles are computed from these records and never stored. That includes needs, vulnerabilities, tiers, and which steps are open. The center of gravity is the one stored choice, and it only counts while that node is still a doer. The map therefore cannot drift out of step with the answers.
 
 ## Local check
 
@@ -105,7 +109,7 @@ These are listed in priority order. Each item is a choice between building it no
 
 1. **Ideas on demand.** A "Give me ideas" button appears only after you have typed an attempt. It asks Claude for three example answers in your domain, labeled as ideas, with no button to insert them.
 2. **Spoken commands, basic.** A command box at the top of the coach. You dictate into it with the keyboard microphone, and the page matches a fixed list of commands. No AI is involved. Every action in the page already runs through a single command list, so this adds a parser and nothing else.
-3. **Decisive points.** A step 7: for each vulnerability, what you will do, who owns it, and by when, sequenced by phase on the lanes.
+3. **Decisive points.** For each vulnerability: what you will do, who owns it, by when, and in which phase. These tasks would appear inside their phase on the lanes.
 4. **Spoken commands, free-form.** Free speech mapped to one command from the fixed list, shown back for you to confirm before it runs. Build this only if the fixed list feels too rigid.
 5. **More challenge questions** in the review, each with a stored answer.
 6. **Export** of PNG, SVG, and JSON files, plus importing a backup.

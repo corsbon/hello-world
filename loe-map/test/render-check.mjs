@@ -92,9 +92,9 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
 {
   const { ctx, p, errors } = await open({ width: 1360, height: 860 });
   let u = await p.evaluate(() => window.LOEMap.unlocks());
-  check('empty store: only start and question 1 open', JSON.stringify(u) === JSON.stringify([true, true, false, false, false, false, false]), JSON.stringify(u));
+  check('empty store: only start and question 1 open', JSON.stringify(u) === JSON.stringify([true, true, false, false, false, false, false, false]), JSON.stringify(u));
   const locked = await p.$$eval('#rail .rail-step', bs => bs.map(b => b.disabled));
-  check('rail shows steps 2-6 locked', JSON.stringify(locked) === JSON.stringify([false, false, true, true, true, true, true]), JSON.stringify(locked));
+  check('rail shows every step after question 1 locked', JSON.stringify(locked) === JSON.stringify([false, false, true, true, true, true, true, true]), JSON.stringify(locked));
   await shot(p, '01-desktop-start-light');
 
   // Question 1 through the real form fields, as a user would type or dictate.
@@ -125,19 +125,27 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   await p.evaluate(async () => { await window.LOEMap.dispatch('addWay', 'Technologist throughput'); });
   await p.waitForTimeout(300);
   u = await p.evaluate(() => window.LOEMap.unlocks());
-  check('question 3 stays locked until a main effort is chosen', u[3] === false, JSON.stringify(u));
-  await p.evaluate(async id => { await window.LOEMap.dispatch('setMain', id); }, wayId);
+  check('a way with an essential action opens question 3, with no main effort needed', u[3] === true, JSON.stringify(u));
+
+  // Question 3: doers, then the team picks the center of gravity itself.
+  await p.evaluate(async id => { await window.LOEMap.dispatch('setDoer', id, 'On-duty radiologists'); }, wayId);
+  const way2 = await p.evaluate(() => window.LOEMap.model().loes.find(l => l.name === 'Technologist throughput').id);
+  await p.evaluate(async id => { await window.LOEMap.dispatch('updateWay', id, { capability: 'complete and send studies without delay' }); }, way2);
+  await p.evaluate(async id => { await window.LOEMap.dispatch('setDoer', id, 'CT technologists'); }, way2);
   await p.waitForTimeout(300);
   u = await p.evaluate(() => window.LOEMap.unlocks());
-  check('marking a main effort opens question 3', u[3] === true, JSON.stringify(u));
-
-  // Question 3
-  await p.evaluate(async id => { await window.LOEMap.dispatch('setDoer', id, 'On-duty radiologists'); }, wayId);
-  await p.waitForTimeout(300);
+  check('naming doers alone does not pick a center of gravity', u[4] === false && (await p.evaluate(() => window.LOEMap.model().cogId)) === null, JSON.stringify(u));
+  await p.evaluate(() => window.LOEMap.dispatch('goto', 3));
+  await settle(p);
+  const radios = await p.$$eval('input[name="cog"]', els => els.length);
+  check('question 3 offers each doer as a center-of-gravity choice', radios === 2, String(radios));
+  await p.click('label.radio:has-text("On-duty radiologists")');
+  await p.waitForTimeout(400);
   u = await p.evaluate(() => window.LOEMap.unlocks());
   const cog = await p.evaluate(() => { const M = window.LOEMap.model(); return M.cogId && M.nodes.get(M.cogId).label; });
-  check('naming the main doer opens question 4', u[4] === true, JSON.stringify(u));
-  check('main effort doer is the center of gravity', cog === 'On-duty radiologists', cog);
+  check('choosing the center of gravity opens question 4', u[4] === true, JSON.stringify(u));
+  check('the chosen doer is the center of gravity', cog === 'On-duty radiologists', cog);
+  await shot(p, '02b-desktop-doers-light');
 
   // Question 4
   await p.evaluate(async id => { await window.LOEMap.dispatch('addRequirement', id, 'Worklist prioritization rule', 'process'); }, wayId);
@@ -162,13 +170,31 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   await p.evaluate(async () => { await window.LOEMap.dispatch('reviewLinks', true); });
   await p.waitForTimeout(300);
   u = await p.evaluate(() => window.LOEMap.unlocks());
-  check('marking relationships reviewed opens the review', u[6] === true, JSON.stringify(u));
+  check('marking relationships reviewed opens phases but not the review', u[6] === true && u[7] === false, JSON.stringify(u));
   const dup = await p.evaluate(([a, b]) => window.LOEMap.dispatch('link', a, 'depends_on', b), ids);
   check('duplicate relationship is refused', dup === false);
   const selfNeed = await p.evaluate(async id => window.LOEMap.dispatch('addRequirement', id, 'On-duty radiologists', 'actor'), wayId);
   check('a doer cannot be its own need', selfNeed === false);
 
+  // Phases: a main effort per phase, set through the form.
   await p.evaluate(() => window.LOEMap.dispatch('goto', 6));
+  await settle(p);
+  await p.fill('#new-phase', 'Prepare');
+  await p.press('#new-phase', 'Enter');
+  await p.waitForTimeout(400);
+  const phId = await p.evaluate(() => window.LOEMap.model().phases[0] && window.LOEMap.model().phases[0].id);
+  u = await p.evaluate(() => window.LOEMap.unlocks());
+  check('a phase without a main effort keeps the review closed', !!phId && u[7] === false, JSON.stringify(u));
+  await p.selectOption(`#f-phase_${phId}_mainLoeId`, way2);
+  await p.waitForTimeout(400);
+  u = await p.evaluate(() => window.LOEMap.unlocks());
+  check('choosing a main effort for every phase opens the review', u[7] === true, JSON.stringify(u));
+  const mainNote = await p.$eval('#coach-body', el => /not your center of gravity/.test(el.textContent));
+  check('coach asks what protects the center of gravity when another way leads', mainNote);
+  const cogStill = await p.evaluate(() => { const M = window.LOEMap.model(); return M.cogId && M.nodes.get(M.cogId).label; });
+  check('the center of gravity does not change with the main effort', cogStill === 'On-duty radiologists', cogStill);
+  await shot(p, '03b-desktop-phases-light');
+  await p.evaluate(() => window.LOEMap.dispatch('goto', 7));
   await settle(p);
   await shot(p, '04-desktop-review-light');
   await p.evaluate(() => window.LOEMap.dispatch('view', 'network'));
@@ -190,9 +216,9 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   const radId = await p.evaluate(() => window.LOEMap.model().cogId);
   await p.evaluate(async id => { await window.LOEMap.dispatch('deleteNode', id); }, radId);
   await p.waitForTimeout(400);
-  const after = await p.evaluate(() => { const M = window.LOEMap.model(); return { cog: M.cogId, uses: M.links.filter(k => k.type === 'uses').length, step: window.LOEMap.ui.step, reach: window.LOEMap.reachable() }; });
-  check('deleting the doer cascades its links and clears the center of gravity', after.cog === null && after.uses === 0, JSON.stringify(after));
-  check('steps already opened stay open after an edit removes a prerequisite', after.reach === 6, JSON.stringify(after));
+  const after = await p.evaluate(() => { const M = window.LOEMap.model(); return { cog: M.cogId, stored: M.P.cogNodeId ?? null, radUses: M.links.filter(k => k.type === 'uses' && k.source === M.loes[0].doerNodeId).length, doer: M.loes[0].doerNodeId ?? null, step: window.LOEMap.ui.step, reach: window.LOEMap.reachable() }; });
+  check('deleting the center of gravity clears it, its links, and the doer slot', after.cog === null && after.stored === null && after.doer === null, JSON.stringify(after));
+  check('steps already opened stay open after an edit removes a prerequisite', after.reach === 7, JSON.stringify(after));
 
   check('desktop: no horizontal overflow', (await overflow(p)) <= 0);
   check('desktop flow: no console or page errors', errors.length === 0, errors.join(' | '));
@@ -206,14 +232,14 @@ for (const scheme of ['light', 'dark']) {
     await p.evaluate(() => window.LOEMap.dispatch('demo', true));
     await settle(p);
     const reach = await p.evaluate(() => window.LOEMap.reachable());
-    check(`${label} ${scheme}: worked example opens all steps`, reach === 6, String(reach));
+    check(`${label} ${scheme}: worked example opens all steps`, reach === 7, String(reach));
     if (label === 'desktop' && scheme === 'light') {
       const M = await p.evaluate(() => { const M = window.LOEMap.model(); return { cog: M.nodes.get(M.cogId).label, vulns: M.vulns.length, nodes: M.nodes.size, links: M.links.length }; });
       check('worked example: center of gravity is the on-duty radiologists', M.cog === 'On-duty radiologists', JSON.stringify(M));
       const disabled = await p.$$eval('#coach-body input, #coach-body textarea, #coach-body select', els => els.every(e => e.disabled));
       check('worked example is read-only', disabled);
     }
-    for (const step of [1, 2, 3, 4]) {
+    for (const step of [1, 2, 3, 4, 6]) {
       await p.evaluate(s => window.LOEMap.dispatch('goto', s), step);
       await settle(p);
       const bad = await p.evaluate(() => {
@@ -228,8 +254,9 @@ for (const scheme of ['light', 'dark']) {
         }
         return out;
       });
-      check(`${label} ${scheme}: question ${step} answers fit with no sideways scrolling`, bad.length === 0, bad.join(', '));
+      check(`${label} ${scheme}: ${step === 6 ? 'phases' : 'question ' + step} answers fit with no sideways scrolling`, bad.length === 0, bad.join(', '));
       if (mobile && step === 1) await shot(p, `08-${label}-goal-${scheme}`);
+      if (step === 6) await shot(p, `08b-${label}-phases-${scheme}`);
     }
     if (mobile) {
       await p.evaluate(() => window.LOEMap.dispatch('goto', 0));
@@ -260,7 +287,10 @@ for (const scheme of ['light', 'dark']) {
       await settle(p);
     }
     await p.evaluate(() => window.LOEMap.dispatch('view', 'lanes'));
+    await p.evaluate(() => window.LOEMap.dispatch('phase', 'ph2'));
     await p.waitForTimeout(300);
+    const lanesNow = await p.evaluate(() => ({ read: document.querySelector('g.lane[data-key="l_read"]').classList.contains('is-main-now'), pacs: document.querySelector('g.lane[data-key="l_pacs"]').classList.contains('is-main-now'), select: document.getElementById('phase-select').value }));
+    check(`${label} ${scheme}: choosing the Launch phase highlights its main-effort lane only`, lanesNow.read && !lanesNow.pacs && lanesNow.select === 'ph2', JSON.stringify(lanesNow));
     await shot(p, `11-${label}-lanes-${scheme}`);
     if (mobile) {
       const box = await p.evaluate(() => {
@@ -291,9 +321,11 @@ for (const scheme of ['light', 'dark']) {
     await p.evaluate(() => window.LOEMap.dispatch('focus', true));
     await p.waitForTimeout(250);
     await shot(p, `14-${label}-network-focus-${scheme}`);
-    await p.evaluate(() => { window.LOEMap.dispatch('focus', false); window.LOEMap.dispatch('tab', 'coach'); window.LOEMap.dispatch('goto', 6); });
+    await p.evaluate(() => { window.LOEMap.dispatch('focus', false); window.LOEMap.dispatch('tab', 'coach'); window.LOEMap.dispatch('goto', 7); });
     await settle(p);
     await shot(p, `15-${label}-review-${scheme}`);
+    await p.$eval('#coach-scroll', el => { const t = document.querySelector('.phase-list'); el.scrollTop += t.getBoundingClientRect().top - el.getBoundingClientRect().top - 60; });
+    await shot(p, `16-${label}-review-phases-${scheme}`);
     check(`${label} ${scheme}: no horizontal overflow`, (await overflow(p)) <= 0);
     check(`${label} ${scheme}: no console or page errors`, errors.length === 0, errors.join(' | '));
     await ctx.close();
