@@ -1,0 +1,2093 @@
+<title>Lines of Effort Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
+<style>
+:root {
+  /* Layout: coach column beside a full-height map on wide screens; Coach and Map tabs over a bottom bar on phones. */
+  --bg: #e8ecef;
+  --surface: #ffffff;
+  --surface-2: #f3f5f7;
+  --ink: #121a21;
+  --ink-2: #44505b;
+  --ink-3: #66717c;
+  --rule: #cfd6dc;
+  --rule-soft: #e2e7eb;
+  --accent: #1a5ba6;
+  --accent-ink: #ffffff;
+  --accent-soft: #e1ebf7;
+  --crit: #b8322a;
+  --crit-ink: #ffffff;
+  --crit-soft: #fbe9e7;
+  --good: #1e7639;
+  --lane-0: #2a78d6;
+  --lane-1: #eb6834;
+  --lane-2: #1baf7a;
+  --lane-3: #eda100;
+  --lane-4: #e87ba4;
+  --lane-5: #008300;
+  --lane-6: #6250d6;
+  --lane-7: #64748b;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --tabbar-h: 58px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1013; --surface: #151b20; --surface-2: #1b2329; --ink: #e6eaee; --ink-2: #b2bcc5; --ink-3: #8c97a1;
+    --rule: #2d363e; --rule-soft: #222a31; --accent: #6aa5ea; --accent-ink: #0a1523; --accent-soft: #182a3f;
+    --crit: #f2776d; --crit-ink: #1d0b09; --crit-soft: #3a1b18; --good: #62c585;
+    --lane-0: #3987e5; --lane-1: #d95926; --lane-2: #199e70; --lane-3: #c98500; --lane-4: #d55181; --lane-5: #2f9a2f; --lane-6: #9085e9; --lane-7: #8a97a8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1013; --surface: #151b20; --surface-2: #1b2329; --ink: #e6eaee; --ink-2: #b2bcc5; --ink-3: #8c97a1;
+  --rule: #2d363e; --rule-soft: #222a31; --accent: #6aa5ea; --accent-ink: #0a1523; --accent-soft: #182a3f;
+  --crit: #f2776d; --crit-ink: #1d0b09; --crit-soft: #3a1b18; --good: #62c585;
+  --lane-0: #3987e5; --lane-1: #d95926; --lane-2: #199e70; --lane-3: #c98500; --lane-4: #d55181; --lane-5: #2f9a2f; --lane-6: #9085e9; --lane-7: #8a97a8;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { height: 100%; }
+body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--font-body); -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Shell ---------- */
+.app { height: 100%; display: grid; grid-template-columns: minmax(21rem, 27rem) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px; padding: 12px 16px 16px; }
+.topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+.brand svg { flex: none; color: var(--ink); }
+.brand-text { min-width: 0; }
+.brand-name { margin: 0; font: 700 20px/1 var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
+.brand-sub { margin: 2px 0 0; font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; min-height: 0; min-width: 0; overflow: hidden; }
+.coach { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto auto; }
+.map { display: grid; grid-template-rows: auto minmax(0, 1fr); position: relative; }
+.tabbar { display: none; }
+
+@media (max-width: 820px) {
+  .app { grid-template-columns: minmax(0, 1fr); padding: 8px 16px calc(var(--tabbar-h) + 10px); gap: 8px; }
+  .app[data-tab="coach"] .map, .app[data-tab="map"] .coach { display: none; }
+  .tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); padding: 0 16px env(safe-area-inset-bottom, 0px); gap: 8px; align-items: center; background: var(--surface); border-top: 1px solid var(--rule); }
+  .tabbar button { flex: 1; height: 42px; border-radius: 8px; border: 1px solid var(--rule); background: var(--surface-2); font: 600 17px var(--font-display); letter-spacing: .04em; text-transform: uppercase; }
+  .tabbar button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .brand-name { font-size: 16px; }
+  .brand svg { width: 28px; height: 28px; }
+  .topbar { flex-wrap: nowrap; gap: 8px; }
+  .top-actions { flex: none; }
+  #btn-copydata { display: none; }
+  .banner .long { display: none; }
+}
+
+/* ---------- Buttons ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 8px 14px; border-radius: 7px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); font-weight: 600; font-size: 14px; cursor: pointer; text-align: center; }
+.btn:hover:not(:disabled) { border-color: var(--ink-3); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn.small { min-height: 34px; padding: 5px 10px; font-size: 13px; }
+.btn.ghost { background: transparent; }
+.btn.danger { background: var(--crit); border-color: var(--crit); color: var(--crit-ink); }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.icon-btn { width: 34px; height: 34px; flex: none; border-radius: 7px; border: 1px solid transparent; background: transparent; color: var(--ink-2); cursor: pointer; font-size: 20px; line-height: 1; }
+.icon-btn:hover:not(:disabled) { border-color: var(--rule); color: var(--ink); }
+.icon-btn:disabled { opacity: .4; cursor: not-allowed; }
+.linklike { border: 0; background: none; padding: 0; color: var(--ink); font-weight: 600; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+.linklike:hover { text-decoration-color: var(--ink); }
+
+/* ---------- Coach ---------- */
+.banners:empty { display: none; }
+.banner { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--rule); font-size: 13px; background: var(--surface-2); }
+.banner p { margin: 0; flex: 1 1 14rem; }
+.banner.demo { background: var(--accent-soft); }
+.banner.warn { background: var(--crit-soft); }
+.rail { display: flex; flex-wrap: wrap; gap: 2px 4px; padding: 8px 10px; border-bottom: 1px solid var(--rule-soft); }
+.rail-step { flex: none; display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 4px 8px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--ink-2); font: 600 15px var(--font-display); letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
+.rail-step .num { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid currentColor; font: 500 11px var(--font-mono); }
+.rail-step[aria-current="step"] { background: var(--ink); color: var(--surface); }
+.rail-step:hover:not(:disabled):not([aria-current]) { border-color: var(--rule); }
+.rail-step:disabled { color: var(--ink-3); opacity: .55; cursor: not-allowed; }
+.rail-step svg { width: 11px; height: 11px; }
+.coach-scroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+.coach-body { padding: 18px 18px 24px; display: grid; gap: 16px; }
+.coach-body > * { margin: 0; min-width: 0; }
+.eyebrow { font: 500 11px/1.2 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.question { font: 600 30px/1.05 var(--font-display); letter-spacing: .005em; text-wrap: balance; margin: -8px 0 0; }
+.lede, .hint { color: var(--ink-2); margin: -6px 0 0; max-width: 62ch; }
+.muted { color: var(--ink-2); margin: 0; font-size: 14px; }
+.fine { color: var(--ink-3); font-size: 12.5px; margin: 0; }
+.qlist { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; }
+.qlist b { font-weight: 600; }
+blockquote.def { margin: 0; padding: 2px 0 2px 14px; border-left: 3px solid var(--ink); font-style: italic; color: var(--ink-2); }
+blockquote.def cite { display: block; font-style: normal; font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+.recap { font-size: 13px; color: var(--ink-2); background: var(--surface-2); border-radius: 8px; padding: 8px 12px; }
+.recap b { color: var(--ink); font-weight: 600; }
+.prereq { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--ink-3); font-size: 14px; }
+.prereq p { margin: 0; flex: 1 1 12rem; }
+
+.field { display: grid; gap: 5px; min-width: 0; }
+.field > label { font-weight: 600; font-size: 13px; }
+.fhint { margin: 0; font-size: 12.5px; color: var(--ink-3); }
+input[type="text"], input[type="date"], select, textarea {
+  width: 100%; min-width: 0; font-size: 16px; padding: 9px 11px; border-radius: 7px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink);
+}
+textarea { resize: vertical; line-height: 1.45; }
+input:hover:not(:disabled), select:hover:not(:disabled), textarea:hover:not(:disabled) { border-color: var(--ink-3); }
+input:disabled, select:disabled, textarea:disabled { background: var(--surface-2); color: var(--ink-2); }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 12px; }
+.prefixed { display: flex; align-items: stretch; border: 1px solid var(--rule); border-radius: 7px; overflow: hidden; background: var(--surface); }
+.prefixed:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.prefixed .prefix { flex: none; display: flex; align-items: center; padding: 0 10px; background: var(--surface-2); border-right: 1px solid var(--rule); font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.prefixed input { border: 0; border-radius: 0; }
+.prefixed input:focus-visible { outline: none; }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; cursor: pointer; min-height: 34px; }
+.check input { width: 18px; height: 18px; accent-color: var(--crit); }
+.addrow { display: grid; gap: 5px; }
+.addrow > label { font-weight: 600; font-size: 13px; }
+.addrow-ctl { display: flex; gap: 8px; flex-wrap: wrap; }
+.addrow-ctl input { flex: 1 1 12rem; }
+.addrow-ctl select { flex: 0 1 11rem; width: auto; }
+.relrow { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
+.relrow-line { display: flex; gap: 8px; flex-wrap: wrap; }
+.relrow-line select { flex: 1 1 9rem; width: auto; }
+
+.stack { display: grid; gap: 12px; }
+.card { border: 1px solid var(--rule); border-radius: 9px; padding: 12px; display: grid; gap: 10px; background: var(--surface); min-width: 0; }
+.card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.card-head .grow { flex: 1 1 8rem; min-width: 0; }
+.card-head.top { align-items: flex-start; }
+.card-head.top .swatch { margin-top: 6px; }
+.card-title { font: 600 19px/1.15 var(--font-display); letter-spacing: .01em; }
+.card-sub { font-size: 13px; color: var(--ink-2); }
+.swatch { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--lc, var(--ink-3)); }
+.pill { flex: none; font: 500 10.5px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; padding: 3px 7px; border-radius: 4px; border: 1px solid var(--ink); }
+.pill.main { background: var(--ink); color: var(--surface); }
+.pill.cog { border-color: var(--ink); }
+.pill.vuln { border-color: var(--crit); color: var(--crit); }
+.card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.colors { display: flex; gap: 4px; flex-wrap: wrap; }
+.color-dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; background: var(--surface); padding: 3px; cursor: pointer; }
+.color-dot span { display: block; width: 100%; height: 100%; border-radius: 50%; background: var(--lc); }
+.color-dot[aria-pressed="true"] { border-color: var(--ink); }
+.coach-line { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.coach-line .tag { font: 600 12px var(--font-display); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-right: 4px; }
+.doer-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.doer-name { font-weight: 600; font-size: 16px; flex: 1 1 8rem; }
+.req-list { display: grid; gap: 8px; }
+.req { border: 1px solid var(--rule-soft); border-radius: 7px; padding: 6px 8px 6px 10px; display: grid; gap: 6px; }
+.req.is-vuln { border-color: var(--crit); background: var(--crit-soft); }
+.req-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.req-head .linklike { flex: 1 1 8rem; }
+.req-type { font: 500 10.5px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.rel-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.rel-list li { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--rule-soft); font-size: 14px; }
+.rel-list li span.t { flex: 1 1 auto; min-width: 0; }
+.rel-list .verb { color: var(--ink-3); font-style: italic; }
+
+.ask { border: 1px solid var(--rule); border-radius: 9px; padding: 12px 14px; background: var(--surface-2); display: grid; gap: 8px; }
+.ask-tag { margin: 0; font: 600 12.5px var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.ask-tag.reflect { color: var(--ink-2); }
+.ask-q { margin: 0; font: 600 19px/1.2 var(--font-display); letter-spacing: .01em; text-wrap: balance; }
+.ok { margin: 0; display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--ink); }
+.ok svg { flex: none; margin-top: 3px; color: var(--good); }
+.ask ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: 14px; }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.examples { border-top: 1px solid var(--rule-soft); padding-top: 10px; }
+.examples summary { cursor: pointer; font: 600 15px var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); min-height: 32px; display: flex; align-items: center; }
+.examples ul { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 10px; }
+.examples li { display: grid; gap: 2px; font-size: 14px; }
+.ex-tag { font: 500 10.5px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.ex-tag.weak { color: var(--crit); }
+.ex-why { color: var(--ink-2); font-size: 13px; }
+
+.rv { display: grid; gap: 8px; }
+.rv h3 { margin: 0; font: 600 20px var(--font-display); letter-spacing: .02em; display: flex; align-items: center; gap: 8px; }
+.rv h3 .num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--ink); font: 500 12px var(--font-mono); }
+.rv p, .rv ul { margin: 0; }
+.rv ul { padding-left: 1.2em; display: grid; gap: 4px; font-size: 14px; }
+.rv dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; font-size: 13.5px; }
+.rv dt { color: var(--ink-3); font: 500 11px/1.9 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+.rv dd { margin: 0; font-variant-numeric: tabular-nums; }
+.quote { font-style: italic; color: var(--ink-2); }
+.missing { color: var(--crit); font-size: 13.5px; }
+.tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 10px; }
+.tier { border: 1px solid var(--rule-soft); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+.tier h4 { margin: 0 0 4px; font: 500 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.tier ul { padding-left: 1.1em; margin: 0; font-size: 13px; }
+.oq { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.oq li { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 8px 10px; border-radius: 7px; border: 1px dashed var(--ink-3); font-size: 14px; }
+.oq li span { flex: 1 1 12rem; }
+
+.coach-foot { display: flex; gap: 8px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--rule); background: var(--surface); }
+.coach-foot .why { flex: 1 1 auto; font-size: 12.5px; color: var(--ink-3); text-align: center; }
+.toast { margin: 0; padding: 0 16px; font-size: 13px; color: var(--ink); min-height: 0; }
+.toast:not(:empty) { padding: 8px 16px; background: var(--accent-soft); border-top: 1px solid var(--rule-soft); }
+
+/* ---------- Map ---------- */
+.maptools { position: relative; z-index: 3; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--rule-soft); min-width: 0; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 7px; overflow: hidden; flex: none; }
+.seg button { border: 0; background: var(--surface); padding: 6px 12px; min-height: 34px; font: 600 15px var(--font-display); letter-spacing: .04em; text-transform: uppercase; cursor: pointer; color: var(--ink-2); }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.chips { display: flex; gap: 6px; overflow-x: auto; flex: 1 1 12rem; min-width: 0; scrollbar-width: thin; padding: 2px 0; }
+.chip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--rule); background: var(--surface); font-size: 12.5px; cursor: pointer; white-space: nowrap; color: var(--ink-2); }
+.chip .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--lc, var(--ink-3)); }
+.chip[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); font-weight: 600; box-shadow: inset 0 0 0 1px var(--ink); }
+.canvas { position: relative; min-height: 0; overflow: hidden; background: var(--surface); }
+#map-svg { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; -webkit-user-select: none; }
+.map-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--ink-3); pointer-events: none; font-size: 14px; }
+.key { flex: none; font-size: 12.5px; }
+.key summary { cursor: pointer; display: inline-flex; align-items: center; min-height: 34px; padding: 5px 10px; border: 1px solid var(--rule); border-radius: 7px; background: var(--surface); font-weight: 600; font-size: 13px; color: var(--ink); list-style: none; }
+.key summary::-webkit-details-marker { display: none; }
+.key[open] summary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.key-body { position: absolute; z-index: 4; right: 10px; top: calc(100% + 6px); width: min(17rem, calc(100% - 20px)); padding: 10px 12px 12px; display: grid; gap: 8px; max-height: min(65vh, 32rem); overflow-y: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 9px; box-shadow: 0 6px 22px rgba(0, 0, 0, .14); }
+.key-body h5 { margin: 0; font: 500 10.5px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.key-row { display: flex; align-items: center; gap: 8px; }
+.key-row svg { flex: none; overflow: visible; }
+.info { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 3; display: flex; gap: 10px; align-items: center; padding: 10px 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: 9px; box-shadow: 0 4px 18px rgba(0, 0, 0, .12); }
+.info-text { flex: 1 1 auto; min-width: 0; }
+.info-title { margin: 0; font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.info-roles { margin: 2px 0 0; font-size: 12.5px; color: var(--ink-2); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.info-actions { display: flex; gap: 4px; align-items: center; flex: none; }
+
+/* SVG: shared */
+.col-head { font: 500 10px var(--font-mono); letter-spacing: .1em; fill: var(--ink-3); text-transform: uppercase; }
+.lane-band { fill: color-mix(in srgb, var(--lc, var(--ink-3)) 8%, var(--surface)); }
+.lane.cross .lane-band, .lane.ph .lane-band { fill: var(--surface-2); }
+.lane-swatch { fill: var(--lc); }
+.lane-name { font: 600 15px var(--font-display); letter-spacing: .02em; fill: var(--ink); }
+.lane-effort { font: 500 9.5px var(--font-mono); letter-spacing: .1em; fill: var(--ink-3); text-transform: uppercase; }
+.lane.is-main .lane-effort { fill: var(--ink); font-weight: 500; }
+.link { fill: none; stroke: var(--ink-3); stroke-width: 1.4; opacity: .55; transition: opacity .15s; }
+.link.t-uses { stroke: var(--ink-2); stroke-width: 1.6; }
+.link.t-depends_on { stroke-dasharray: 6 4; }
+.link.t-influences { stroke-dasharray: 1.5 4; stroke-linecap: round; stroke-width: 1.8; }
+.link.t-tension { stroke: var(--crit); stroke-dasharray: 9 3 2 3; stroke-width: 1.6; }
+.link.t-does { stroke: var(--ink); stroke-width: 2.2; opacity: .8; }
+.link.t-serves { stroke: var(--accent); stroke-width: 1.6; opacity: .75; }
+.link.is-hot { opacity: 1; stroke-width: 2.4; }
+.is-dim { opacity: .13 !important; }
+.mk { fill: var(--ink-2); }
+.mk-does { fill: var(--ink); }
+.mk-serves { fill: var(--accent); }
+.mk-depends_on, .mk-influences { fill: var(--ink-3); }
+.lnode, .nnode { cursor: pointer; transition: opacity .15s; }
+.lnode:focus-visible, .nnode:focus-visible { outline: none; }
+.lnode:focus-visible .nbox, .nnode:focus-visible .nshape { stroke: var(--accent); stroke-width: 3; }
+
+/* SVG: lane view nodes */
+.nbox { fill: var(--surface); stroke: var(--rule); stroke-width: 1; }
+.lnode.is-req .nbox { stroke: var(--ink-3); stroke-width: 1.3; }
+.lnode.is-doer .nbox { stroke: var(--ink); stroke-width: 1.8; }
+.lnode.is-vuln .nbox { stroke: var(--crit); stroke-width: 1.8; stroke-dasharray: 5 3; fill: var(--crit-soft); }
+.lnode.is-atrisk .nbox { stroke: var(--crit); stroke-dasharray: 2 3; }
+.lnode.is-orphan .nbox { stroke: var(--ink-3); stroke-dasharray: 3 3; }
+.lane-mini rect { fill: var(--surface); opacity: .94; stroke: var(--rule); }
+.lane-mini text { font: 600 12px var(--font-body); fill: var(--ink); }
+.lnode.is-sel .nbox, .lnode.is-sel .cbox { stroke: var(--accent); stroke-width: 3; stroke-dasharray: none; }
+.cog-ring { fill: none; stroke: var(--ink); stroke-width: 1.3; }
+.cog-tag rect { fill: var(--ink); }
+.cog-tag text { fill: var(--surface); font: 500 9.5px var(--font-mono); letter-spacing: .1em; }
+.glyph { fill: var(--lc, var(--ink-3)); }
+.nlabel { font: 500 12px var(--font-body); fill: var(--ink); }
+.lnode.is-doer .nlabel { font-weight: 700; }
+.vbadge circle { fill: var(--crit); }
+.vbadge text { fill: var(--crit-ink); font: 700 11px var(--font-body); }
+.cbox { fill: var(--ink); stroke: none; }
+.clabel { font: 600 12px var(--font-body); fill: var(--surface); }
+.ph .nbox, .ph .cbox { fill: none; stroke: var(--ink-3); stroke-width: 1.2; stroke-dasharray: 4 4; }
+.ph-q { font: 500 9.5px var(--font-mono); letter-spacing: .1em; fill: var(--ink-3); text-transform: uppercase; }
+.ph-t { font: italic 400 12px var(--font-body); fill: var(--ink-2); }
+.obj-box { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+.objblock.ph .obj-box { fill: none; stroke: var(--ink-3); stroke-dasharray: 5 4; }
+.obj-eyebrow { font: 500 10px var(--font-mono); letter-spacing: .12em; fill: var(--accent); text-transform: uppercase; }
+.obj-text { font: 600 15px var(--font-display); letter-spacing: .01em; fill: var(--ink); }
+.obj-meta { font: 400 11.5px var(--font-mono); fill: var(--ink-2); }
+.obj-meta-k { fill: var(--ink-3); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; }
+
+/* SVG: network view nodes */
+.nshape { fill: var(--lc, var(--ink-3)); stroke: var(--surface); stroke-width: 1.5; }
+.nnode.kind-capability .nshape { fill: var(--ink); }
+.nnode.kind-objective .nshape { fill: var(--accent); stroke: var(--accent); }
+.nnode.is-doer .nshape { stroke: var(--ink); stroke-width: 2.5; }
+.nnode.is-sel .nshape { stroke: var(--accent); stroke-width: 3.5; }
+.nnode.is-pinned .nshape { stroke-dasharray: 3 2; }
+.ring { fill: none; stroke: var(--ink); stroke-width: 1.3; }
+.ring.req { stroke: var(--ink-3); }
+.ring.vuln { stroke: var(--crit); stroke-width: 2; stroke-dasharray: 4 3; }
+.hit { fill: transparent; }
+.lbl { font: 500 11px var(--font-body); fill: var(--ink-2); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
+.nnode.is-doer .lbl, .nnode.kind-objective .lbl { fill: var(--ink); font-weight: 700; }
+.obj-in { font: 600 10px var(--font-mono); letter-spacing: .1em; fill: var(--accent-ink); text-transform: uppercase; }
+
+/* ---------- Dialog ---------- */
+dialog { border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); color: var(--ink); padding: 0; width: min(36rem, calc(100% - 32px)); }
+dialog::backdrop { background: rgba(10, 14, 18, .45); }
+.dlg { padding: 18px; display: grid; gap: 12px; }
+.dlg h3 { margin: 0; font: 600 24px var(--font-display); }
+.dlg p { margin: 0; }
+.dlg textarea { font: 400 12px/1.4 var(--font-mono); }
+
+@media (prefers-reduced-motion: reduce) { .link, .lnode, .nnode { transition: none; } }
+@media (max-width: 820px) {
+  .rail { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .question { font-size: 27px; }
+  .coach-body { padding: 16px 14px 22px; }
+}
+</style>
+
+<div class="app" id="app" data-tab="coach">
+  <header class="topbar">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 11h10M7 17h14M7 23h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M17 11c5 0 4 6 9 6M21 17h5M15 23c6 0 5-6 11-6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="27" cy="17" r="2.6" fill="currentColor"/></svg>
+      <div class="brand-text">
+        <p class="brand-name">Lines of Effort Map</p>
+        <p class="brand-sub" id="proj-title">Center-of-gravity planning coach</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn small" id="btn-demo" data-cmd="demo" data-args="[true]" aria-pressed="false">Worked example</button>
+      <button class="btn small" id="btn-copydata" data-cmd="copyData">Copy data</button>
+    </div>
+  </header>
+
+  <section class="panel coach" id="coach" aria-label="Coach">
+    <div class="banners" id="banners"></div>
+    <nav class="rail" id="rail" aria-label="Steps"></nav>
+    <div class="coach-scroll" id="coach-scroll">
+      <form class="coach-body" id="coach-body" autocomplete="off" novalidate></form>
+    </div>
+    <p class="toast" id="toast" role="status" aria-live="polite"></p>
+    <div class="coach-foot" id="coach-foot"></div>
+  </section>
+
+  <section class="panel map" id="map" aria-label="Map">
+    <div class="maptools" id="maptools">
+      <div class="seg" role="group" aria-label="Map view">
+        <button type="button" data-cmd="view" data-args="[&quot;lanes&quot;]" id="v-lanes">Lanes</button>
+        <button type="button" data-cmd="view" data-args="[&quot;network&quot;]" id="v-network">Network</button>
+      </div>
+      <button type="button" class="btn small" data-cmd="focus" id="btn-focus" aria-pressed="false" title="Fade minor and peripheral items">Focus</button>
+      <button type="button" class="btn small" data-cmd="fit" title="Fit the map to the window">Fit</button>
+      <div class="chips" id="chips" role="group" aria-label="Highlight ways"></div>
+      <details class="key" id="key">
+        <summary>Key</summary>
+        <div class="key-body">
+          <h5>Items</h5>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><circle r="6.5" style="fill:var(--ink-3)"/></svg>Person or group</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-6" y="-6" width="12" height="12" style="fill:var(--ink-3)"/></svg>System or tool</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><path d="M6.5,0L3.25,5.6H-3.25L-6.5,0L-3.25,-5.6H3.25Z" style="fill:var(--ink-3)"/></svg>Process or rule</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><path d="M0,-6.5L7,5.5H-7Z" style="fill:var(--ink-3)"/></svg>Resource or condition</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><path d="M0,-7L7,0L0,7L-7,0Z" style="fill:var(--ink)"/></svg>Essential action</div>
+          <h5>Roles</h5>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-7" width="14" height="14" rx="2" fill="none" style="stroke:var(--ink);stroke-width:1.3"/><rect x="-4.5" y="-4.5" width="9" height="9" rx="1.5" fill="none" style="stroke:var(--ink);stroke-width:1.8"/></svg>Center of gravity</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-6" y="-6" width="12" height="12" rx="2" fill="none" style="stroke:var(--ink);stroke-width:2"/></svg>Doer</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-6" y="-6" width="12" height="12" rx="2" style="fill:var(--crit-soft);stroke:var(--crit);stroke-width:1.8;stroke-dasharray:3 2"/></svg>Vulnerable need</div>
+          <h5>Links</h5>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink);stroke-width:2.2"/></svg>Does the action</div>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink-2);stroke-width:1.6"/></svg>Uses</div>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink-3);stroke-width:1.4;stroke-dasharray:6 4"/></svg>Depends on</div>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M2,5H33" style="stroke:var(--ink-3);stroke-width:1.8;stroke-dasharray:1.5 4;stroke-linecap:round"/></svg>Influences</div>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--crit);stroke-width:1.6;stroke-dasharray:9 3 2 3"/></svg>In tension with</div>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--accent);stroke-width:1.6"/></svg>Serves the objective</div>
+        </div>
+      </details>
+    </div>
+    <div class="canvas" id="canvas">
+      <svg id="map-svg" role="group" aria-label="Map of your lines of effort">
+        <defs>
+          <marker id="mk-uses" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path class="mk mk-uses" d="M0,1.2L9.5,5L0,8.8Z"/></marker>
+          <marker id="mk-depends_on" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path class="mk mk-depends_on" d="M0,1.2L9.5,5L0,8.8Z"/></marker>
+          <marker id="mk-influences" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path class="mk mk-influences" d="M0,1.2L9.5,5L0,8.8Z"/></marker>
+          <marker id="mk-does" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path class="mk mk-does" d="M0,1.2L9.5,5L0,8.8Z"/></marker>
+          <marker id="mk-serves" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path class="mk mk-serves" d="M0,1.2L9.5,5L0,8.8Z"/></marker>
+        </defs>
+        <g id="zoom-root"><g id="lane-layer"></g><g id="link-layer"></g><g id="node-layer"></g></g>
+      </svg>
+      <p class="map-msg" id="map-msg" hidden></p>
+      <div class="info" id="info" hidden></div>
+    </div>
+  </section>
+
+  <nav class="tabbar" id="tabbar" aria-label="Switch panel">
+    <button type="button" data-cmd="tab" data-args="[&quot;coach&quot;]" id="tab-coach">Coach</button>
+    <button type="button" data-cmd="tab" data-args="[&quot;map&quot;]" id="tab-map">Map</button>
+  </nav>
+</div>
+
+<dialog id="dlg-export">
+  <form method="dialog" class="dlg">
+    <h3>Copy your map's data</h3>
+    <p class="muted">This is everything your team has entered, as text. Paste it into a file to keep a backup.</p>
+    <label class="sr" for="export-text">Map data</label>
+    <textarea id="export-text" rows="12" readonly></textarea>
+    <div class="row-actions">
+      <button type="button" class="btn primary" id="btn-copy">Copy to clipboard</button>
+      <button class="btn" value="close">Close</button>
+    </div>
+    <p class="fine" id="copy-status" role="status"></p>
+  </form>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+(function () {
+'use strict';
+
+/* ================================================================
+   Constants
+   ================================================================ */
+const STEPS = [
+  { key: 'start', short: 'Start' },
+  { key: 'goal', short: 'Goal', n: 1 },
+  { key: 'ways', short: 'Ways', n: 2 },
+  { key: 'doers', short: 'Doers', n: 3 },
+  { key: 'needs', short: 'Needs', n: 4 },
+  { key: 'links', short: 'Links' },
+  { key: 'review', short: 'Review' },
+];
+const NODE_TYPES = { actor: 'Person or group', system: 'System or tool', process: 'Process or rule', resource: 'Resource or condition' };
+const LINK_TYPES = {
+  uses: { verb: 'uses', label: 'Uses' },
+  depends_on: { verb: 'depends on', label: 'Depends on' },
+  influences: { verb: 'influences', label: 'Influences' },
+  tension: { verb: 'is in tension with', label: 'Is in tension with' },
+};
+const TIER_LABEL = { critical: 'Critical', major: 'Major contributor', minor: 'Minor contributor', peripheral: 'Peripheral, no connections' };
+const NEXT_REASON = {
+  1: 'Write an objective to open question 2.',
+  2: 'Give one way an essential action and mark a main effort to open question 3.',
+  3: 'Name the doer of your main effort to open question 4.',
+  4: 'Add at least one need for your center of gravity to continue.',
+  5: 'Mark the relationships reviewed to open the review.',
+};
+const MAX_WAYS = 8;
+const LS_KEY = 'loe-map-ui-v1';
+const HAS_D3 = typeof window.d3 !== 'undefined';
+const REDUCED = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+const PHONE_MQ = window.matchMedia ? matchMedia('(max-width: 820px)') : { matches: false };
+
+/* ================================================================
+   Coach content: examples bank and the worked example
+   ================================================================ */
+const EXAMPLES = {
+  goal: { intro: 'Two objectives from different projects, and one that falls short.', items: [
+    { tag: 'Radiology turnaround', text: 'Reduce median final-report turnaround for ED CT from 45 to 30 minutes by 31 March 2027, without raising the addendum rate.' },
+    { tag: 'Critical results', text: 'Communicate every critical imaging result to a responsible clinician within 60 minutes, at 95% compliance, by 30 June 2027.' },
+    { tag: 'Falls short', text: 'Improve radiology workflow.', why: 'Nobody could tell whether you got there. It has no measure, no number, and no date.' },
+  ] },
+  ways: { intro: 'Each way names a broad approach. The essential action reads naturally after “someone must.”', items: [
+    { tag: 'Radiology turnaround', text: 'Reading and assignment. Someone must read and sign ED CT within target.' },
+    { tag: 'Radiology turnaround', text: 'PACS and IT workflow. Someone must route and flag ED studies automatically.' },
+    { tag: 'Critical results', text: 'Result notification. Someone must reach the responsible clinician directly.' },
+    { tag: 'Falls short', text: 'Voice-recognition software.', why: 'This names a thing, not a way. It is probably a need of whoever reads the studies, which comes up in question 4.' },
+  ] },
+  doers: { items: [
+    { tag: 'Radiology turnaround', text: 'Read and sign ED CT within target: the on-duty radiologists.', why: 'The worklist rule does not read studies. Radiologists use it, so the worklist is a need, not the doer.' },
+    { tag: 'Critical results', text: 'Reach the responsible clinician directly: the interpreting radiologist.' },
+    { tag: 'Center of gravity reasoning', text: 'If the on-duty radiologists vanished, nobody else could produce a signed report. Technologists, IT, and the dashboard all exist to support them.' },
+  ] },
+  needs: { items: [
+    { tag: 'Radiology turnaround', text: 'The on-duty radiologists use a worklist prioritization rule, the voice-recognition system, protected reading time, and the overnight coverage schedule.' },
+    { tag: 'Radiology turnaround', text: 'Vulnerable: the overnight coverage schedule. One radiologist covers ED and inpatients after midnight.' },
+    { tag: 'Critical results', text: 'The interpreting radiologist uses an up-to-date on-call directory and closed-loop acknowledgment in the EHR.' },
+    { tag: 'Critical results', text: 'Vulnerable: the on-call directory. It is updated by hand and is often wrong on weekends.' },
+  ] },
+  links: { items: [
+    { tag: 'Depends on', text: 'Protected reading time depends on the conference schedule.' },
+    { tag: 'Influences', text: 'The turnaround dashboard influences ED physicians.' },
+    { tag: 'In tension with', text: 'ED physicians are in tension with the radiology section chief over who owns CT protocols.' },
+    { tag: 'Critical results', text: 'Closed-loop acknowledgment depends on the EHR build team.' },
+  ] },
+};
+
+const DEMO_RAW = {
+  project: {
+    title: 'ED CT turnaround (worked example)',
+    objective: 'Reduce median final-report turnaround for emergency department CT from 45 to 30 minutes by 31 March 2027, without raising the addendum rate.',
+    measure: 'Median minutes from exam complete to signed report, ED CT',
+    baseline: '45 min', target: '30 min', dueDate: '2027-03-31',
+    objectiveRationale: 'Faster reports shorten ED length of stay, which is the hospital goal. We kept turnaround as our objective because radiology controls it directly and can measure it weekly.',
+    cogRationale: 'No one else can produce a signed report. Technologists, IT, and the dashboard all exist to support the radiologists.',
+    relationshipsReviewed: true,
+  },
+  loes: {
+    l_read: { name: 'Reading and assignment', order: 1, color: 0, effort: 'main', capability: 'read and sign ED CT within target', doerNodeId: 'n_rads' },
+    l_tech: { name: 'Technologist throughput', order: 2, color: 1, effort: 'supporting', capability: 'complete and send studies to PACS without delay', doerNodeId: 'n_techs' },
+    l_pacs: { name: 'PACS and IT workflow', order: 3, color: 2, effort: 'supporting', capability: 'route and flag ED studies automatically', doerNodeId: 'n_pacs' },
+    l_meas: { name: 'Measurement and feedback', order: 4, color: 3, effort: 'supporting', capability: 'measure turnaround and feed it back weekly', doerNodeId: 'n_analyst' },
+    l_stake: { name: 'Stakeholder alignment', order: 5, color: 6, effort: 'supporting', capability: 'secure ED and radiology leadership commitment', doerNodeId: 'n_lead' },
+  },
+  nodes: {
+    n_rads: ['On-duty radiologists', 'actor', 'l_read'],
+    n_worklist: ['Worklist prioritization rule', 'process', 'l_read'],
+    n_protected: ['Protected reading time', 'resource', 'l_read', 'Noon conference pulls the ED reader off the worklist with no backfill.'],
+    n_overnight: ['Overnight coverage schedule', 'resource', 'l_read', 'One radiologist covers ED and inpatients after midnight.'],
+    n_techs: ['CT technologists', 'actor', 'l_tech'],
+    n_scanner: ['CT scanner availability', 'resource', 'l_tech'],
+    n_protocols: ['Standard ED CT protocols', 'process', 'l_tech'],
+    n_transport: ['Patient transport', 'actor', 'l_tech'],
+    n_pacs: ['PACS administrator', 'actor', 'l_pacs'],
+    n_vr: ['Voice-recognition system', 'system', 'l_pacs', 'Unplanned downtime twice a month, with no fallback dictation workflow.'],
+    n_routing: ['Routing rules engine', 'system', 'l_pacs'],
+    n_change: ['IT change-request queue', 'process', 'l_pacs', 'Routing changes wait six to eight weeks in the enterprise IT backlog.'],
+    n_analyst: ['QI data analyst', 'actor', 'l_meas'],
+    n_ris: ['RIS timestamp data', 'system', 'l_meas'],
+    n_dash: ['Turnaround dashboard', 'system', 'l_meas'],
+    n_lead: ['QI project lead', 'actor', 'l_stake'],
+    n_meeting: ['Monthly ED and radiology meeting', 'process', 'l_stake'],
+    n_sponsor: ['Executive sponsor', 'actor', 'l_stake'],
+    n_edphys: ['ED physicians', 'actor', 'l_stake'],
+    n_chief: ['Radiology section chief', 'actor', 'l_stake'],
+    n_conf: ['Conference schedule', 'process', null],
+  },
+  links: [
+    ['uses', 'n_rads', 'n_worklist'], ['uses', 'n_rads', 'n_vr'], ['uses', 'n_rads', 'n_protected'], ['uses', 'n_rads', 'n_overnight'], ['uses', 'n_rads', 'n_dash'],
+    ['uses', 'n_techs', 'n_scanner'], ['uses', 'n_techs', 'n_protocols'], ['uses', 'n_techs', 'n_transport'],
+    ['uses', 'n_pacs', 'n_routing'], ['uses', 'n_pacs', 'n_change'],
+    ['uses', 'n_analyst', 'n_ris'], ['uses', 'n_analyst', 'n_dash'],
+    ['uses', 'n_lead', 'n_meeting'], ['uses', 'n_lead', 'n_sponsor'],
+    ['depends_on', 'n_worklist', 'n_routing'], ['depends_on', 'n_protected', 'n_conf'], ['depends_on', 'n_routing', 'n_change'],
+    ['depends_on', 'n_dash', 'n_ris'], ['depends_on', 'n_overnight', 'n_chief'], ['depends_on', 'n_protocols', 'n_chief'],
+    ['influences', 'n_dash', 'n_edphys'], ['influences', 'n_sponsor', 'n_chief'], ['influences', 'n_sponsor', 'n_change'], ['influences', 'n_meeting', 'n_edphys'],
+    ['tension', 'n_edphys', 'n_chief'],
+  ],
+};
+function buildDemo() {
+  const nodes = new Map(Object.entries(DEMO_RAW.nodes).map(([id, [label, type, loeId, rationale]]) =>
+    [id, { label, type, loeId, vulnerable: !!rationale, rationale: rationale || '', owner: '', notes: '' }]));
+  const links = new Map(DEMO_RAW.links.map(([type, source, target]) => [`${type}__${source}__${target}`, { type, source, target }]));
+  return { project: DEMO_RAW.project, loes: new Map(Object.entries(DEMO_RAW.loes)), nodes, links };
+}
+const DEMO = buildDemo();
+
+/* ================================================================
+   Helpers
+   ================================================================ */
+const has = v => typeof v === 'string' ? v.trim().length > 0 : (v != null && v !== false);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const dargs = (...a) => `data-args="${esc(JSON.stringify(a))}"`;
+const fid = (key, sfx) => 'f-' + (key + (sfx ? '-' + sfx : '')).replace(/[^A-Za-z0-9_-]/g, '_');
+const uniq = a => [...new Set(a)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const isPhone = () => !!PHONE_MQ.matches;
+const trunc = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
+const $ = id => document.getElementById(id);
+const CHECK_SVG = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 7.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const LOCK_SVG = '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5.5" width="8" height="5.5" rx="1" fill="currentColor"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+
+function wrap(text, max, maxLines) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    if (!cur) cur = w;
+    else if ((cur + ' ' + w).length <= max) cur += ' ' + w;
+    else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  const out = lines.map(l => (l.length > max ? l.slice(0, max - 1) + '…' : l));
+  if (out.length > maxLines) {
+    const keep = out.slice(0, maxLines);
+    keep[maxLines - 1] = keep[maxLines - 1].slice(0, max - 1).replace(/[\s.,;:…]*$/, '') + '…';
+    return keep;
+  }
+  return out.length ? out : [''];
+}
+
+/* ================================================================
+   State
+   ================================================================ */
+const S = { project: {}, projectExists: false, loes: new Map(), nodes: new Map(), links: new Map(), got: new Set() };
+const ui = Object.assign({ step: 0, maxReached: 0, view: 'lanes', tab: 'coach', focus: false }, loadUi(), {
+  lanesOn: [], selected: null, editNode: null, confirm: null, demo: false, savedStep: null,
+  readOnly: false, mode: 'connecting',
+  pending: new Map(), drafts: new Map(), openDetails: new Set(),
+  composing: false, forceUntil: 0, coachDirty: false, scrollTop: false,
+  userZoomed: { lanes: false, network: false },
+});
+let version = 0;
+let cache = { v: -1, demo: null, M: null };
+
+function loadUi() {
+  try { const o = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; }
+}
+function saveUi() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ step: ui.demo ? (ui.savedStep ?? 0) : ui.step, maxReached: ui.maxReached, view: ui.view, tab: ui.tab, focus: ui.focus }));
+  } catch (e) { /* storage unavailable: per-visit only */ }
+}
+const loaded = () => S.got.size >= 4;
+const canWrite = () => !ui.demo && !ui.readOnly && ui.mode !== 'connecting' && loaded();
+const dis = () => (canWrite() ? '' : ' disabled');
+
+/* ================================================================
+   Derivations: everything the coach reflects back is computed here
+   ================================================================ */
+function model() {
+  if (cache.v === version && cache.demo === ui.demo) return cache.M;
+  const M = derive(ui.demo ? DEMO : S);
+  cache = { v: version, demo: ui.demo, M };
+  return M;
+}
+
+function derive(src) {
+  const P = src.project || {};
+  const loes = [...src.loes].map(([id, d]) => ({ id, ...d, name: d.name || 'Untitled way', capability: d.capability || '' }))
+    .sort((a, b) => ((a.effort === 'main' ? 0 : 1) - (b.effort === 'main' ? 0 : 1)) || ((a.order || 0) - (b.order || 0)) || a.name.localeCompare(b.name));
+  const loeById = new Map(loes.map(l => [l.id, l]));
+  const nodes = new Map([...src.nodes].map(([id, d]) => [id, { id, ...d, label: d.label || 'Untitled', type: NODE_TYPES[d.type] ? d.type : 'resource', loeId: loeById.has(d.loeId) ? d.loeId : null }]));
+  const links = [...src.links].map(([id, d]) => ({ id, ...d }))
+    .filter(k => LINK_TYPES[k.type] && nodes.has(k.source) && nodes.has(k.target) && k.source !== k.target);
+  const main = loes.find(l => l.effort === 'main') || null;
+  const doerLoes = new Map();
+  for (const l of loes) if (l.doerNodeId && nodes.has(l.doerNodeId)) push(doerLoes, l.doerNodeId, l);
+  const cogId = main && nodes.has(main.doerNodeId) ? main.doerNodeId : null;
+  const reqsByLoe = new Map();
+  const reqOwners = new Map();
+  for (const l of loes) {
+    const d = l.doerNodeId;
+    if (!d || !nodes.has(d)) continue;
+    const r = links.filter(k => k.type === 'uses' && k.source === d).map(k => k.target);
+    reqsByLoe.set(l.id, r);
+    for (const t of r) push(reqOwners, t, l);
+  }
+  const degree = new Map();
+  const adj = new Map();
+  const addAdj = (a, b) => { push(adj, a, b); push(adj, b, a); };
+  for (const k of links) { degree.set(k.source, (degree.get(k.source) || 0) + 1); degree.set(k.target, (degree.get(k.target) || 0) + 1); addAdj(k.source, k.target); }
+  for (const l of loes) {
+    if (!has(l.capability)) continue;
+    const cap = 'cap:' + l.id;
+    addAdj(cap, 'obj');
+    if (l.doerNodeId && nodes.has(l.doerNodeId)) addAdj(l.doerNodeId, cap);
+  }
+  const rank = { critical: 0, major: 1, minor: 2, peripheral: 3 };
+  const tier = new Map();
+  const setTier = (id, t) => { if (!tier.has(id) || rank[t] < rank[tier.get(id)]) tier.set(id, t); };
+  for (const n of nodes.values()) setTier(n.id, (degree.get(n.id) || 0) > 0 || doerLoes.has(n.id) ? 'minor' : 'peripheral');
+  for (const l of loes) {
+    const t = main && l.id === main.id ? 'critical' : 'major';
+    if (has(l.capability)) setTier('cap:' + l.id, t);
+    if (l.doerNodeId && nodes.has(l.doerNodeId)) setTier(l.doerNodeId, t);
+    for (const r of reqsByLoe.get(l.id) || []) setTier(r, t);
+  }
+  tier.set('obj', 'critical');
+  const all = [...nodes.values()];
+  const vulns = all.filter(n => n.vulnerable && reqOwners.has(n.id));
+  const atRisk = all.filter(n => n.vulnerable && !reqOwners.has(n.id));
+  const orphans = all.filter(n => !(degree.get(n.id) > 0) && !doerLoes.has(n.id));
+  const shared = [...reqOwners].filter(([, ls]) => uniq(ls.map(l => l.doerNodeId)).length > 1).map(([id, ls]) => ({ node: nodes.get(id), loes: ls }));
+  // Distance from the nearest doer along uses / depends_on: drives lane columns.
+  const depth = new Map();
+  const out = new Map();
+  for (const k of links) if (k.type === 'uses' || k.type === 'depends_on') push(out, k.source, k.target);
+  const queue = [];
+  for (const id of doerLoes.keys()) { depth.set(id, 0); queue.push(id); }
+  while (queue.length) {
+    const id = queue.shift();
+    for (const t of out.get(id) || []) if (!depth.has(t)) { depth.set(t, depth.get(id) + 1); queue.push(t); }
+  }
+  return { P, loes, loeById, main, nodes, links, doerLoes, cogId, reqsByLoe, reqOwners, degree, adj, tier, vulns, atRisk, orphans, shared, depth };
+}
+function push(map, k, v) { const a = map.get(k); if (a) a.push(v); else map.set(k, [v]); }
+
+function unlocks(M) {
+  const s2 = has(M.P.objective);
+  const s3 = s2 && !!M.main && M.loes.some(l => has(l.capability));
+  const s4 = s3 && !!M.cogId;
+  const s5 = s4 && (M.reqsByLoe.get(M.main.id) || []).length > 0;
+  const s6 = s5 && !!M.P.relationshipsReviewed;
+  return [true, true, s2, s3, s4, s5, s6];
+}
+function furthest(M) { const u = unlocks(M); let f = 0; for (let i = 0; i < u.length && u[i]; i++) f = i; return f; }
+function reachable(M) { return ui.demo ? STEPS.length - 1 : Math.max(furthest(M), Math.min(ui.maxReached || 0, STEPS.length - 1)); }
+
+function openQuestions(M) {
+  const q = [];
+  const P = M.P;
+  if (!has(P.objective)) q.push({ step: 1, text: 'What is the objective?' });
+  else {
+    if (!/\d/.test(`${P.objective} ${P.target || ''}`) || !P.dueDate) q.push({ step: 1, text: 'Could someone tell from your objective whether you got there? It still lacks a number or a date.' });
+    if (!has(P.objectiveRationale)) q.push({ step: 1, text: 'If you achieved the objective, what would it get you? Not answered yet.' });
+  }
+  if (M.loes.length && !M.main) q.push({ step: 2, text: 'Which way is the main effort?' });
+  for (const l of M.loes) {
+    const doer = M.nodes.get(l.doerNodeId);
+    if (!has(l.capability)) q.push({ step: 2, text: `What is the essential action inside “${l.name}”?` });
+    else if (!doer) q.push({ step: 3, text: `Who or what performs “${l.capability}”?` });
+    else if (!(M.reqsByLoe.get(l.id) || []).length) q.push({ step: 4, text: `What does ${doer.label} use to ${l.capability}?` });
+  }
+  if (M.cogId && !has(P.cogRationale)) q.push({ step: 3, text: 'If your center of gravity vanished, could anyone else achieve the objective? Not answered yet.' });
+  for (const v of M.vulns) if (!has(v.rationale)) q.push({ node: v.id, text: `Why is ${v.label} vulnerable?` });
+  for (const n of M.atRisk) q.push({ node: n.id, text: `You marked ${n.label} as at risk, but no doer uses it. Whose need is it?` });
+  for (const n of M.orphans) q.push({ step: 5, text: `${n.label} has no connections. Is it relevant to the objective?` });
+  return q;
+}
+
+/* ================================================================
+   Data layer
+   ================================================================ */
+let db = null;
+const known = new Set();
+const queues = new Map();
+const timers = new Map();
+
+function exists(path) {
+  const [c, id] = path.split('/');
+  if (c === 'project') return S.projectExists || known.has(path);
+  return (S[c] instanceof Map && S[c].has(id)) || known.has(path);
+}
+function enqueue(path, op) {
+  const prev = queues.get(path) || Promise.resolve();
+  const next = prev.then(op);
+  queues.set(path, next);
+  next.then(() => { if (queues.get(path) === next) queues.delete(path); });
+  return next;
+}
+async function attempt(fn) {
+  try { return await fn(); } catch (e) {
+    if (e && e.code === 'unavailable') { await sleep(300 + Math.random() * 700); return fn(); }
+    throw e;
+  }
+}
+function write(path, kind, data) {
+  return enqueue(path, async () => {
+    const ref = db.doc(path);
+    try {
+      if (kind === 'delete') { await attempt(() => ref.delete()); known.delete(path); }
+      else if (kind === 'set' || !exists(path)) { await attempt(() => ref.set(data)); known.add(path); }
+      else await attempt(() => ref.update(data));
+      return true;
+    } catch (e) { writeFailed(e, kind); return false; }
+  });
+}
+function writeFailed(e, kind) {
+  const code = e && e.code;
+  if (code === 'invalid_argument' && kind !== 'update') { ui.readOnly = true; toast('Your changes cannot be saved. You have view-only access to this map.'); }
+  else if (code === 'invalid_argument') toast('Someone else changed or removed that item. Try again.');
+  else if (code === 'quota_exceeded') toast('The map is full. Remove some items before adding more.');
+  else if (code === 'resource_exhausted') toast('Too many changes at once. Wait a moment, then try again.');
+  else if (['revoked', 'not_granted', 'capability_disabled', 'capability_removed'].includes(code)) { ui.readOnly = true; toast('Saving is no longer available on this page.'); }
+  else toast('That change did not save. Check your connection and try again.');
+  bump();
+}
+
+function subscribe() {
+  const listen = (name, attach) => {
+    let retried = false;
+    const start = () => attach(err => {
+      if (err && err.code === 'unavailable' && !retried) { retried = true; setTimeout(start, 2000); return; }
+      ui.readOnly = true;
+      toast('The map stopped updating. Reload the page to reconnect.');
+      bump();
+    });
+    start();
+  };
+  listen('project', onErr => db.doc('project/main').onSnapshot(s => {
+    S.project = (s.exists && s.data()) || {};
+    S.projectExists = !!s.exists;
+    S.got.add('project');
+    bump();
+  }, onErr));
+  for (const c of ['loes', 'nodes', 'links']) {
+    listen(c, onErr => db.collection(c).onSnapshot(q => {
+      S[c] = new Map(q.docs.map(d => [d.id, d.data()]));
+      S.got.add(c);
+      bump();
+    }, onErr));
+  }
+}
+function bump() { version++; ui.coachDirty = true; render(); }
+
+/* In-memory store with the same surface as the db capability. Used when
+   the page runs where shared saving is unavailable. */
+class MemDB {
+  constructor() { this.docs = new Map(); this.subs = new Set(); this.q = false; }
+  doc(path) {
+    const self = this;
+    return {
+      id: path.split('/').pop(), path,
+      get: async () => self.docSnap(path),
+      set: async data => { self.docs.set(path, Object.freeze({ ...data })); self.notify(); },
+      update: async patch => {
+        if (!self.docs.has(path)) throw { code: 'invalid_argument', message: 'missing document' };
+        self.docs.set(path, Object.freeze({ ...self.docs.get(path), ...patch })); self.notify();
+      },
+      delete: async () => { self.docs.delete(path); self.notify(); },
+      onSnapshot: next => { const s = { kind: 'doc', path, next }; self.subs.add(s); queueMicrotask(() => self.fire(s)); return () => self.subs.delete(s); },
+    };
+  }
+  collection(path) {
+    const self = this;
+    return {
+      path,
+      doc: id => self.doc(path + '/' + (id || uid('d'))),
+      onSnapshot: next => { const s = { kind: 'col', path, next }; self.subs.add(s); queueMicrotask(() => self.fire(s)); return () => self.subs.delete(s); },
+    };
+  }
+  docSnap(path) { const d = this.docs.get(path); return { id: path.split('/').pop(), exists: !!d, data: () => d, metadata: { fromCache: false, hasPendingWrites: false } }; }
+  colSnap(path) {
+    const depth = path.split('/').length + 1;
+    const docs = [...this.docs.keys()].filter(k => k.startsWith(path + '/') && k.split('/').length === depth).sort().map(k => this.docSnap(k));
+    return { docs, size: docs.length, empty: !docs.length, docChanges: () => [], metadata: { fromCache: false, hasPendingWrites: false } };
+  }
+  fire(s) { if (this.subs.has(s)) s.next(s.kind === 'doc' ? this.docSnap(s.path) : this.colSnap(s.path)); }
+  notify() { if (this.q) return; this.q = true; queueMicrotask(() => { this.q = false; this.subs.forEach(s => this.fire(s)); }); }
+}
+
+/* ================================================================
+   Commands: every action in the page goes through dispatch()
+   ================================================================ */
+function guard() {
+  if (canWrite()) return true;
+  toast(ui.demo ? 'This is the worked example. Leave it to answer for your own project.'
+    : ui.mode === 'connecting' || !loaded() ? 'Still connecting to your map. Try again in a moment.'
+    : 'You have view-only access to this map.');
+  return false;
+}
+const force = () => { ui.forceUntil = performance.now() + 2000; };
+function findByLabel(label) {
+  const k = String(label || '').trim().toLowerCase();
+  if (!k) return null;
+  for (const n of model().nodes.values()) if (n.label.trim().toLowerCase() === k) return n;
+  return null;
+}
+async function findOrCreate(label, type, loeId) {
+  const found = findByLabel(label);
+  if (found) return found.id;
+  const id = uid('n');
+  const ok = await write(`nodes/${id}`, 'set', { label: label.trim(), type: NODE_TYPES[type] ? type : 'resource', loeId: loeId || null, vulnerable: false, rationale: '', owner: '', notes: '' });
+  return ok ? id : null;
+}
+
+const cmd = {
+  goto(i) {
+    i = Math.max(0, Math.min(STEPS.length - 1, Number(i) || 0));
+    if (i > reachable(model())) { toast(NEXT_REASON[i - 1] || 'Answer the earlier questions first.'); return false; }
+    ui.step = i; ui.editNode = null; ui.scrollTop = true; ui.tab = 'coach'; force(); saveUi(); render();
+    return true;
+  },
+  next() { return cmd.goto(ui.step + 1); },
+  back() { return cmd.goto(ui.step - 1); },
+  tab(t) { ui.tab = t === 'map' ? 'map' : 'coach'; saveUi(); render(); return true; },
+  view(v) {
+    if (v !== 'lanes' && v !== 'network') return false;
+    if (ui.view !== v) { ui.view = v; saveUi(); clearLayers(); }
+    render(); return true;
+  },
+  focus(on) { ui.focus = on === undefined || on === null ? !ui.focus : !!on; saveUi(); render(); return true; },
+  fit() { ui.userZoomed[ui.view] = false; fitView(true); return true; },
+  filterLane(id) { const i = ui.lanesOn.indexOf(id); if (i >= 0) ui.lanesOn.splice(i, 1); else ui.lanesOn.push(id); render(); return true; },
+  select(id) { ui.selected = id || null; render(); return true; },
+  editNode(id) {
+    if (!id) return false;
+    if (id === 'obj') return cmd.goto(1);
+    if (String(id).startsWith('cap:')) return cmd.goto(2);
+    if (!model().nodes.has(id)) return false;
+    ui.editNode = id; ui.selected = id; ui.scrollTop = true; ui.tab = 'coach'; force(); saveUi(); render();
+    return true;
+  },
+  closeEditor() { ui.editNode = null; ui.scrollTop = true; force(); render(); return true; },
+  demo(on) {
+    on = !!on;
+    if (on === ui.demo) return true;
+    if (on) { ui.savedStep = ui.step; ui.step = 1; } else { ui.step = ui.savedStep ?? ui.step; ui.savedStep = null; }
+    ui.demo = on; ui.editNode = null; ui.selected = null; ui.lanesOn = []; ui.scrollTop = true;
+    ui.userZoomed = { lanes: false, network: false };
+    resetGraph(); clearLayers(); force(); version++; render();
+    return true;
+  },
+  copyData() { openExport(); return true; },
+
+  setProject(patch) { if (!guard()) return false; return write('project/main', 'update', patch); },
+  addWay(name) {
+    name = String(name || '').trim();
+    if (!name) { toast('Name the way first.'); return false; }
+    if (!guard()) return false;
+    const M = model();
+    if (M.loes.length >= MAX_WAYS) { toast('Eight ways is the limit. Combine ways that overlap.'); return false; }
+    if (M.loes.some(l => l.name.trim().toLowerCase() === name.toLowerCase())) { toast('You already have a way with that name.'); return false; }
+    const used = new Set(M.loes.map(l => l.color));
+    let color = 0;
+    while (used.has(color) && color < MAX_WAYS - 1) color++;
+    const order = M.loes.reduce((m, l) => Math.max(m, l.order || 0), 0) + 1;
+    force();
+    return write(`loes/${uid('w')}`, 'set', { name, order, color, effort: 'supporting', capability: '', doerNodeId: null });
+  },
+  updateWay(id, patch) {
+    if (!guard()) return false;
+    if ('name' in patch && !has(patch.name)) { toast('A way needs a name.'); return false; }
+    if ('color' in patch) force();
+    return write(`loes/${id}`, 'update', patch);
+  },
+  async setMain(id) {
+    if (!guard()) return false;
+    force();
+    for (const l of model().loes) if (l.effort === 'main' && l.id !== id) await write(`loes/${l.id}`, 'update', { effort: 'supporting' });
+    return write(`loes/${id}`, 'update', { effort: 'main' });
+  },
+  async deleteWay(id) {
+    if (!guard()) return false;
+    force();
+    for (const n of model().nodes.values()) if (n.loeId === id) await write(`nodes/${n.id}`, 'update', { loeId: null });
+    ui.lanesOn = ui.lanesOn.filter(x => x !== id);
+    return write(`loes/${id}`, 'delete');
+  },
+  async setDoer(loeId, label) {
+    label = String(label || '').trim();
+    if (!label) { toast('Name the doer first.'); return false; }
+    if (!guard()) return false;
+    force();
+    const nodeId = await findOrCreate(label, 'actor', loeId);
+    if (!nodeId) return false;
+    return write(`loes/${loeId}`, 'update', { doerNodeId: nodeId });
+  },
+  clearDoer(loeId) { if (!guard()) return false; force(); return write(`loes/${loeId}`, 'update', { doerNodeId: null }); },
+  async addRequirement(loeId, label, type) {
+    label = String(label || '').trim();
+    if (!label) { toast('Name the need first.'); return false; }
+    if (!guard()) return false;
+    const l = model().loeById.get(loeId);
+    if (!l || !model().nodes.has(l.doerNodeId)) { toast('Name the doer of this way first.'); return false; }
+    const existing = findByLabel(label);
+    if (existing && existing.id === l.doerNodeId) { toast('A doer cannot be its own need.'); return false; }
+    force();
+    const nodeId = await findOrCreate(label, NODE_TYPES[type] ? type : 'resource', loeId);
+    if (!nodeId) return false;
+    return cmd.link(l.doerNodeId, 'uses', nodeId);
+  },
+  async addNode(label, type, loeId) {
+    label = String(label || '').trim();
+    if (!label) { toast('Name the item first.'); return false; }
+    if (!guard()) return false;
+    if (findByLabel(label)) { toast(`${label} is already on the map.`); return false; }
+    force();
+    return !!(await findOrCreate(label, type, loeId || null));
+  },
+  updateNode(id, patch) {
+    if (!guard()) return false;
+    if ('label' in patch) {
+      if (!has(patch.label)) { toast('An item needs a name.'); return false; }
+      const dup = findByLabel(patch.label);
+      if (dup && dup.id !== id) { toast('Another item already has that name.'); return false; }
+    }
+    if ('loeId' in patch && !patch.loeId) patch.loeId = null;
+    if ('vulnerable' in patch || 'loeId' in patch || 'type' in patch) force();
+    return write(`nodes/${id}`, 'update', patch);
+  },
+  markVulnerable(id, on, reason) {
+    const p = { vulnerable: !!on };
+    if (reason !== undefined) p.rationale = String(reason);
+    return cmd.updateNode(id, p);
+  },
+  async deleteNode(id) {
+    if (!guard()) return false;
+    const M = model();
+    force();
+    for (const k of M.links) if (k.source === id || k.target === id) await write(`links/${k.id}`, 'delete');
+    for (const l of M.loes) if (l.doerNodeId === id) await write(`loes/${l.id}`, 'update', { doerNodeId: null });
+    if (ui.selected === id) ui.selected = null;
+    if (ui.editNode === id) ui.editNode = null;
+    return write(`nodes/${id}`, 'delete');
+  },
+  link(source, type, target) {
+    if (!guard()) return false;
+    if (!LINK_TYPES[type]) { toast('Pick a relationship.'); return false; }
+    if (!source || !target) { toast('Pick an item on both sides.'); return false; }
+    if (source === target) { toast('Pick two different items.'); return false; }
+    const id = `${type}__${source}__${target}`;
+    const ids = new Set(model().links.map(k => k.id));
+    if (ids.has(id) || (type === 'tension' && ids.has(`tension__${target}__${source}`))) { toast('That relationship is already on the map.'); return false; }
+    force();
+    return write(`links/${id}`, 'set', { source, target, type });
+  },
+  unlink(id) { if (!guard()) return false; force(); return write(`links/${id}`, 'delete'); },
+  reviewLinks(on) { force(); return cmd.setProject({ relationshipsReviewed: on !== false }); },
+};
+function dispatch(name, ...args) {
+  const f = cmd[name];
+  if (!f) throw new Error('Unknown command: ' + name);
+  return f(...args);
+}
+
+/* ================================================================
+   Coach: builders
+   ================================================================ */
+function fieldVal(key, stored) { return ui.pending.has(key) ? ui.pending.get(key) : (stored ?? ''); }
+function field(o) {
+  const id = fid(o.key, o.sfx);
+  const v = fieldVal(o.key, o.value);
+  const common = `id="${id}" data-bind="${esc(o.key)}"${o.placeholder ? ` placeholder="${esc(o.placeholder)}"` : ''}${dis()}`;
+  const ctl = o.multiline
+    ? `<textarea ${common} rows="${o.rows || 3}">${esc(v)}</textarea>`
+    : `<input type="${o.type || 'text'}" ${common} value="${esc(v)}" autocomplete="off">`;
+  return `<div class="field">${o.label ? `<label for="${id}"${o.srLabel ? ' class="sr"' : ''}>${esc(o.label)}</label>` : ''}${ctl}${o.hint ? `<p class="fhint">${esc(o.hint)}</p>` : ''}</div>`;
+}
+function selectField(o) {
+  const id = fid(o.key, o.sfx);
+  const cur = String(o.value ?? '');
+  return `<div class="field"><label for="${id}">${esc(o.label)}</label><select id="${id}" data-bind="${esc(o.key)}"${dis()}>${o.options.map(([v, l]) => `<option value="${esc(v)}"${cur === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
+}
+function checkField(o) {
+  const id = fid(o.key, o.sfx);
+  return `<label class="check" for="${id}"><input type="checkbox" id="${id}" data-bind="${esc(o.key)}"${o.value ? ' checked' : ''}${dis()}><span>${esc(o.label)}</span></label>`;
+}
+function draftSelect(id, options, def, label) {
+  const v = ui.drafts.has(id) ? ui.drafts.get(id) : def;
+  return `<select id="${id}" data-draft aria-label="${esc(label)}"${dis()}>${options.map(o => o.group
+    ? `<optgroup label="${esc(o.group)}">${o.items.map(([val, l]) => `<option value="${esc(val)}"${val === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</optgroup>`
+    : `<option value="${esc(o[0])}"${o[0] === v ? ' selected' : ''}>${esc(o[1])}</option>`).join('')}</select>`;
+}
+function addRow(o) {
+  const v = ui.drafts.get(o.id) ?? '';
+  const from = [o.id, ...(o.extraIds || [])].join(',');
+  return `<div class="addrow"><label for="${o.id}"${o.srLabel ? ' class="sr"' : ''}>${esc(o.label)}</label><div class="addrow-ctl">`
+    + `<input type="text" id="${o.id}" data-draft data-enter="${o.id}-btn" value="${esc(v)}" placeholder="${esc(o.placeholder)}" autocomplete="off"${o.list ? ` list="${o.list}"` : ''}${dis()}>`
+    + `${o.extra || ''}<button type="button" class="btn" id="${o.id}-btn" data-cmd="${o.cmd}" ${dargs(...(o.pre || []))} data-from="${from}" data-clear="${o.id}"${dis()}>${esc(o.button)}</button></div></div>`;
+}
+function btn(label, name, args, cls, opts) {
+  opts = opts || {};
+  const write = opts.write ? dis() : '';
+  if (opts.confirm) {
+    const armed = ui.confirm === opts.confirm;
+    return `<button type="button" class="btn ${cls || ''}${armed ? ' danger' : ''}" data-cmd="${name}" ${dargs(...(args || []))} data-confirm="${esc(opts.confirm)}"${write}>${esc(armed ? opts.confirmLabel || 'Confirm' : label)}</button>`;
+  }
+  return `<button type="button" class="btn ${cls || ''}" data-cmd="${name}" ${dargs(...(args || []))}${write}>${esc(label)}</button>`;
+}
+function ask(question, body, tag) {
+  return `<section class="ask"><p class="ask-tag${tag ? ' reflect' : ''}">${tag || 'Coach asks'}</p>${question ? `<p class="ask-q">${question}</p>` : ''}${body || ''}</section>`;
+}
+const okNote = html => `<p class="ok">${CHECK_SVG}<span>${html}</span></p>`;
+const eyebrow = t => `<p class="eyebrow">${esc(t)}</p>`;
+function examples(key) {
+  const ex = EXAMPLES[key];
+  if (!ex) return '';
+  const id = 'ex-' + key;
+  return `<details class="examples" data-details="${id}"${ui.openDetails.has(id) ? ' open' : ''}><summary>Show examples</summary>`
+    + `${ex.intro ? `<p class="muted">${esc(ex.intro)}</p>` : ''}<ul>${ex.items.map(i => `<li><span class="ex-tag${i.why ? ' weak' : ''}">${esc(i.tag)}</span><span>${esc(i.text)}</span>${i.why ? `<span class="ex-why">${esc(i.why)}</span>` : ''}</li>`).join('')}</ul>`
+    + `<p class="fine">Examples are for ideas. Your answers come from your team.</p></details>`;
+}
+function goalRecap(M) { return has(M.P.objective) ? `<p class="recap"><b>Goal:</b> ${esc(M.P.objective)}</p>` : ''; }
+function laneStyle(l) { return `style="--lc:var(--lane-${l && l.color != null ? l.color : 7})"`; }
+const typeOptions = () => Object.entries(NODE_TYPES);
+function laneOptions(M) { return [['', 'Cross-cutting (no single way)'], ...M.loes.map(l => [l.id, l.name])]; }
+function nodeOptionGroups(M) {
+  const groups = M.loes.map(l => ({ group: l.name, items: [...M.nodes.values()].filter(n => n.loeId === l.id).sort((a, b) => a.label.localeCompare(b.label)).map(n => [n.id, n.label]) })).filter(g => g.items.length);
+  const cross = [...M.nodes.values()].filter(n => !n.loeId).sort((a, b) => a.label.localeCompare(b.label)).map(n => [n.id, n.label]);
+  if (cross.length) groups.push({ group: 'Cross-cutting', items: cross });
+  return [['', 'Choose an item'], ...groups];
+}
+function prereq(M, step) {
+  const note = (text, to) => `<div class="prereq"><p>${text}</p>${btn(`Go to question ${to}`, 'goto', [to], 'small')}</div>`;
+  if (step === 2 && !has(M.P.objective)) return note('Question 1 has no objective yet. Ways only make sense against a goal.', 1);
+  if (step === 3 && (!M.main || !M.loes.some(l => has(l.capability)))) return note('Question 2 needs a way with an essential action, and a main effort.', 2);
+  if (step === 4 && !M.cogId) return note('Question 3 has no doer for the main effort yet.', 3);
+  if (step === 5 && !(M.main && (M.reqsByLoe.get(M.main.id) || []).length)) return note('Question 4 has no needs for your center of gravity yet.', 4);
+  return '';
+}
+
+function buildStart() {
+  return `${eyebrow('Before you start')}
+  <h2 class="question">Plan from the objective backward</h2>
+  <p class="lede">This page coaches your team through Col. Dale Eikmeier's center-of-gravity method, applied to a quality-improvement project. It asks four questions. You answer them, and the map draws itself from your answers.</p>
+  <ol class="qlist">
+    <li><b>Goal.</b> What are you trying to achieve?</li>
+    <li><b>Ways.</b> What ways will you use to get there, and what is the essential action in each?</li>
+    <li><b>Doers.</b> Who or what has the inherent ability to perform each action?</li>
+    <li><b>Needs.</b> What does each doer require, and which of those are vulnerable?</li>
+  </ol>
+  <p class="muted">Then you connect the remaining pieces and review what your answers imply. Each answer opens the next question, and you can change any answer later.</p>
+  ${ask('', '<p class="muted">The coach asks questions and reflects your answers back. It never supplies the answers. Examples show what a good answer looks like, but everything on the map comes from your team, because the thinking is the point.</p>', 'How the coach works')}
+  <div class="row-actions">${btn('Start with question 1', 'goto', [1], 'primary')}${ui.demo ? '' : btn('See a worked example', 'demo', [true])}</div>
+  <p class="fine">Everyone who opens this page sees and edits the same map. Do not enter patient information. On a phone, tap the microphone on your keyboard to answer by voice.</p>`;
+}
+
+function buildGoal(M) {
+  const P = M.P;
+  const checkable = has(P.objective) && /\d/.test(`${P.objective} ${P.target || ''}`) && has(P.dueDate);
+  return `${eyebrow('Question 1 of 4 · Goal')}
+  <h2 class="question">What are you trying to achieve?</h2>
+  <p class="hint">State the end you want, not the work you plan to do.</p>
+  ${field({ key: 'project:title', label: 'Project name', value: P.title, placeholder: 'A short name your team uses' })}
+  ${field({ key: 'project:objective', label: 'Objective', value: P.objective, multiline: true, rows: 3, placeholder: 'The end state, in a sentence or two' })}
+  <div class="grid-2">
+    ${field({ key: 'project:measure', label: 'Measure', value: P.measure, placeholder: 'What you will count' })}
+    ${field({ key: 'project:dueDate', label: 'Due date', value: P.dueDate, type: 'date' })}
+    ${field({ key: 'project:baseline', label: 'Baseline', value: P.baseline, placeholder: 'Where it is now' })}
+    ${field({ key: 'project:target', label: 'Target', value: P.target, placeholder: 'Where it needs to be' })}
+  </div>
+  ${ask('Could someone tell from this objective whether you got there?', checkable
+    ? okNote('Your objective has a number and a date, so it can be checked.')
+    : '<p class="muted">A number and a date make it checkable. Put them in the objective, or in the target and due date.</p>')}
+  ${ask('If you achieved this, what would it get you?', `<p class="muted">If that answer is the real goal, rewrite the objective. If not, say why this is the right level.</p>${field({ key: 'project:objectiveRationale', label: 'Your answer', srLabel: true, value: P.objectiveRationale, multiline: true, rows: 2, placeholder: 'Your answer' })}`)}
+  ${examples('goal')}`;
+}
+
+function buildWays(M) {
+  const full = M.loes.length >= MAX_WAYS;
+  return `${eyebrow('Question 2 of 4 · Ways')}
+  ${prereq(M, 2)}
+  <h2 class="question">What ways will you use to reach the goal?</h2>
+  <p class="hint">A way is a line of effort, a broad approach such as “Reading workflow” or “Staffing.” For each one, name the single essential action inside it.</p>
+  ${goalRecap(M)}
+  <div class="stack">${M.loes.map(l => wayCard(M, l)).join('') || '<p class="muted">No ways yet. Add the first one below.</p>'}</div>
+  ${full ? '<p class="muted">Eight ways is the limit. If you need more, some of them are probably the same way.</p>'
+    : addRow({ id: 'new-way', label: 'Add a way', placeholder: 'Name of the way', cmd: 'addWay', button: 'Add way' })}
+  ${M.loes.length ? ask('Which one way matters most to the objective?', M.main
+    ? okNote(`You marked <b>${esc(M.main.name)}</b> as the main effort. The other ways support it.`)
+    : '<p class="muted">Mark it as the main effort. The rest support it. This choice decides your center of gravity in question 3.</p>') : ''}
+  ${examples('ways')}`;
+}
+function wayCard(M, l) {
+  const count = [...M.nodes.values()].filter(n => n.loeId === l.id).length;
+  const isMain = l.effort === 'main';
+  const capKey = `loe:${l.id}:capability`;
+  return `<div class="card" ${laneStyle(l)}>
+    <div class="card-head"><span class="swatch"></span><div class="grow">${field({ key: `loe:${l.id}:name`, label: 'Way name', srLabel: true, value: l.name })}</div>
+      ${isMain ? '<span class="pill main">Main effort</span>' : btn('Make main effort', 'setMain', [l.id], 'small', { write: true })}</div>
+    <div class="field"><label for="${fid(capKey)}">Essential action</label><div class="prefixed"><span class="prefix">Someone must</span><input type="text" id="${fid(capKey)}" data-bind="${capKey}" value="${esc(fieldVal(capKey, l.capability))}" placeholder="a verb phrase" autocomplete="off"${dis()}></div></div>
+    ${has(l.capability) ? `<p class="coach-line"><span class="tag">Coach asks</span>Is “${esc(l.capability)}” an action someone performs? If it names a thing, the thing is probably a need for question 4.</p>` : ''}
+    <div class="card-foot"><div class="colors" role="group" aria-label="Color for ${esc(l.name)}">${Array.from({ length: MAX_WAYS }, (_, i) => `<button type="button" class="color-dot" style="--lc:var(--lane-${i})" data-cmd="updateWay" ${dargs(l.id, { color: i })} aria-label="Color ${i + 1}" aria-pressed="${l.color === i}"${dis()}><span></span></button>`).join('')}</div>
+      ${btn('Delete way', 'deleteWay', [l.id], 'small ghost', { write: true, confirm: 'del-way-' + l.id, confirmLabel: count ? `Delete, and move ${count} item${count > 1 ? 's' : ''} to Cross-cutting` : 'Confirm delete' })}</div>
+  </div>`;
+}
+
+function buildDoers(M) {
+  const withCap = M.loes.filter(l => has(l.capability));
+  const noCap = M.loes.filter(l => !has(l.capability));
+  const cog = M.cogId && M.nodes.get(M.cogId);
+  let cogBlock = '';
+  if (cog) {
+    cogBlock = ask(`If ${esc(cog.label)} vanished tomorrow, could anyone else still achieve the objective?`,
+      `<p class="muted">Your main effort is <b>${esc(M.main.name)}</b>, so its doer, <b>${esc(cog.label)}</b>, is your center of gravity. Test that claim. If someone else could step in, the real center of gravity may be elsewhere.</p>${field({ key: 'project:cogRationale', label: 'Your answer', srLabel: true, value: M.P.cogRationale, multiline: true, rows: 2, placeholder: 'Your answer' })}`);
+  } else if (M.main) {
+    cogBlock = ask('', `<p class="muted">Name the doer of your main effort, <b>${esc(M.main.name)}</b>. That doer is your center of gravity.</p>`, 'From your answers');
+  }
+  return `${eyebrow('Question 3 of 4 · Doers')}
+  ${prereq(M, 3)}
+  <h2 class="question">Who or what has the inherent ability to perform each action?</h2>
+  <p class="hint">Name the doer: the person, group, or system that performs the action itself, not something it uses.</p>
+  <blockquote class="def">“The center of gravity is the primary entity that possesses the inherent capability to achieve the objective.”<cite>Dale C. Eikmeier, Military Review, 2017</cite></blockquote>
+  <datalist id="dl-nodes">${[...M.nodes.values()].map(n => `<option value="${esc(n.label)}"></option>`).join('')}</datalist>
+  <div class="stack">${withCap.map(l => doerCard(M, l)).join('') || '<p class="muted">No ways have an essential action yet.</p>'}</div>
+  ${noCap.length ? `<p class="muted">Still without an action in question 2: ${noCap.map(l => esc(l.name)).join(', ')}.</p>` : ''}
+  ${cogBlock}
+  ${examples('doers')}`;
+}
+function doerCard(M, l) {
+  const doer = l.doerNodeId && M.nodes.get(l.doerNodeId);
+  const isMain = l.effort === 'main';
+  const body = doer
+    ? `<div class="doer-row"><span class="doer-name">${esc(doer.label)}</span>${btn('Edit', 'editNode', [doer.id], 'small')}${btn('Change doer', 'clearDoer', [l.id], 'small ghost', { write: true })}</div>
+       <p class="coach-line"><span class="tag">Coach asks</span>Does ${esc(doer.label)} perform this action itself, or is it used by whoever does? If it is used, ask who uses it. That person or group is the doer, and ${esc(doer.label)} belongs in question 4.</p>`
+    : addRow({ id: `doer-${l.id}`, label: 'Who or what does this?', placeholder: 'A person, group, or system', cmd: 'setDoer', pre: [l.id], button: 'Set doer', list: 'dl-nodes' });
+  return `<div class="card" ${laneStyle(l)}>
+    <div class="card-head top"><span class="swatch"></span><span class="card-title grow">${esc(l.name)}</span>${isMain ? '<span class="pill main">Main effort</span>' : ''}${doer && l.doerNodeId === M.cogId ? '<span class="pill cog">Center of gravity</span>' : ''}</div>
+    <p class="muted">Someone must <b>${esc(l.capability)}</b>.</p>
+    ${body}
+  </div>`;
+}
+
+function buildNeeds(M) {
+  const withDoer = M.loes.filter(l => l.doerNodeId && M.nodes.has(l.doerNodeId));
+  const without = M.loes.filter(l => has(l.capability) && !(l.doerNodeId && M.nodes.has(l.doerNodeId)));
+  return `${eyebrow('Question 4 of 4 · Needs')}
+  ${prereq(M, 4)}
+  <h2 class="question">What does each doer require, and which of those are vulnerable?</h2>
+  <p class="hint">List the people, systems, processes, and conditions each doer uses to perform its action. Then mark the ones that are deficient, weak, or at risk, and say why.</p>
+  <datalist id="dl-nodes">${[...M.nodes.values()].map(n => `<option value="${esc(n.label)}"></option>`).join('')}</datalist>
+  <div class="stack">${withDoer.map(l => needsCard(M, l)).join('') || '<p class="muted">No doers yet. Name them in question 3.</p>'}</div>
+  ${without.length ? `<p class="muted">Ways still without a doer: ${without.map(l => esc(l.name)).join(', ')}.</p>` : ''}
+  ${examples('needs')}`;
+}
+function needsCard(M, l) {
+  const doer = M.nodes.get(l.doerNodeId);
+  const reqs = (M.reqsByLoe.get(l.id) || []).map(id => M.nodes.get(id));
+  const rows = reqs.map(n => {
+    const linkId = `uses__${doer.id}__${n.id}`;
+    return `<div class="req${n.vulnerable ? ' is-vuln' : ''}">
+      <div class="req-head"><button type="button" class="linklike" data-cmd="editNode" ${dargs(n.id)}>${esc(n.label)}</button><span class="req-type">${esc(NODE_TYPES[n.type])}</span>
+        ${checkField({ key: `node:${n.id}:vulnerable`, sfx: l.id, label: 'Vulnerable', value: n.vulnerable })}
+        <button type="button" class="icon-btn" data-cmd="unlink" ${dargs(linkId)} aria-label="Remove ${esc(n.label)} from the needs of ${esc(doer.label)}"${dis()}>×</button></div>
+      ${n.vulnerable ? field({ key: `node:${n.id}:rationale`, sfx: l.id, label: `Why is ${n.label} vulnerable?`, value: n.rationale, placeholder: 'What is deficient, weak, or at risk' }) : ''}
+    </div>`;
+  }).join('');
+  return `<div class="card" ${laneStyle(l)}>
+    <div class="card-head top"><span class="swatch"></span><div class="grow"><div class="card-title">${esc(doer.label)}</div><div class="card-sub">uses what to ${esc(l.capability)}?</div></div>${doer.id === M.cogId ? '<span class="pill cog">Center of gravity</span>' : ''}</div>
+    <div class="req-list">${rows || '<p class="muted">No needs yet.</p>'}</div>
+    ${addRow({ id: `req-${l.id}`, label: `Add a need of ${doer.label}`, srLabel: true, placeholder: 'A resource, system, process, or person', cmd: 'addRequirement', pre: [l.id], button: 'Add need', list: 'dl-nodes', extra: draftSelect(`req-type-${l.id}`, typeOptions(), 'resource', 'Kind of need'), extraIds: [`req-type-${l.id}`] })}
+    ${reqs.length ? `<p class="coach-line"><span class="tag">Coach asks</span>Would losing any one of these stop ${esc(doer.label)} from being able to ${esc(l.capability)}? If not, it may be helpful rather than critical.</p>` : ''}
+  </div>`;
+}
+
+function buildLinks(M) {
+  const rel = M.links.slice().sort((a, b) => a.type.localeCompare(b.type) || M.nodes.get(a.source).label.localeCompare(M.nodes.get(b.source).label));
+  const relList = rel.length ? `<ul class="rel-list">${rel.map(k => `<li><span class="t">${esc(M.nodes.get(k.source).label)} <span class="verb">${esc(LINK_TYPES[k.type].verb)}</span> ${esc(M.nodes.get(k.target).label)}</span><button type="button" class="icon-btn" data-cmd="unlink" ${dargs(k.id)} aria-label="Remove this relationship"${dis()}>×</button></li>`).join('')}</ul>` : '<p class="muted">No relationships yet.</p>';
+  const orph = M.orphans.length ? ask('These items have no connections. Are they relevant?', `<ul>${M.orphans.map(n => `<li><button type="button" class="linklike" data-cmd="editNode" ${dargs(n.id)}>${esc(n.label)}</button></li>`).join('')}</ul><p class="muted">Connect them below, or remove them if they do not bear on the objective.</p>`) : '';
+  const shared = M.shared.length ? ask('These needs are shared by more than one doer. Is that dependency real?', `<ul>${M.shared.map(s => `<li><b>${esc(s.node.label)}</b>, used by ${esc(uniq(s.loes.map(l => M.nodes.get(l.doerNodeId).label)).join(' and '))}</li>`).join('')}</ul><p class="muted">Shared needs are often where plans break, because no single way owns them.</p>`) : '';
+  const reviewed = !!M.P.relationshipsReviewed;
+  return `${eyebrow('Connect the pieces')}
+  ${prereq(M, 5)}
+  <h2 class="question">How do the rest of the pieces connect?</h2>
+  <p class="hint">Doers and their needs are already linked. Now add what depends on what, what influences what, and where there is friction. Add any other people or groups that matter, such as stakeholders.</p>
+  <div class="card">
+    ${addRow({ id: 'new-node', label: 'Add another item', placeholder: 'A person, group, system, or condition', cmd: 'addNode', button: 'Add item', extra: draftSelect('new-node-type', typeOptions(), 'actor', 'Kind of item') + draftSelect('new-node-lane', laneOptions(M), '', 'Way it belongs to'), extraIds: ['new-node-type', 'new-node-lane'] })}
+  </div>
+  <div class="card relrow">
+    <p class="card-title">Add a relationship</p>
+    <div class="relrow-line">${draftSelect('rel-from', nodeOptionGroups(M), '', 'From item')}${draftSelect('rel-type', Object.entries(LINK_TYPES).filter(([k]) => k !== 'uses').map(([k, v]) => [k, v.label]).concat([['uses', 'Uses']]), 'depends_on', 'Relationship')}${draftSelect('rel-to', nodeOptionGroups(M), '', 'To item')}</div>
+    <div class="row-actions"><button type="button" class="btn" data-cmd="link" data-from="rel-from,rel-type,rel-to" data-clear="rel-to"${dis()}>Add relationship</button></div>
+  </div>
+  ${relList}
+  ${orph}${shared}
+  ${ask('Have you mapped the relationships that matter?', reviewed
+    ? okNote('Marked as reviewed. You can keep adding relationships at any time.') + `<div class="row-actions">${btn('Mark not reviewed', 'reviewLinks', [false], 'small ghost', { write: true })}</div>`
+    : `<p class="muted">When the map shows the dependencies and frictions your team knows about, mark this step reviewed to open the review.</p><div class="row-actions">${btn('Mark relationships reviewed', 'reviewLinks', [true], 'primary', { write: true })}</div>`)}
+  ${examples('links')}`;
+}
+
+function buildReview(M) {
+  const P = M.P;
+  const oq = openQuestions(M);
+  const cog = M.cogId && M.nodes.get(M.cogId);
+  const tiers = ['critical', 'major', 'minor', 'peripheral'].map(t => {
+    const items = [...M.nodes.values()].filter(n => M.tier.get(n.id) === t).map(n => n.label).sort();
+    return `<div class="tier"><h4>${esc(TIER_LABEL[t])}</h4>${items.length ? `<ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>` : '<p class="fine">None</p>'}</div>`;
+  }).join('');
+  const needs = M.loes.filter(l => M.nodes.has(l.doerNodeId)).map(l => {
+    const doer = M.nodes.get(l.doerNodeId);
+    const reqs = (M.reqsByLoe.get(l.id) || []).map(id => M.nodes.get(id));
+    return `<li><b>${esc(doer.label)}</b> uses ${reqs.length ? reqs.map(n => n.vulnerable ? `<span class="missing">${esc(n.label)} (vulnerable${has(n.rationale) ? ': ' + esc(n.rationale) : ''})</span>` : esc(n.label)).join(', ') : '<span class="missing">nothing named yet</span>'}</li>`;
+  }).join('');
+  return `${eyebrow('Review')}
+  <h2 class="question">Your plan, as you answered it</h2>
+  <p class="hint">This is what your answers say. Read it together as a team and decide whether you agree.</p>
+  <section class="rv"><h3><span class="num">1</span>Goal</h3>
+    <p>${has(P.objective) ? esc(P.objective) : '<span class="missing">No objective yet.</span>'}</p>
+    <dl><dt>Measure</dt><dd>${esc(P.measure || '—')}</dd><dt>Baseline</dt><dd>${esc(P.baseline || '—')}</dd><dt>Target</dt><dd>${esc(P.target || '—')}</dd><dt>Due</dt><dd>${esc(P.dueDate || '—')}</dd></dl>
+    ${has(P.objectiveRationale) ? `<p class="quote">${esc(P.objectiveRationale)}</p>` : ''}</section>
+  <section class="rv"><h3><span class="num">2</span>Ways</h3>
+    <ul>${M.loes.map(l => `<li><b>${esc(l.name)}</b>${l.effort === 'main' ? ' (main effort)' : ''}: someone must ${has(l.capability) ? esc(l.capability) : '<span class="missing">action not named</span>'}</li>`).join('') || '<li class="missing">No ways yet.</li>'}</ul></section>
+  <section class="rv"><h3><span class="num">3</span>Doers and center of gravity</h3>
+    <ul>${M.loes.filter(l => has(l.capability)).map(l => `<li>${esc(l.capability)}: ${M.nodes.has(l.doerNodeId) ? `<b>${esc(M.nodes.get(l.doerNodeId).label)}</b>` : '<span class="missing">no doer named</span>'}</li>`).join('')}</ul>
+    ${cog ? `<p>Center of gravity: <b>${esc(cog.label)}</b>.</p>${has(P.cogRationale) ? `<p class="quote">${esc(P.cogRationale)}</p>` : ''}` : '<p class="missing">No center of gravity yet.</p>'}</section>
+  <section class="rv"><h3><span class="num">4</span>Needs and vulnerabilities</h3><ul>${needs || '<li class="missing">No needs yet.</li>'}</ul></section>
+  ${ask('Do these tiers match what your team believes?', `<p class="muted">Based on your links. Critical items serve the center of gravity. Major items serve the supporting ways. Minor items connect to something. Peripheral items connect to nothing.</p><div class="tiers">${tiers}</div><div class="row-actions">${btn(ui.focus ? 'Focus is on' : 'Fade minor and peripheral items on the map', 'focus', [true], 'small')}${isPhone() ? btn('Show the map', 'tab', ['map'], 'small') : ''}</div>`, 'From your answers')}
+  ${ask(oq.length ? `${oq.length} open question${oq.length > 1 ? 's' : ''}` : 'No open questions', oq.length
+    ? `<ul class="oq">${oq.map(q => `<li><span>${esc(q.text)}</span>${q.node ? btn('Open item', 'editNode', [q.node], 'small') : btn(`Go to ${q.step >= 1 && q.step <= 4 ? 'question ' + q.step : 'links'}`, 'goto', [q.step], 'small')}</li>`).join('')}</ul>`
+    : okNote('Every question has an answer. Revisit them as the project changes.'))}
+  <div class="row-actions">${btn('Copy data', 'copyData', [], 'small')}</div>`;
+}
+
+function buildNodeEditor(M, id) {
+  const n = M.nodes.get(id);
+  if (!n) return `<p class="muted">That item is no longer on the map.</p>${btn('Back', 'closeEditor', [], 'small')}`;
+  const roles = [];
+  if (id === M.cogId) roles.push('This is your center of gravity.');
+  for (const l of M.doerLoes.get(id) || []) roles.push(`Doer of “${l.capability || l.name}”.`);
+  const owners = M.reqOwners.get(id);
+  if (owners) roles.push(`Needed by ${uniq(owners.map(l => M.nodes.get(l.doerNodeId).label)).join(', ')}.`);
+  roles.push(`Tier: ${TIER_LABEL[M.tier.get(id)]}.`);
+  const mine = M.links.filter(k => k.source === id || k.target === id);
+  const relList = mine.length ? `<ul class="rel-list">${mine.map(k => `<li><span class="t">${esc(M.nodes.get(k.source).label)} <span class="verb">${esc(LINK_TYPES[k.type].verb)}</span> ${esc(M.nodes.get(k.target).label)}</span><button type="button" class="icon-btn" data-cmd="unlink" ${dargs(k.id)} aria-label="Remove this relationship"${dis()}>×</button></li>`).join('')}</ul>` : '<p class="muted">No relationships yet.</p>';
+  const others = nodeOptionGroups(M).map(o => (o.group ? { group: o.group, items: o.items.filter(([v]) => v !== id) } : o)).filter(o => !o.group || o.items.length);
+  return `${eyebrow('Item')}
+  <h2 class="question">${esc(n.label)}</h2>
+  ${ask('', `<ul>${roles.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`, 'From your answers')}
+  ${field({ key: `node:${id}:label`, label: 'Name', value: n.label })}
+  <div class="grid-2">${selectField({ key: `node:${id}:type`, label: 'Kind', value: n.type, options: typeOptions() })}${selectField({ key: `node:${id}:loeId`, label: 'Way', value: n.loeId || '', options: laneOptions(M) })}</div>
+  ${checkField({ key: `node:${id}:vulnerable`, label: 'Deficient, weak, or at risk', value: n.vulnerable })}
+  ${n.vulnerable ? field({ key: `node:${id}:rationale`, label: 'Why?', value: n.rationale, placeholder: 'What is deficient, weak, or at risk' }) : ''}
+  ${field({ key: `node:${id}:owner`, label: 'Owner', value: n.owner, placeholder: 'Who on the team watches this' })}
+  ${field({ key: `node:${id}:notes`, label: 'Notes', value: n.notes, multiline: true, rows: 3 })}
+  <section class="rv"><h3>Relationships</h3>${relList}
+    <div class="relrow-line"><span class="muted">${esc(n.label)}</span>${draftSelect('ed-rel-type', Object.entries(LINK_TYPES).map(([k, v]) => [k, v.label]), 'depends_on', 'Relationship')}${draftSelect('ed-rel-to', others, '', 'To item')}</div>
+    <div class="row-actions"><button type="button" class="btn small" data-cmd="link" ${dargs(id)} data-from="ed-rel-type,ed-rel-to" data-clear="ed-rel-to"${dis()}>Add relationship</button></div></section>
+  <div class="row-actions">${btn('Done', 'closeEditor', [], 'primary')}${btn('Delete item', 'deleteNode', [id], 'ghost', { write: true, confirm: 'del-node-' + id, confirmLabel: 'Confirm: delete item and its links' })}</div>`;
+}
+
+/* ================================================================
+   Coach: rendering with focus preservation
+   ================================================================ */
+const els = {};
+function coachTextFocused() {
+  const a = document.activeElement;
+  return !!a && els.body.contains(a) && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit'].includes(a.type)));
+}
+function renderCoach(M) {
+  const forced = performance.now() < ui.forceUntil;
+  if (ui.composing || (!forced && coachTextFocused())) { ui.coachDirty = true; return; }
+  ui.coachDirty = false;
+  const a = document.activeElement;
+  const aid = a && els.body.contains(a) ? a.id : null;
+  let s0 = null, s1 = null;
+  try { if (aid && typeof a.selectionStart === 'number') { s0 = a.selectionStart; s1 = a.selectionEnd; } } catch (e) { /* not a text control */ }
+  const top = els.scroll.scrollTop;
+  const build = [buildStart, buildGoal, buildWays, buildDoers, buildNeeds, buildLinks, buildReview][ui.step] || buildStart;
+  els.body.innerHTML = ui.editNode ? buildNodeEditor(M, ui.editNode) : build(M);
+  if (ui.scrollTop) { els.scroll.scrollTop = 0; ui.scrollTop = false; } else els.scroll.scrollTop = top;
+  if (aid) {
+    const el = document.getElementById(aid);
+    if (el && !el.disabled) {
+      el.focus({ preventScroll: true });
+      try { if (s0 != null) el.setSelectionRange(s0, s1); } catch (e) { /* not a text control */ }
+    }
+  }
+}
+function renderRail(M) {
+  const reach = reachable(M);
+  els.rail.innerHTML = STEPS.map((s, i) => {
+    const locked = i > reach;
+    const cur = i === ui.step && !ui.editNode;
+    return `<button type="button" class="rail-step" data-cmd="goto" ${dargs(i)}${locked ? ' disabled' : ''}${cur ? ' aria-current="step"' : ''}${locked ? ` title="${esc(NEXT_REASON[i - 1] || '')}"` : ''}>${s.n ? `<span class="num">${s.n}</span>` : ''}<span>${s.short}</span>${locked ? LOCK_SVG : ''}</button>`;
+  }).join('');
+  const cur = els.rail.querySelector('[aria-current]');
+  if (cur && isPhone()) els.rail.scrollLeft = Math.max(0, cur.offsetLeft - (els.rail.clientWidth - cur.offsetWidth) / 2);
+}
+function renderFoot(M) {
+  if (ui.editNode) { els.foot.innerHTML = `${btn('Back to the question', 'closeEditor', [], '')}`; return; }
+  const reach = reachable(M);
+  const s = ui.step;
+  const last = s >= STEPS.length - 1;
+  const nextOpen = !last && s + 1 <= reach;
+  els.foot.innerHTML = `<button type="button" class="btn" data-cmd="back"${s === 0 ? ' disabled' : ''}>Back</button>
+    <span class="why">${!last && !nextOpen ? esc(NEXT_REASON[s] || '') : ''}</span>
+    ${last ? '' : `<button type="button" class="btn primary" data-cmd="next"${nextOpen ? '' : ' disabled'}>Next</button>`}`;
+}
+function renderBanners() {
+  let h = '';
+  if (ui.demo) h = `<div class="banner demo"><p><b>Worked example.</b> Nothing here is saved.<span class="long"> It is a finished map for an ED CT turnaround project. Step through the questions to see its answers. Your team's map is untouched.</span></p>${btn('Back to your map', 'demo', [false], 'small')}</div>`;
+  else if (ui.mode === 'connecting' || (ui.mode === 'live' && !loaded())) h = '<div class="banner"><p>Connecting to your team\'s map…</p></div>';
+  else if (ui.mode === 'local') h = '<div class="banner warn"><p>Shared saving is not available in this view. Answers on this page will be lost when you close it.</p></div>';
+  else if (ui.readOnly) h = '<div class="banner"><p>You can view this map but not change it. To answer, ask the owner to invite you as an Editor.</p></div>';
+  if (els.banners.innerHTML !== h) els.banners.innerHTML = h;
+}
+let toastTimer = 0;
+function toast(msg) {
+  if (!els.toast) return;
+  els.toast.textContent = msg;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { els.toast.textContent = ''; }, 6000);
+}
+
+/* ================================================================
+   Map: shared
+   ================================================================ */
+let zoom = null;
+let svgSel = null;
+let sim = null;
+let G = new Map();
+let GL = [];
+let topoSig = '';
+let netFresh = true;
+
+function clearLayers() {
+  for (const id of ['lane-layer', 'link-layer', 'node-layer']) $(id).replaceChildren();
+}
+function resetGraph() {
+  G = new Map(); GL = []; topoSig = ''; netFresh = true;
+  if (sim) { sim.stop(); sim.nodes([]); }
+}
+function laneOf(M, id) {
+  if (id === 'obj') return null;
+  if (String(id).startsWith('cap:')) return id.slice(4);
+  const n = M.nodes.get(id);
+  return n ? (n.loeId || '__cross') : null;
+}
+function highlighter(M) {
+  const sel = ui.selected && (M.nodes.has(ui.selected) || ui.selected === 'obj' || (String(ui.selected).startsWith('cap:') && M.loeById.has(ui.selected.slice(4)))) ? ui.selected : null;
+  const nb = sel ? new Set([sel, ...(M.adj.get(sel) || [])]) : null;
+  const lanesOn = ui.lanesOn.length ? new Set(ui.lanesOn) : null;
+  const dimNode = id => {
+    if (nb) return !nb.has(id);
+    if (ui.focus) { const t = M.tier.get(id); if (t === 'minor' || t === 'peripheral') return true; }
+    if (lanesOn) { const l = laneOf(M, id); if (l && !lanesOn.has(l)) return true; }
+    return false;
+  };
+  const dimLink = (s, t) => (nb ? !(s === sel || t === sel) : dimNode(s) || dimNode(t));
+  const hotLink = (s, t) => !!nb && (s === sel || t === sel);
+  return { sel, dimNode, dimLink, hotLink };
+}
+function shapePath(kind, r) {
+  switch (kind) {
+    case 'actor': return `M${-r},0a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0Z`;
+    case 'system': { const s = r * 0.86; return `M${-s},${-s}H${s}V${s}H${-s}Z`; }
+    case 'process': { const p = []; for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i; p.push(`${(r * Math.cos(a)).toFixed(2)},${(r * Math.sin(a)).toFixed(2)}`); } return `M${p.join('L')}Z`; }
+    case 'resource': { const h = r * 1.05; return `M0,${-h}L${h * 1.1},${h * 0.85}H${-h * 1.1}Z`; }
+    case 'capability': { const d = r * 1.3; return `M0,${-d}L${d},0L0,${d}L${-d},0Z`; }
+    case 'objective': return 'M-38,-18H38V18H-38Z';
+    default: return `M${-r},0a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0Z`;
+  }
+}
+function setLines(el, lines, x, lh) {
+  const t = d3.select(el);
+  t.selectAll('tspan').remove();
+  lines.forEach((l, i) => t.append('tspan').attr('x', x).attr('dy', i ? lh : 0).text(l));
+}
+function ensureG(parent, cls) {
+  let g = parent.querySelector(':scope > g.' + cls);
+  if (!g) { g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', cls); parent.appendChild(g); }
+  return g;
+}
+function initMap() {
+  if (!HAS_D3) return;
+  svgSel = d3.select('#map-svg');
+  zoom = d3.zoom().scaleExtent([0.25, 2.5]).on('zoom', e => {
+    $('zoom-root').setAttribute('transform', e.transform);
+    if (e.sourceEvent) ui.userZoomed[ui.view] = true;
+    stickyLabels(e.transform);
+  });
+  svgSel.call(zoom).on('dblclick.zoom', null);
+  svgSel.on('click', e => {
+    const t = e.target;
+    if (t === svgSel.node() || (t.classList && (t.classList.contains('lane-band') || t.classList.contains('col-head')))) { if (ui.selected) cmd.select(null); }
+  });
+  sim = d3.forceSimulation()
+    .force('link', d3.forceLink().distance(l => (l.type === 'does' || l.type === 'serves' ? 60 : 85)).strength(0.45))
+    .force('charge', d3.forceManyBody().strength(-320))
+    .force('collide', d3.forceCollide().radius(d => d.r + 20))
+    .force('x', d3.forceX(d => d.tx).strength(0.05))
+    .force('y', d3.forceY(d => d.ty).strength(0.07))
+    .on('tick', () => { if (ui.view === 'network') tickNetwork(); })
+    .stop();
+  new ResizeObserver(() => { if (!ui.userZoomed[ui.view]) fitView(false); }).observe($('canvas'));
+}
+function fitView(animate) {
+  if (!HAS_D3) return;
+  const svg = svgSel.node();
+  const W = svg.clientWidth, H = svg.clientHeight;
+  if (!W || !H) return;
+  let box;
+  try { box = $('zoom-root').getBBox(); } catch (e) { return; }
+  if (!box || !box.width || !box.height) return;
+  const pad = 16;
+  let k = Math.min((W - pad * 2) / box.width, (H - pad * 2) / box.height, ui.view === 'network' ? 1.3 : 1.15);
+  let tx, ty;
+  const minK = ui.view === 'lanes' ? 0.62 : 0.3;
+  if (k < minK) {
+    k = minK;
+    const fx = ui.view === 'lanes' && lastLanes ? lastLanes.focusX : box.x + box.width / 2;
+    tx = Math.min(pad - box.x * k, Math.max(W - pad - (box.x + box.width) * k, W / 2 - fx * k));
+    ty = pad - box.y * k;
+  } else { tx = (W - box.width * k) / 2 - box.x * k; ty = Math.max(pad, (H - box.height * k) / 2) - box.y * k; }
+  const t = d3.zoomIdentity.translate(tx, ty).scale(k);
+  (animate && !REDUCED ? svgSel.transition().duration(280) : svgSel).call(zoom.transform, t);
+}
+
+function renderMap(M) {
+  const msg = $('map-msg');
+  if (!HAS_D3) { msg.hidden = false; msg.textContent = 'The map library did not load. The coach still works, and the map will appear when the page can reach cdnjs.cloudflare.com.'; return; }
+  if (ui.view === 'lanes') { renderLanes(M); msg.hidden = true; }
+  else {
+    const any = renderNetwork(M);
+    msg.hidden = any;
+    if (!any) msg.textContent = 'Answer question 1 to start the map.';
+  }
+  if (!ui.userZoomed[ui.view]) fitView(false);
+}
+
+/* ================================================================
+   Map: swim-lane view
+   ================================================================ */
+const LV = { headH: 34, labelW: 150, colW: 178, nodeW: 154, nodeH: 46, gapY: 12, padY: 22, laneGap: 6, objW: 200, objGap: 14 };
+let lastLanes = null;
+const COL_TEXT = { U: 'Indirect', 3: 'Third-order needs', 2: 'Second-order needs', 1: 'Direct needs', 0: 'Doer', C: 'Essential action' };
+
+function layoutLanes(M) {
+  const lanes = M.loes.map(l => ({ key: l.id, loe: l, name: l.name, color: l.color ?? 0, main: l.effort === 'main' }));
+  const crossNodes = [...M.nodes.values()].filter(n => !n.loeId);
+  if (crossNodes.length) lanes.push({ key: '__cross', loe: null, name: 'Cross-cutting', color: null, cross: true });
+  if (!lanes.length) lanes.push({ key: '__ph', loe: null, name: 'Your first way', color: null, ph: true });
+  const colOf = n => { const d = M.depth.get(n.id); return d === undefined ? 'U' : String(Math.min(d, 3)); };
+  const used = new Set(['0', '1']);
+  let hasU = false;
+  for (const n of M.nodes.values()) { const c = colOf(n); if (c === 'U') hasU = true; else used.add(c); }
+  const cols = [];
+  if (hasU) cols.push('U');
+  for (const c of ['3', '2', '1', '0']) if (used.has(c)) cols.push(c);
+  cols.push('C');
+  const colX = new Map(cols.map((c, i) => [c, LV.labelW + i * LV.colW]));
+  const cell = c => colX.get(c) + (LV.colW - LV.nodeW) / 2;
+  const rects = new Map();
+  const caps = [];
+  const placeholders = [];
+  let y = LV.headH;
+  for (const lane of lanes) {
+    const cells = new Map(cols.map(c => [c, []]));
+    for (const n of M.nodes.values()) {
+      const inLane = lane.cross ? !n.loeId : n.loeId === lane.key;
+      if (inLane) cells.get(colOf(n)).push(n);
+    }
+    for (const arr of cells.values()) arr.sort((a, b) => ((b.vulnerable ? 1 : 0) - (a.vulnerable ? 1 : 0)) || a.label.localeCompare(b.label));
+    const ph = [];
+    if (lane.ph) {
+      ph.push({ col: '1', q: 4, text: 'What does the doer use?' }, { col: '0', q: 3, text: 'Who does the action?' });
+    } else if (!lane.cross) {
+      const l = lane.loe;
+      if (!(l.doerNodeId && M.nodes.has(l.doerNodeId))) ph.push({ col: '0', q: 3, text: 'Who does the action?' });
+      else if (!(M.reqsByLoe.get(l.id) || []).length) ph.push({ col: '1', q: 4, text: 'What does the doer use?' });
+    }
+    const count = c => cells.get(c).length + ph.filter(p => p.col === c).length;
+    const rows = Math.max(1, ...cols.map(count));
+    const h = rows * (LV.nodeH + LV.gapY) - LV.gapY + 2 * LV.padY;
+    lane.y = y; lane.h = Math.max(h, 92);
+    for (const c of cols) {
+      const n = count(c);
+      let yy = y + (lane.h - (n * (LV.nodeH + LV.gapY) - LV.gapY)) / 2;
+      for (const node of cells.get(c)) { rects.set(node.id, { x: cell(c), y: yy, w: LV.nodeW, h: LV.nodeH }); yy += LV.nodeH + LV.gapY; }
+      for (const p of ph.filter(q => q.col === c)) { placeholders.push({ ...p, key: `${lane.key}:${c}`, x: cell(c), y: yy, w: LV.nodeW, h: LV.nodeH, lane }); yy += LV.nodeH + LV.gapY; }
+    }
+    if (!lane.cross) {
+      const cx = cell('C'), cy = y + (lane.h - LV.nodeH) / 2;
+      const l = lane.loe;
+      if (l && has(l.capability)) caps.push({ id: 'cap:' + l.id, loe: l, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, text: l.capability });
+      else placeholders.push({ key: `${lane.key}:C`, col: 'C', q: 2, text: 'What is the action?', chevron: true, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, lane });
+    }
+    y += lane.h + LV.laneGap;
+  }
+  const height = y - LV.laneGap;
+  const objX = LV.labelW + cols.length * LV.colW + LV.objGap;
+  const obj = { x: objX, y: LV.headH, w: LV.objW, h: height - LV.headH };
+  const heads = cols.map(c => ({ key: c, x: colX.get(c) + LV.colW / 2, text: COL_TEXT[c] })).concat([{ key: 'O', x: objX + LV.objW / 2, text: 'Objective' }]);
+  return { lanes, cols, rects, caps, placeholders, obj, heads, width: objX + LV.objW, height, focusX: colX.get('0') + LV.colW / 2 };
+}
+
+function lanePath(a, b) {
+  const ay = a.y + a.h / 2, by = b.y + b.h / 2;
+  if (a.x + a.w <= b.x - 2) { const x1 = a.x + a.w, x2 = b.x, dx = (x2 - x1) / 2; return `M${x1},${ay}C${x1 + dx},${ay} ${x2 - dx},${by} ${x2},${by}`; }
+  if (b.x + b.w <= a.x - 2) { const x1 = a.x, x2 = b.x + b.w, dx = (x1 - x2) / 2; return `M${x1},${ay}C${x1 - dx},${ay} ${x2 + dx},${by} ${x2},${by}`; }
+  const x1 = a.x + a.w, x2 = b.x + b.w, bulge = 24 + Math.min(36, Math.abs(by - ay) * 0.12);
+  return `M${x1},${ay}C${x1 + bulge},${ay} ${x2 + bulge},${by} ${x2},${by}`;
+}
+
+function renderLanes(M) {
+  const L = layoutLanes(M);
+  lastLanes = L;
+  const H = highlighter(M);
+  const laneLayer = $('lane-layer');
+  const bandG = ensureG(laneLayer, 'bands');
+  const headG = ensureG(laneLayer, 'heads');
+  const objG = ensureG(laneLayer, 'objs');
+
+  d3.select(headG).selectAll('text.col-head').data(L.heads, d => d.key).join('text')
+    .attr('class', 'col-head').attr('x', d => d.x).attr('y', 21).attr('text-anchor', 'middle').text(d => d.text);
+
+  const lanes = d3.select(bandG).selectAll('g.lane').data(L.lanes, d => d.key).join(enter => {
+    const g = enter.append('g');
+    g.append('rect').attr('class', 'lane-band');
+    g.append('circle').attr('class', 'lane-swatch').attr('r', 5);
+    g.append('text').attr('class', 'lane-name');
+    g.append('text').attr('class', 'lane-effort');
+    const mini = g.append('g').attr('class', 'lane-mini').attr('display', 'none');
+    mini.append('rect').attr('rx', 5).attr('height', 19);
+    mini.append('circle').attr('class', 'lane-swatch').attr('r', 4);
+    mini.append('text');
+    return g;
+  });
+  lanes.attr('class', d => `lane${d.cross ? ' cross' : ''}${d.ph ? ' ph' : ''}${d.main ? ' is-main' : ''}${ui.lanesOn.length && !ui.lanesOn.includes(d.key) && !H.sel ? ' is-dim' : ''}`)
+    .attr('style', d => (d.color != null ? `--lc:var(--lane-${d.color})` : null));
+  lanes.select('rect').attr('x', 0).attr('y', d => d.y).attr('width', L.obj.x - LV.objGap / 2).attr('height', d => d.h).attr('rx', 7);
+  lanes.select('circle').attr('cx', 16).attr('cy', d => d.y + 22).attr('display', d => (d.color == null ? 'none' : null));
+  lanes.select('text.lane-name').attr('y', d => d.y + 27).each(function (d) { setLines(this, wrap(d.name, 16, 3), 28, 17); });
+  lanes.select('text.lane-effort').attr('x', 28).attr('y', d => d.y + 27 + wrap(d.name, 16, 3).length * 17 + 1)
+    .text(d => (d.cross ? 'Shared items' : d.ph ? 'Question 2' : d.main ? 'Main effort' : 'Supporting'));
+  lanes.select('g.lane-mini rect').attr('x', 4).attr('y', d => d.y + 3).attr('width', d => 26 + trunc(d.name, 26).length * 6.6);
+  lanes.select('g.lane-mini circle').attr('cx', 15).attr('cy', d => d.y + 12.5).attr('display', d => (d.color == null ? 'none' : null));
+  lanes.select('g.lane-mini text').attr('x', 24).attr('y', d => d.y + 17).text(d => trunc(d.name, 26));
+
+  // Objective block spanning all lanes
+  const og = d3.select(objG).selectAll('g.objblock').data([L.obj]).join(enter => {
+    const g = enter.append('g').attr('class', 'objblock').attr('tabindex', 0).attr('role', 'button');
+    g.on('click', e => { e.stopPropagation(); cmd.select('obj'); }).on('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cmd.select('obj'); } });
+    return g;
+  });
+  og.attr('class', `objblock${has(M.P.objective) ? '' : ' ph'}${H.dimNode('obj') ? ' is-dim' : ''}`)
+    .attr('aria-label', has(M.P.objective) ? `Objective: ${M.P.objective}` : 'Objective not set');
+  og.each(function (d) {
+    const g = d3.select(this);
+    g.selectAll('*').remove();
+    g.append('rect').attr('class', 'obj-box').attr('x', d.x).attr('y', d.y).attr('width', d.w).attr('height', d.h).attr('rx', 9);
+    g.append('text').attr('class', 'obj-eyebrow').attr('x', d.x + 14).attr('y', d.y + 24).text(has(M.P.objective) ? 'Objective' : 'Question 1');
+    const maxLines = Math.max(2, Math.floor((d.h - 130) / 19));
+    const lines = has(M.P.objective) ? wrap(M.P.objective, 22, Math.min(maxLines, 12)) : ['What are you trying', 'to achieve?'];
+    const t = g.append('text').attr('class', 'obj-text').attr('x', d.x + 14).attr('y', d.y + 48);
+    setLines(t.node(), lines, d.x + 14, 19);
+    let yy = d.y + 48 + lines.length * 19 + 14;
+    for (const [k, v] of [['Baseline', M.P.baseline], ['Target', M.P.target], ['Due', M.P.dueDate]]) {
+      if (!has(v) || yy > d.y + d.h - 20) continue;
+      g.append('text').attr('class', 'obj-meta obj-meta-k').attr('x', d.x + 14).attr('y', yy).text(k);
+      g.append('text').attr('class', 'obj-meta').attr('x', d.x + 84).attr('y', yy).text(trunc(v, 16));
+      yy += 18;
+    }
+    g.append('title').text(has(M.P.objective) ? M.P.objective : 'Objective: answer question 1');
+  });
+
+  // Links
+  const segs = [];
+  for (const k of M.links) {
+    const a = L.rects.get(k.source), b = L.rects.get(k.target);
+    if (a && b) segs.push({ id: k.id, type: k.type, a, b, s: k.source, t: k.target });
+  }
+  for (const c of L.caps) {
+    const d = c.loe.doerNodeId && L.rects.get(c.loe.doerNodeId);
+    if (d) segs.push({ id: 'does:' + c.loe.id, type: 'does', a: d, b: c, s: c.loe.doerNodeId, t: c.id });
+    segs.push({ id: 'serves:' + c.loe.id, type: 'serves', a: c, b: { x: L.obj.x, y: c.y, w: 0, h: c.h }, s: c.id, t: 'obj' });
+  }
+  d3.select('#link-layer').selectAll('path.link').data(segs, d => d.id).join('path')
+    .attr('class', d => `link t-${d.type}${H.hotLink(d.s, d.t) ? ' is-hot' : ''}${H.dimLink(d.s, d.t) ? ' is-dim' : ''}`)
+    .attr('d', d => lanePath(d.a, d.b))
+    .attr('marker-end', d => (d.type === 'tension' ? null : `url(#mk-${d.type})`));
+
+  // Nodes, actions, placeholders
+  const items = [
+    ...[...L.rects].map(([id, r]) => ({ key: id, kind: 'node', id, r, n: M.nodes.get(id) })),
+    ...L.caps.map(c => ({ key: c.id, kind: 'cap', id: c.id, r: c, text: c.text, loe: c.loe })),
+    ...L.placeholders.map(p => ({ key: 'ph:' + p.key, kind: 'ph', r: p, p })),
+  ];
+  const sel = d3.select('#node-layer').selectAll('g.lnode').data(items, d => d.key).join(enter => {
+    const g = enter.append('g').attr('tabindex', 0).attr('role', 'button');
+    g.on('click', (e, d) => { e.stopPropagation(); laneItemClick(d); })
+      .on('keydown', (e, d) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); laneItemClick(d); } });
+    return g;
+  });
+  sel.attr('transform', d => `translate(${d.r.x},${d.r.y})`)
+    .attr('class', d => laneItemClass(M, H, d))
+    .attr('style', d => laneItemStyle(M, d))
+    .attr('aria-label', d => laneItemLabel(M, d));
+  sel.each(function (d) { drawLaneItem(this, d, M); });
+  stickyLabels(d3.zoomTransform(svgSel.node()));
+}
+function stickyLabels(t) {
+  if (ui.view !== 'lanes') return;
+  const lx = -t.x / t.k;
+  d3.select('#lane-layer').selectAll('g.lane-mini').attr('transform', `translate(${Math.max(0, lx)},0)`).attr('display', lx > 60 ? null : 'none');
+}
+function laneItemClick(d) {
+  if (d.kind === 'ph') { if (d.p.q <= reachable(model())) cmd.goto(d.p.q); else toast(NEXT_REASON[d.p.q - 1] || 'Answer the earlier questions first.'); return; }
+  cmd.select(ui.selected === d.id ? null : d.id);
+}
+function laneItemClass(M, H, d) {
+  if (d.kind === 'ph') return 'lnode ph';
+  const c = ['lnode', d.kind];
+  if (d.kind === 'node') {
+    if (d.id === M.cogId) c.push('is-cog');
+    if (M.doerLoes.has(d.id)) c.push('is-doer');
+    if (M.reqOwners.has(d.id)) c.push('is-req');
+    if (!(M.degree.get(d.id) > 0) && !M.doerLoes.has(d.id)) c.push('is-orphan');
+    if (d.n.vulnerable) c.push(M.reqOwners.has(d.id) ? 'is-vuln' : 'is-atrisk');
+  }
+  if (H.sel === d.id) c.push('is-sel');
+  if (H.dimNode(d.id)) c.push('is-dim');
+  return c.join(' ');
+}
+function laneItemStyle(M, d) {
+  if (d.kind === 'node') { const l = d.n.loeId && M.loeById.get(d.n.loeId); return `--lc:var(--lane-${l ? l.color ?? 0 : 7})`; }
+  if (d.kind === 'cap') return `--lc:var(--lane-${d.loe.color ?? 0})`;
+  return null;
+}
+function laneItemLabel(M, d) {
+  if (d.kind === 'ph') return `Question ${d.p.q}: ${d.p.text}`;
+  if (d.kind === 'cap') return `Essential action: ${d.text}`;
+  const parts = [d.n.label, NODE_TYPES[d.n.type]];
+  if (d.id === M.cogId) parts.push('center of gravity');
+  if (d.n.vulnerable) parts.push('vulnerable');
+  return parts.join(', ');
+}
+function drawLaneItem(el, d, M) {
+  const g = d3.select(el);
+  g.selectAll('*').remove();
+  const { w, h } = d.r;
+  if (d.kind === 'ph') {
+    if (d.p.chevron) g.append('path').attr('class', 'cbox').attr('d', `M0,0H${w - 14}L${w},${h / 2}L${w - 14},${h}H0Z`);
+    else g.append('rect').attr('class', 'nbox').attr('width', w).attr('height', h).attr('rx', 7);
+    g.append('text').attr('class', 'ph-q').attr('x', 12).attr('y', 18).text(`Question ${d.p.q}`);
+    g.append('text').attr('class', 'ph-t').attr('x', 12).attr('y', 35).text(d.p.text);
+    return;
+  }
+  if (d.kind === 'cap') {
+    g.append('path').attr('class', 'cbox').attr('d', `M0,0H${w - 14}L${w},${h / 2}L${w - 14},${h}H0Z`);
+    const lines = wrap(d.text, 20, 2);
+    const t = g.append('text').attr('class', 'clabel').attr('y', h / 2 - (lines.length - 1) * 7 + 4);
+    setLines(t.node(), lines, 11, 14);
+    g.append('title').text(`Someone must ${d.text}`);
+    return;
+  }
+  const n = d.n;
+  if (d.id === M.cogId) g.append('rect').attr('class', 'cog-ring').attr('x', -4).attr('y', -4).attr('width', w + 8).attr('height', h + 8).attr('rx', 10);
+  g.append('rect').attr('class', 'nbox').attr('width', w).attr('height', h).attr('rx', 7);
+  g.append('path').attr('class', 'glyph').attr('transform', `translate(14,${h / 2})`).attr('d', shapePath(n.type, 5));
+  const lines = wrap(n.label, 19, 2);
+  const t = g.append('text').attr('class', 'nlabel').attr('y', h / 2 - (lines.length - 1) * 7 + 4);
+  setLines(t.node(), lines, 26, 14);
+  if (n.vulnerable) {
+    const b = g.append('g').attr('class', 'vbadge').attr('transform', `translate(${w - 2},2)`);
+    b.append('circle').attr('r', 8);
+    b.append('text').attr('text-anchor', 'middle').attr('y', 4).text('!');
+  }
+  if (d.id === M.cogId) {
+    const tg = g.append('g').attr('class', 'cog-tag').attr('transform', `translate(${w - 50},-11)`);
+    tg.append('rect').attr('width', 34).attr('height', 15).attr('rx', 3);
+    tg.append('text').attr('x', 17).attr('y', 11).attr('text-anchor', 'middle').text('COG');
+  }
+  g.append('title').text(n.vulnerable && has(n.rationale) ? `${n.label}. Vulnerable: ${n.rationale}` : n.label);
+}
+
+/* ================================================================
+   Map: network view
+   ================================================================ */
+function netWant(M) {
+  const laneIdx = new Map(M.loes.map((l, i) => [l.id, i]));
+  const nL = M.loes.length;
+  const colOf = id => { const d = M.depth.get(id); return d === undefined ? 0 : 4 - Math.min(d, 3); };
+  const out = [];
+  for (const n of M.nodes.values()) {
+    const l = n.loeId && M.loeById.get(n.loeId);
+    out.push({ id: n.id, kind: n.type, label: n.label, color: l ? l.color ?? 0 : 7, lane: l ? laneIdx.get(l.id) : nL, col: colOf(n.id), r: n.type === 'actor' ? 17 : 14 });
+  }
+  for (const l of M.loes) if (has(l.capability)) out.push({ id: 'cap:' + l.id, kind: 'capability', label: l.capability, color: l.color ?? 0, lane: laneIdx.get(l.id), col: 5, r: 12 });
+  if (has(M.P.objective) || nL) out.push({ id: 'obj', kind: 'objective', label: has(M.P.objective) ? M.P.objective : 'Objective', color: null, lane: Math.max(nL - 1, 0) / 2, col: 6.3, r: 26 });
+  return out;
+}
+function netLinks(M) {
+  const out = M.links.map(k => ({ id: k.id, type: k.type, s: k.source, t: k.target }));
+  for (const l of M.loes) {
+    if (!has(l.capability)) continue;
+    if (l.doerNodeId && M.nodes.has(l.doerNodeId)) out.push({ id: 'does:' + l.id, type: 'does', s: l.doerNodeId, t: 'cap:' + l.id });
+    out.push({ id: 'serves:' + l.id, type: 'serves', s: 'cap:' + l.id, t: 'obj' });
+  }
+  return out;
+}
+function syncNet(M) {
+  let topo = false;
+  const next = new Map();
+  for (const w of netWant(M)) {
+    let n = G.get(w.id);
+    const tx = w.col * 150, ty = w.lane * 140;
+    if (!n) { n = { id: w.id, x: tx + (Math.random() - 0.5) * 40, y: ty + (Math.random() - 0.5) * 40 }; topo = true; }
+    Object.assign(n, w, { tx, ty });
+    next.set(w.id, n);
+  }
+  if (next.size !== G.size) topo = true;
+  G = next;
+  GL = netLinks(M).filter(l => G.has(l.s) && G.has(l.t)).map(l => ({ id: l.id, type: l.type, source: G.get(l.s), target: G.get(l.t) }));
+  const sig = [...G.keys()].sort().join('|') + '#' + GL.map(l => l.id).sort().join('|');
+  if (sig !== topoSig) { topo = true; topoSig = sig; }
+  return topo;
+}
+function renderNetwork(M) {
+  const topo = syncNet(M);
+  const nodes = [...G.values()];
+  if (topo) {
+    sim.nodes(nodes);
+    sim.force('link').links(GL);
+    if (netFresh || REDUCED) { sim.alpha(1); for (let i = 0; i < 320; i++) sim.tick(); sim.stop(); netFresh = false; }
+    else sim.alpha(0.45).restart();
+  }
+  const H = highlighter(M);
+  d3.select('#link-layer').selectAll('path.link').data(GL, d => d.id).join('path')
+    .attr('class', d => `link t-${d.type}${H.hotLink(d.source.id, d.target.id) ? ' is-hot' : ''}${H.dimLink(d.source.id, d.target.id) ? ' is-dim' : ''}`)
+    .attr('marker-end', d => (d.type === 'tension' ? null : `url(#mk-${d.type})`));
+  const drag = d3.drag()
+    .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.25).restart(); d.fx = d.x; d.fy = d.y; })
+    .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+    .on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); d3.select(e.sourceEvent && e.sourceEvent.target ? e.sourceEvent.target.closest('g.nnode') : null).classed('is-pinned', true); });
+  const sel = d3.select('#node-layer').selectAll('g.nnode').data(nodes, d => d.id).join(enter => {
+    const g = enter.append('g').attr('tabindex', 0).attr('role', 'button');
+    g.append('circle').attr('class', 'hit').attr('r', 24);
+    g.append('g').attr('class', 'rings');
+    g.append('path').attr('class', 'nshape');
+    g.append('text').attr('class', 'obj-in').attr('text-anchor', 'middle').attr('y', 4);
+    g.append('text').attr('class', 'lbl').attr('text-anchor', 'middle');
+    g.append('g').attr('class', 'vbadge');
+    g.append('title');
+    g.call(drag);
+    g.on('click', (e, d) => { e.stopPropagation(); cmd.select(ui.selected === d.id ? null : d.id); })
+      .on('dblclick', (e, d) => { e.stopPropagation(); d.fx = null; d.fy = null; d3.select(e.currentTarget).classed('is-pinned', false); sim.alpha(0.2).restart(); })
+      .on('keydown', (e, d) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cmd.select(ui.selected === d.id ? null : d.id); } });
+    return g;
+  });
+  sel.attr('class', d => {
+    const c = ['nnode', 'kind-' + d.kind];
+    if (M.doerLoes.has(d.id)) c.push('is-doer');
+    if (d.fx != null) c.push('is-pinned');
+    if (H.sel === d.id) c.push('is-sel');
+    if (H.dimNode(d.id)) c.push('is-dim');
+    return c.join(' ');
+  }).attr('style', d => (d.color != null ? `--lc:var(--lane-${d.color})` : null))
+    .attr('aria-label', d => d.label);
+  sel.select('path.nshape').attr('d', d => shapePath(d.kind, d.r));
+  sel.select('text.obj-in').text(d => (d.kind === 'objective' ? 'Objective' : ''));
+  sel.select('text.lbl').attr('y', d => (d.kind === 'objective' ? 34 : d.r + 15)).text(d => trunc(d.label, d.kind === 'objective' ? 34 : 26));
+  sel.select('title').text(d => d.label);
+  sel.select('g.rings').selectAll('circle').data(d => ringsOf(M, d)).join('circle').attr('class', r => 'ring ' + r.cls).attr('r', r => r.r);
+  sel.select('g.vbadge').attr('transform', d => `translate(${d.r * 0.85},${-d.r * 0.85})`).selectAll('*').remove();
+  sel.filter(d => M.nodes.has(d.id) && M.nodes.get(d.id).vulnerable).select('g.vbadge').each(function () {
+    const b = d3.select(this);
+    b.append('circle').attr('r', 7.5);
+    b.append('text').attr('text-anchor', 'middle').attr('y', 4).text('!');
+  });
+  tickNetwork();
+  return nodes.length > 0;
+}
+function ringsOf(M, d) {
+  const out = [];
+  if (d.id === M.cogId) { out.push({ r: d.r + 5, cls: 'cog' }, { r: d.r + 9, cls: 'cog' }); }
+  else if (M.reqOwners.has(d.id)) out.push({ r: d.r + 4, cls: 'req' });
+  const n = M.nodes.get(d.id);
+  if (n && n.vulnerable) out.push({ r: d.r + (d.id === M.cogId ? 13 : 8), cls: 'vuln' });
+  return out;
+}
+function tickNetwork() {
+  d3.select('#node-layer').selectAll('g.nnode').attr('transform', d => `translate(${d.x},${d.y})`);
+  d3.select('#link-layer').selectAll('path.link').attr('d', d => {
+    const x1 = d.source.x, y1 = d.source.y, x2 = d.target.x, y2 = d.target.y;
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    const r1 = d.source.r + 2, r2 = d.target.r + (d.type === 'tension' ? 2 : 7);
+    return `M${x1 + dx / len * r1},${y1 + dy / len * r1}L${x2 - dx / len * r2},${y2 - dy / len * r2}`;
+  });
+}
+
+/* ================================================================
+   Map: toolbar, selection bar, tabs
+   ================================================================ */
+function describe(M, id) {
+  if (id === 'obj') return { title: has(M.P.objective) ? M.P.objective : 'Objective', lines: ['Objective, question 1'], action: ['Go to question 1', 'goto', [1]] };
+  if (String(id).startsWith('cap:')) {
+    const l = M.loeById.get(id.slice(4));
+    if (!l) return null;
+    return { title: `Someone must ${l.capability}`, lines: [`Essential action of ${l.name}`], action: ['Go to question 2', 'goto', [2]] };
+  }
+  const n = M.nodes.get(id);
+  if (!n) return null;
+  const lines = [];
+  if (id === M.cogId) lines.push('Center of gravity');
+  for (const l of M.doerLoes.get(id) || []) lines.push(`Doer: ${l.capability || l.name}`);
+  const owners = M.reqOwners.get(id);
+  if (owners) lines.push('Needed by ' + uniq(owners.map(l => M.nodes.get(l.doerNodeId).label)).join(', '));
+  if (n.vulnerable) lines.push(owners ? 'Vulnerable' + (has(n.rationale) ? `: ${n.rationale}` : '') : 'Marked at risk, but no doer uses it');
+  lines.push(TIER_LABEL[M.tier.get(id)]);
+  return { title: n.label, lines, action: [canWrite() ? 'Edit answers' : 'Details', 'editNode', [id]] };
+}
+function renderInfo(M) {
+  const info = $('info');
+  const d = ui.selected && describe(M, ui.selected);
+  if (!d) { info.hidden = true; info.innerHTML = ''; return; }
+  info.hidden = false;
+  info.innerHTML = `<div class="info-text"><p class="info-title">${esc(d.title)}</p><p class="info-roles">${esc(d.lines.join(' · '))}</p></div>
+    <div class="info-actions">${btn(d.action[0], d.action[1], d.action[2], 'small')}<button type="button" class="icon-btn" data-cmd="select" ${dargs(null)} aria-label="Clear selection">×</button></div>`;
+}
+function renderTools(M) {
+  $('v-lanes').setAttribute('aria-pressed', String(ui.view === 'lanes'));
+  $('v-network').setAttribute('aria-pressed', String(ui.view === 'network'));
+  $('btn-focus').setAttribute('aria-pressed', String(!!ui.focus));
+  const chips = M.loes.map(l => ({ id: l.id, name: l.name, color: l.color ?? 0 }));
+  if ([...M.nodes.values()].some(n => !n.loeId)) chips.push({ id: '__cross', name: 'Cross-cutting', color: 7 });
+  const h = chips.map(c => `<button type="button" class="chip" style="--lc:var(--lane-${c.color})" data-cmd="filterLane" ${dargs(c.id)} aria-pressed="${ui.lanesOn.includes(c.id)}"><span class="dot"></span>${esc(trunc(c.name, 28))}</button>`).join('');
+  if ($('chips').innerHTML !== h) $('chips').innerHTML = h;
+}
+function renderTop(M) {
+  $('proj-title').textContent = has(M.P.title) ? M.P.title : (has(M.P.objective) ? trunc(M.P.objective, 80) : 'Center-of-gravity planning coach');
+  const b = $('btn-demo');
+  b.setAttribute('aria-pressed', String(ui.demo));
+  b.setAttribute('data-args', JSON.stringify([!ui.demo]));
+  b.textContent = ui.demo ? 'Leave example' : 'Worked example';
+}
+function renderTabs() {
+  $('app').dataset.tab = ui.tab;
+  $('tab-coach').setAttribute('aria-pressed', String(ui.tab === 'coach'));
+  $('tab-map').setAttribute('aria-pressed', String(ui.tab === 'map'));
+}
+
+/* ================================================================
+   Render loop
+   ================================================================ */
+let raf = 0;
+function render() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderNow(); }); }
+function reconcilePending(M) {
+  for (const [key, v] of ui.pending) {
+    if (timers.has(key)) continue;
+    const [kind, a, b] = key.split(':');
+    const stored = kind === 'project' ? M.P[a] : kind === 'loe' ? (M.loeById.get(a) || {})[b] : (M.nodes.get(a) || {})[b];
+    if ((stored ?? '') === v) ui.pending.delete(key);
+  }
+}
+function renderNow() {
+  const M = model();
+  if (!ui.demo && loaded()) {
+    const f = furthest(M);
+    if (f > (ui.maxReached || 0)) { ui.maxReached = f; saveUi(); }
+    if (ui.step > reachable(M)) ui.step = reachable(M);
+    if (ui.editNode && !M.nodes.has(ui.editNode)) ui.editNode = null;
+    reconcilePending(M);
+  }
+  if (ui.selected && !describe(M, ui.selected)) ui.selected = null;
+  renderTop(M);
+  renderBanners();
+  renderRail(M);
+  renderCoach(M);
+  renderFoot(M);
+  renderTabs();
+  renderTools(M);
+  renderInfo(M);
+  renderMap(M);
+}
+
+/* ================================================================
+   Events
+   ================================================================ */
+function commitField(key, value) {
+  const [kind, a, b] = key.split(':');
+  if (kind === 'project') return cmd.setProject({ [a]: value });
+  if (kind === 'loe') return cmd.updateWay(a, { [b]: value });
+  if (kind === 'node') return cmd.updateNode(a, { [b]: value });
+  return false;
+}
+function flush(key) {
+  clearTimeout(timers.get(key));
+  timers.delete(key);
+  if (ui.pending.has(key)) commitField(key, ui.pending.get(key));
+}
+function flushAll() { for (const key of [...timers.keys()]) flush(key); }
+let confirmTimer = 0;
+async function runButton(b) {
+  if (b.disabled) return;
+  const name = b.dataset.cmd;
+  if (b.dataset.confirm) {
+    const key = b.dataset.confirm;
+    if (ui.confirm !== key) {
+      ui.confirm = key; force(); render();
+      clearTimeout(confirmTimer);
+      confirmTimer = setTimeout(() => { ui.confirm = null; force(); render(); }, 5000);
+      return;
+    }
+    ui.confirm = null;
+  }
+  let args = [];
+  try { args = JSON.parse(b.dataset.args || '[]'); } catch (e) { args = []; }
+  const fromIds = b.dataset.from ? b.dataset.from.split(',') : [];
+  for (const id of fromIds) { const el = $(id); args.push(el ? el.value : ''); }
+  flushAll();
+  const res = await dispatch(name, ...args);
+  if (res !== false && fromIds.length) {
+    for (const id of (b.dataset.clear || '').split(',').filter(Boolean)) {
+      ui.drafts.delete(id);
+      const el = $(id);
+      if (el) el.value = '';
+    }
+  }
+}
+function bindEvents() {
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-cmd]');
+    if (!b || !document.body.contains(b)) return;
+    e.preventDefault();
+    runButton(b);
+  });
+  const body = els.body;
+  body.addEventListener('submit', e => e.preventDefault());
+  body.addEventListener('input', e => {
+    const t = e.target;
+    if (t.dataset.bind && t.type !== 'checkbox' && t.tagName !== 'SELECT') {
+      const key = t.dataset.bind;
+      ui.pending.set(key, t.value);
+      clearTimeout(timers.get(key));
+      timers.set(key, setTimeout(() => flush(key), 700));
+    } else if (t.hasAttribute('data-draft')) ui.drafts.set(t.id, t.value);
+  });
+  body.addEventListener('change', e => {
+    const t = e.target;
+    if (t.hasAttribute('data-draft')) { ui.drafts.set(t.id, t.value); return; }
+    const key = t.dataset.bind;
+    if (!key) return;
+    if (t.type === 'checkbox') { commitField(key, t.checked); return; }
+    if (t.tagName === 'SELECT') { commitField(key, t.value || null); return; }
+    clearTimeout(timers.get(key));
+    timers.delete(key);
+    const v = t.value.trim();
+    const [kind, , field] = key.split(':');
+    if ((field === 'label' || (kind === 'loe' && field === 'name')) && !v) {
+      ui.pending.delete(key);
+      toast('A name is required, so the previous name was kept.');
+      force(); bump();
+      return;
+    }
+    ui.pending.set(key, v);
+    commitField(key, v);
+  });
+  body.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.matches('input[data-enter]')) {
+      e.preventDefault();
+      const b = $(e.target.dataset.enter);
+      if (b) runButton(b);
+    }
+  });
+  body.addEventListener('compositionstart', () => { ui.composing = true; });
+  body.addEventListener('compositionend', () => { ui.composing = false; if (ui.coachDirty) render(); });
+  body.addEventListener('focusout', () => setTimeout(() => { if (ui.coachDirty && !coachTextFocused()) render(); }, 0));
+  body.addEventListener('toggle', e => {
+    const d = e.target;
+    if (d.dataset && d.dataset.details) { if (d.open) ui.openDetails.add(d.dataset.details); else ui.openDetails.delete(d.dataset.details); }
+  }, true);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flushAll(); });
+  window.addEventListener('pagehide', flushAll);
+  if (PHONE_MQ.addEventListener) PHONE_MQ.addEventListener('change', () => render());
+  $('btn-copy').addEventListener('click', async () => {
+    const ta = $('export-text');
+    try { await navigator.clipboard.writeText(ta.value); $('copy-status').textContent = 'Copied.'; }
+    catch (e) { ta.focus(); ta.select(); $('copy-status').textContent = 'Copying was blocked here. The text is selected, so copy it with your keyboard or the long-press menu.'; }
+  });
+}
+function openExport() {
+  const src = ui.demo ? DEMO : S;
+  const data = {
+    project: src.project || {},
+    loes: Object.fromEntries(src.loes),
+    nodes: Object.fromEntries(src.nodes),
+    links: Object.fromEntries(src.links),
+  };
+  $('export-text').value = JSON.stringify(data, null, 2);
+  $('copy-status').textContent = '';
+  const dlg = $('dlg-export');
+  try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); }
+}
+
+/* ================================================================
+   Boot
+   ================================================================ */
+async function boot() {
+  els.body = $('coach-body'); els.scroll = $('coach-scroll'); els.rail = $('rail'); els.foot = $('coach-foot'); els.banners = $('banners'); els.toast = $('toast');
+  if (!['lanes', 'network'].includes(ui.view)) ui.view = 'lanes';
+  if (!['coach', 'map'].includes(ui.tab)) ui.tab = 'coach';
+  ui.step = Math.max(0, Math.min(STEPS.length - 1, Number(ui.step) || 0));
+  bindEvents();
+  initMap();
+  renderNow();
+  const c = window.claude;
+  let dbNs = null, userNs = null;
+  if (c && typeof c.use === 'function') {
+    [dbNs, userNs] = await Promise.all([
+      c.use('db').catch(() => null),
+      c.use('user').catch(() => null),
+    ]);
+  }
+  if (dbNs) { db = dbNs; ui.mode = 'live'; } else { db = new MemDB(); ui.mode = 'local'; }
+  if (userNs && typeof userNs.can === 'function') {
+    try { if ((await userNs.can('data.write')) === false) ui.readOnly = true; } catch (e) { /* keep inputs; a refused write decides */ }
+  }
+  subscribe();
+  render();
+}
+
+window.LOEMap = { dispatch, model, ui, reachable: () => reachable(model()), unlocks: () => unlocks(model()) };
+boot();
+})();
+</script>
