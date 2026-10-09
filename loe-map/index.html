@@ -126,6 +126,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .qlist b { font-weight: 600; }
 blockquote.def { margin: 0; padding: 2px 0 2px 14px; border-left: 3px solid var(--ink); font-style: italic; color: var(--ink-2); }
 blockquote.def cite { display: block; font-style: normal; font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+.coach-body a { color: var(--accent); text-underline-offset: 2px; }
 .recap { font-size: 13px; color: var(--ink-2); background: var(--surface-2); border-radius: 8px; padding: 8px 12px; }
 .recap b { color: var(--ink); font-weight: 600; }
 .prereq { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--ink-3); font-size: 14px; }
@@ -478,33 +479,33 @@ const PHONE_MQ = window.matchMedia ? matchMedia('(max-width: 820px)') : { matche
    Coach content: examples bank and the worked example
    ================================================================ */
 const EXAMPLES = {
-  goal: { intro: 'Two objectives from different projects, and one that falls short.', items: [
+  goal: { intro: 'Two objectives from different kinds of projects, and one that falls short.', items: [
     { tag: 'Radiology turnaround', text: 'Reduce median final-report turnaround for ED CT from 45 to 30 minutes by 31 March 2027, without raising the addendum rate.' },
-    { tag: 'Critical results', text: 'Communicate every critical imaging result to a responsible clinician within 60 minutes, at 95% compliance, by 30 June 2027.' },
-    { tag: 'Falls short', text: 'Improve radiology workflow.', why: 'Nobody could tell whether you got there. It has no measure, no number, and no date.' },
+    { tag: 'Library fundraising', text: 'Raise $250,000 in pledges for the new library wing by 31 December 2027, with at least 40% from first-time donors.' },
+    { tag: 'Falls short', text: 'Improve our workflow.', why: 'Nobody could tell whether you got there. It has no measure, no number, and no date.' },
   ] },
   ways: { intro: 'Each way names a broad approach. The essential action reads naturally after “someone must.”', items: [
     { tag: 'Radiology turnaround', text: 'Reading and assignment. Someone must read and sign ED CT within target.' },
     { tag: 'Radiology turnaround', text: 'PACS and IT workflow. Someone must route and flag ED studies automatically.' },
-    { tag: 'Critical results', text: 'Result notification. Someone must reach the responsible clinician directly.' },
-    { tag: 'Falls short', text: 'Voice-recognition software.', why: 'This names a thing, not a way. It is probably a need of whoever reads the studies, which comes up in question 4.' },
+    { tag: 'Library fundraising', text: 'Major gifts. Someone must secure pledges from the twenty largest prospective donors.' },
+    { tag: 'Falls short', text: 'New scheduling software.', why: 'This names a thing, not a way. It is probably a need of whoever does the work, which comes up in question 4.' },
   ] },
   doers: { items: [
     { tag: 'Radiology turnaround', text: 'Read and sign ED CT within target: the on-duty radiologists.', why: 'The worklist rule does not read studies. Radiologists use it, so the worklist is a need, not the doer.' },
-    { tag: 'Critical results', text: 'Reach the responsible clinician directly: the interpreting radiologist.' },
+    { tag: 'Library fundraising', text: 'Secure pledges from the largest prospective donors: the board members who know them personally.', why: 'The campaign brochure does not secure pledges. Board members use it, so the brochure is a need, not the doer.' },
     { tag: 'Center of gravity reasoning', text: 'If the on-duty radiologists vanished, nobody else could produce a signed report. Technologists, IT, and the dashboard all exist to support them.' },
   ] },
   needs: { items: [
     { tag: 'Radiology turnaround', text: 'The on-duty radiologists use a worklist prioritization rule, the voice-recognition system, protected reading time, and the overnight coverage schedule.' },
     { tag: 'Radiology turnaround', text: 'Vulnerable: the overnight coverage schedule. One radiologist covers ED and inpatients after midnight.' },
-    { tag: 'Critical results', text: 'The interpreting radiologist uses an up-to-date on-call directory and closed-loop acknowledgment in the EHR.' },
-    { tag: 'Critical results', text: 'Vulnerable: the on-call directory. It is updated by hand and is often wrong on weekends.' },
+    { tag: 'Library fundraising', text: 'The board members use a current donor list, a campaign brochure, and a matching-gift sponsor.' },
+    { tag: 'Library fundraising', text: 'Vulnerable: the donor list. Nobody has updated it since the last campaign, five years ago.' },
   ] },
   links: { items: [
     { tag: 'Depends on', text: 'Protected reading time depends on the conference schedule.' },
     { tag: 'Influences', text: 'The turnaround dashboard influences ED physicians.' },
     { tag: 'In tension with', text: 'ED physicians are in tension with the radiology section chief over who owns CT protocols.' },
-    { tag: 'Critical results', text: 'Closed-loop acknowledgment depends on the EHR build team.' },
+    { tag: 'Library fundraising', text: 'The board chair is in tension with the library director over naming rights for the new wing.' },
   ] },
 };
 
@@ -1098,7 +1099,7 @@ function prereq(M, step) {
 function buildStart() {
   return `${eyebrow('Before you start')}
   <h2 class="question">Plan from the objective backward</h2>
-  <p class="lede">This page coaches your team through Col. Dale Eikmeier's center-of-gravity method, applied to a quality-improvement project. It asks four questions. You answer them, and the map draws itself from your answers.</p>
+  <p class="lede">This page coaches your team through the center-of-gravity method from military planning, adapted for any project with a goal you can measure. It asks four questions. You answer them, and the map draws itself from your answers.</p>
   <ol class="qlist">
     <li><b>Goal.</b> What are you trying to achieve?</li>
     <li><b>Ways.</b> What ways will you use to get there, and what is the essential action in each?</li>
@@ -1108,7 +1109,8 @@ function buildStart() {
   <p class="muted">Then you connect the remaining pieces and review what your answers imply. Each answer opens the next question, and you can change any answer later.</p>
   ${ask('', '<p class="muted">The coach asks questions and reflects your answers back. It never supplies the answers. Examples show what a good answer looks like, but everything on the map comes from your team, because the thinking is the point.</p>', 'How the coach works')}
   <div class="row-actions">${btn('Start with question 1', 'goto', [1], 'primary')}${ui.demo ? '' : btn('See a worked example', 'demo', [true])}</div>
-  <p class="fine">Everyone who opens this page sees and edits the same map. Do not enter patient information. On a phone, tap the microphone on your keyboard to answer by voice.</p>`;
+  <p class="fine">Everyone who opens this page sees and edits the same map. Do not enter personal or confidential information. On a phone, tap the microphone on your keyboard to answer by voice.</p>
+  <p class="fine">Source: <a href="https://www.armyupress.army.mil/Journals/Military-Review/Online-Exclusive/2017-Online-Exclusive-Articles/The-Center-of-Gravity/" target="_blank" rel="noopener">“The Center of Gravity: Still Relevant After All These Years?”</a> Military Review, online exclusive, May 2017.</p>`;
 }
 
 function buildGoal(M) {
@@ -1137,7 +1139,7 @@ function buildWays(M) {
   return `${eyebrow('Question 2 of 4 · Ways')}
   ${prereq(M, 2)}
   <h2 class="question">What ways will you use to reach the goal?</h2>
-  <p class="hint">A way is a line of effort, a broad approach such as “Reading workflow” or “Staffing.” For each one, name the single essential action inside it.</p>
+  <p class="hint">A way is a line of effort, a broad approach such as “Staffing,” “Technology,” or “Outreach.” For each one, name the single essential action inside it.</p>
   ${goalRecap(M)}
   <div class="stack">${M.loes.map(l => wayCard(M, l)).join('') || '<p class="muted">No ways yet. Add the first one below.</p>'}</div>
   ${full ? '<p class="muted">Eight ways is the limit. If you need more, some of them are probably the same way.</p>'
@@ -1176,7 +1178,7 @@ function buildDoers(M) {
   ${prereq(M, 3)}
   <h2 class="question">Who or what has the inherent ability to perform each action?</h2>
   <p class="hint">Name the doer: the person, group, or system that performs the action itself, not something it uses.</p>
-  <blockquote class="def">“The center of gravity is the primary entity that possesses the inherent capability to achieve the objective.”<cite>Dale C. Eikmeier, Military Review, 2017</cite></blockquote>
+  <blockquote class="def">“The center of gravity is the primary entity that possesses the inherent capability to achieve the objective.”<cite><a href="https://www.armyupress.army.mil/Journals/Military-Review/Online-Exclusive/2017-Online-Exclusive-Articles/The-Center-of-Gravity/" target="_blank" rel="noopener">“The Center of Gravity: Still Relevant After All These Years?”</a> Military Review, May 2017</cite></blockquote>
   <datalist id="dl-nodes">${[...M.nodes.values()].map(n => `<option value="${esc(n.label)}"></option>`).join('')}</datalist>
   <div class="stack">${withCap.map(l => doerCard(M, l)).join('') || '<p class="muted">No ways have an essential action yet.</p>'}</div>
   ${noCap.length ? `<p class="muted">Still without an action in question 2: ${noCap.map(l => esc(l.name)).join(', ')}.</p>` : ''}
@@ -1365,7 +1367,7 @@ function renderFoot(M) {
 }
 function renderBanners() {
   let h = '';
-  if (ui.demo) h = `<div class="banner demo"><p><b>Worked example.</b> Nothing here is saved.<span class="long"> It is a finished map for an ED CT turnaround project. Step through the questions to see its answers. Your team's map is untouched.</span></p>${btn('Back to your map', 'demo', [false], 'small')}</div>`;
+  if (ui.demo) h = `<div class="banner demo"><p><b>Worked example.</b> Nothing here is saved.<span class="long"> It is a finished map for a hospital project to cut emergency CT report turnaround. Step through the questions to see its answers. Your team's map is untouched.</span></p>${btn('Back to your map', 'demo', [false], 'small')}</div>`;
   else if (ui.mode === 'connecting' || (ui.mode === 'live' && !loaded())) h = '<div class="banner"><p>Connecting to your team\'s map…</p></div>';
   else if (ui.mode === 'local') h = '<div class="banner warn"><p>Shared saving is not available in this view. Answers on this page will be lost when you close it.</p></div>';
   else if (ui.readOnly) h = '<div class="banner"><p>You can view this map but not change it. To answer, ask the owner to invite you as an Editor.</p></div>';

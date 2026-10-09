@@ -1,6 +1,6 @@
 # Lines of Effort Map
 
-A coaching tool that walks a quality-improvement team through Dale Eikmeier's center-of-gravity method and draws a map of the plan from the team's answers. It was built for a radiology turnaround project but works for any project with a measurable objective.
+A coaching tool that walks a team through the center-of-gravity method from military planning and draws a map of the plan from the team's answers. It works for any project with a goal you can measure. The built-in worked example is a hospital radiology project.
 
 The whole app is one file, `index.html`, published as a claude.ai artifact so the team shares one live map.
 
@@ -16,9 +16,9 @@ The tool asks questions. The team answers them. It never supplies an answer, pro
 
 ## The four questions
 
-From Eikmeier, "The Center of Gravity: Still Relevant After All These Years?", Military Review online exclusive, May 2017, page 6.
+Source: ["The Center of Gravity: Still Relevant After All These Years?"](https://www.armyupress.army.mil/Journals/Military-Review/Online-Exclusive/2017-Online-Exclusive-Articles/The-Center-of-Gravity/), Military Review, online exclusive, May 2017. The four questions are on page 6.
 
-| Step | Eikmeier's question | What your answer becomes on the map |
+| Step | The article's question | What your answer becomes on the map |
 |---|---|---|
 | 1 Goal | What is the system's goal or purpose? | The objective block, with measure, baseline, target, and due date |
 | 2 Ways | What probable ways or actions will the system use to achieve the goal? | One lane per way, each with an essential action. One way is the main effort. |
@@ -27,7 +27,7 @@ From Eikmeier, "The Center of Gravity: Still Relevant After All These Years?", M
 | Links | (Relationships, actors, function, tensions) | Depends-on, influences, and in-tension-with links between any items |
 | Review | | Your answers laid out as the four questions, a tier list, and open questions |
 
-Eikmeier's definition, shown in step 3: "The center of gravity is the primary entity that possesses the inherent capability to achieve the objective."
+The article's definition, shown in step 3: "The center of gravity is the primary entity that possesses the inherent capability to achieve the objective."
 
 The tier list sorts every item the way the article describes. Critical items serve the center of gravity. Major items serve the supporting ways. Minor items connect to something. Peripheral items connect to nothing. The Focus button fades the minor and peripheral items so the map shows what the objective hinges on.
 
@@ -36,7 +36,7 @@ The tier list sorts every item the way the article describes. Critical items ser
 1. Open the link. The coach starts on a short orientation and the first question.
 2. Answer question 1. The map draws the objective. Question 2 opens.
 3. Keep going. The map fills in as each answer lands.
-4. Use **Worked example** to see a finished map for an ED CT turnaround project. It is read-only and never touches your team's map.
+4. Use **Worked example** to see a finished map for a hospital project to cut emergency CT report turnaround. It is read-only and never touches your team's map.
 5. Switch the map between **Lanes** and **Network**. Lanes shows the structure: needs, then doer, then action, then objective. Network shows the tangle.
 6. Tap any item on the map to see its role. Use **Edit answers** to change it.
 7. **Copy data** gives you a text backup of everything your team has entered.
@@ -54,9 +54,9 @@ Everyone who opens the link sees the same map, live. Who can edit depends on you
 - **Team or Enterprise plan.** Members of your organization who open the link at Contributor level or above can answer.
 - **Personal plan (Pro or Max).** Only you can edit, plus people you invite by email as **Editor**. They can edit only while the artifact is not also shared by public link. Anyone who arrives through a public link can view but not edit.
 
-For a hospital team on a personal account, invite each teammate by email as Editor and leave the public link off. People without edit access see a banner telling them how to get it.
+For a team on a personal account, invite each teammate by email as Editor and leave the public link off. People without edit access see a banner telling them how to get it.
 
-**Do not enter patient information.** The map is for project structure only.
+**Do not enter personal or confidential information.** The map is for project structure only.
 
 ## Data
 
