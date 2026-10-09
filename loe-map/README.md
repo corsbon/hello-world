@@ -4,6 +4,22 @@ A coaching tool that walks a team through the center-of-gravity method from mili
 
 The whole app is one file, `index.html`, published as a claude.ai artifact so the team shares one live map.
 
+## The idea in plain language
+
+The app's start screen explains this at about a 5th-grade reading level.
+
+Every plan depends on someone or something doing the main work. Planners call that the **center of gravity**: the main doer, the person, group, or thing with the built-in ability to reach the goal. Three more terms describe what the doer does and what it needs. Together with the center of gravity, they are the **critical factors**.
+
+| Term | Plain meaning | Pizza-delivery example |
+|---|---|---|
+| Goal | What you are trying to achieve | Every Friday-night delivery arrives within 30 minutes |
+| Critical capability | The main action the doer must be able to do | Get hot pizza to the customer's door |
+| Center of gravity | The doer that actually does that action | The delivery drivers |
+| Critical requirements | What the doer needs to do the action | Cars that run, gas, phones with maps, pizzas ready on time, enough drivers |
+| Critical vulnerabilities | Requirements that are weak, missing, or easy to break | Only two drivers on Friday nights, and one car breaks down often |
+
+To find the doer, ask: does it do the action, or is it used to do the action? A car does not deliver pizza. A driver uses a car to deliver pizza. So the drivers are the center of gravity, and the cars are a requirement.
+
 ## The coaching principle
 
 The tool asks questions. The team answers them. It never supplies an answer, proposes a center of gravity, or generates a plan.

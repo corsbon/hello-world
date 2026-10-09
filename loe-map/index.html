@@ -127,6 +127,22 @@ button, input, select, textarea { font: inherit; color: inherit; }
 blockquote.def { margin: 0; padding: 2px 0 2px 14px; border-left: 3px solid var(--ink); font-style: italic; color: var(--ink-2); }
 blockquote.def cite { display: block; font-style: normal; font-size: 12px; color: var(--ink-3); margin-top: 4px; }
 .coach-body a { color: var(--accent); text-underline-offset: 2px; }
+.intro-h { margin: 6px 0 -6px; font: 600 22px/1.15 var(--font-display); letter-spacing: .01em; }
+.terms { margin: 0; display: grid; gap: 10px; }
+.terms div { display: grid; gap: 1px; }
+.terms dt { font-weight: 600; font-size: 14.5px; }
+.terms dd { margin: 0; color: var(--ink-2); font-size: 14px; }
+.chain { list-style: none; margin: 0; padding: 0; display: grid; }
+.chain-row { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 9px; background: var(--surface); }
+.chain-row.cog { border: 2px solid var(--ink); box-shadow: 0 0 0 3px var(--surface), 0 0 0 4.5px var(--ink); margin: 4px 0; }
+.chain-row.vuln { border: 1.5px dashed var(--crit); background: var(--crit-soft); }
+.chain-head { display: flex; align-items: center; gap: 8px; }
+.chain-head .num { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--ink); font: 500 12px var(--font-mono); }
+.chain-row.vuln .num { border-color: var(--crit); background: var(--crit); color: var(--crit-ink); font-weight: 700; }
+.chain-term { font: 600 15px var(--font-display); letter-spacing: .07em; text-transform: uppercase; }
+.chain-ask { margin: 0; font-size: 12.5px; color: var(--ink-3); }
+.chain-a { margin: 0; font-size: 15px; }
+.chain-link { margin-left: 22px; padding: 5px 0 5px 14px; border-left: 2px solid var(--rule); font: 500 10.5px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
 .recap { font-size: 13px; color: var(--ink-2); background: var(--surface-2); border-radius: 8px; padding: 8px 12px; }
 .recap b { color: var(--ink); font-weight: 600; }
 .prereq { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--ink-3); font-size: 14px; }
@@ -1099,14 +1115,55 @@ function prereq(M, step) {
 function buildStart() {
   return `${eyebrow('Before you start')}
   <h2 class="question">Plan from the objective backward</h2>
-  <p class="lede">This page coaches your team through the center-of-gravity method from military planning, adapted for any project with a goal you can measure. It asks four questions. You answer them, and the map draws itself from your answers.</p>
-  <ol class="qlist">
-    <li><b>Goal.</b> What are you trying to achieve?</li>
-    <li><b>Ways.</b> What ways will you use to get there, and what is the essential action in each?</li>
-    <li><b>Doers.</b> Who or what has the inherent ability to perform each action?</li>
-    <li><b>Needs.</b> What does each doer require, and which of those are vulnerable?</li>
+  <p class="lede">This page coaches your team through center-of-gravity analysis, a method military planners use to find what a plan really depends on. It works for any project with a goal you can measure. It asks four questions. You answer them, and the map draws itself from your answers.</p>
+
+  <h3 class="intro-h">The big idea</h3>
+  <p>Every plan depends on someone or something doing the main work. Planners call that the <b>center of gravity</b>. It is the main doer: the person, group, or thing with the built-in ability to reach the goal.</p>
+  <p class="fine">The source article defines it as “the primary entity that possesses the inherent capability to achieve the objective.”</p>
+  <p>If something is not the main doer, it is not the center of gravity, even if it is important. Three more terms describe what the doer does and what it needs. Together with the center of gravity, they are called the <b>critical factors</b>.</p>
+  <dl class="terms">
+    <div><dt>Critical capability</dt><dd>The main action the doer must be able to do to reach the goal. It is a verb, like deliver, build, or teach.</dd></div>
+    <div><dt>Center of gravity</dt><dd>The doer. The person, group, or thing that actually does that action.</dd></div>
+    <div><dt>Critical requirements</dt><dd>What the doer needs to do the action, such as people, tools, money, time, or the right conditions.</dd></div>
+    <div><dt>Critical vulnerabilities</dt><dd>Requirements that are weak, missing, or easy to break. This is where a plan is most likely to fail.</dd></div>
+  </dl>
+
+  <h3 class="intro-h">An example: Friday-night pizza delivery</h3>
+  <p>A pizza shop keeps getting complaints about late deliveries on Friday nights. Here is how the four questions sort out the problem.</p>
+  <ol class="chain" aria-label="The four questions answered for a pizza shop">
+    <li class="chain-row">
+      <div class="chain-head"><span class="num">1</span><span class="chain-term">Goal</span></div>
+      <p class="chain-ask">What are you trying to achieve?</p>
+      <p class="chain-a">Every Friday-night delivery arrives within 30 minutes.</p>
+    </li>
+    <li class="chain-link" aria-hidden="true">reached by</li>
+    <li class="chain-row">
+      <div class="chain-head"><span class="num">2</span><span class="chain-term">Way and critical capability</span></div>
+      <p class="chain-ask">What ways will you use, and what is the main action in each?</p>
+      <p class="chain-a">The shop takes orders, cooks, and delivers. Delivery is the main way. Its main action is to get hot pizza to the customer's door.</p>
+    </li>
+    <li class="chain-link" aria-hidden="true">done by</li>
+    <li class="chain-row cog">
+      <div class="chain-head"><span class="num">3</span><span class="chain-term">Center of gravity</span></div>
+      <p class="chain-ask">Who or what has the ability to do that action?</p>
+      <p class="chain-a">The delivery drivers.</p>
+    </li>
+    <li class="chain-link" aria-hidden="true">who need</li>
+    <li class="chain-row">
+      <div class="chain-head"><span class="num">4</span><span class="chain-term">Critical requirements</span></div>
+      <p class="chain-ask">What does the doer need?</p>
+      <p class="chain-a">Cars that run, gas, phones with maps, pizzas that are ready on time, and enough drivers on the schedule.</p>
+    </li>
+    <li class="chain-link" aria-hidden="true">weak spots</li>
+    <li class="chain-row vuln">
+      <div class="chain-head"><span class="num">!</span><span class="chain-term">Critical vulnerabilities</span></div>
+      <p class="chain-ask">Which of those needs are weak?</p>
+      <p class="chain-a">Only two drivers work on Friday nights. One of the cars breaks down often.</p>
+    </li>
   </ol>
-  <p class="muted">Then you connect the remaining pieces and review what your answers imply. Each answer opens the next question, and you can change any answer later.</p>
+  ${ask('Does it do the action, or is it used to do it?', '<p class="muted">Ask this about anything you think might be the doer. A car does not deliver pizza. A driver uses a car to deliver pizza. So the drivers are the center of gravity, and the cars are a requirement. The cook matters too, but the cook does not bring the pizza to the door.</p>', 'The test for the doer')}
+  <p>Now the owner knows where to act first: add a third Friday driver and get the unreliable car fixed. Without this, the shop might spend money on new menus or a new sign, and deliveries would still be late.</p>
+  <p class="muted">Your project works the same way. The map shows your answers in the same chain, read left to right: needs, then the doer, then the action, then the goal. After the four questions, you connect the remaining pieces and review what your answers mean. Each answer opens the next question, and you can change any answer later.</p>
   ${ask('', '<p class="muted">The coach asks questions and reflects your answers back. It never supplies the answers. Examples show what a good answer looks like, but everything on the map comes from your team, because the thinking is the point.</p>', 'How the coach works')}
   <div class="row-actions">${btn('Start with question 1', 'goto', [1], 'primary')}${ui.demo ? '' : btn('See a worked example', 'demo', [true])}</div>
   <p class="fine">Everyone who opens this page sees and edits the same map. Do not enter personal or confidential information. On a phone, tap the microphone on your keyboard to answer by voice.</p>

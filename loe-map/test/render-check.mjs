@@ -214,6 +214,14 @@ for (const scheme of ['light', 'dark']) {
       check('worked example is read-only', disabled);
     }
     if (mobile) {
+      await p.evaluate(() => window.LOEMap.dispatch('goto', 0));
+      await settle(p);
+      for (const [sel, tag] of [['.terms', 'terms'], ['.chain', 'chain'], ['.chain + .ask', 'test']]) {
+        await p.$eval('#coach-scroll', (el, s) => { const t = document.querySelector(s); el.scrollTop += t.getBoundingClientRect().top - el.getBoundingClientRect().top - 12; }, sel);
+        await shot(p, `09-${label}-intro-${tag}-${scheme}`);
+      }
+      const introOk = await p.$$eval('.chain .chain-row', rows => rows.length === 5);
+      check(`${label} ${scheme}: intro shows the five-part pizza example`, introOk);
       await p.evaluate(() => window.LOEMap.dispatch('goto', 3));
       await settle(p);
       await shot(p, `10-${label}-coach-${scheme}`);
