@@ -213,6 +213,24 @@ for (const scheme of ['light', 'dark']) {
       const disabled = await p.$$eval('#coach-body input, #coach-body textarea, #coach-body select', els => els.every(e => e.disabled));
       check('worked example is read-only', disabled);
     }
+    for (const step of [1, 2, 3, 4]) {
+      await p.evaluate(s => window.LOEMap.dispatch('goto', s), step);
+      await settle(p);
+      const bad = await p.evaluate(() => {
+        const out = [];
+        const sc = document.getElementById('coach-scroll');
+        if (sc.scrollWidth > sc.clientWidth + 1) out.push('coach panel scrolls sideways');
+        const rail = document.getElementById('rail');
+        if (rail.scrollWidth > rail.clientWidth + 1) out.push('step bar scrolls sideways');
+        for (const el of document.querySelectorAll('#coach-body textarea, #coach-body input[type="text"]')) {
+          if (el.scrollWidth > el.clientWidth + 1) out.push(el.id + ' scrolls sideways');
+          if (el.tagName === 'TEXTAREA' && el.scrollHeight > el.clientHeight + 3) out.push(el.id + ' hides lines');
+        }
+        return out;
+      });
+      check(`${label} ${scheme}: question ${step} answers fit with no sideways scrolling`, bad.length === 0, bad.join(', '));
+      if (mobile && step === 1) await shot(p, `08-${label}-goal-${scheme}`);
+    }
     if (mobile) {
       await p.evaluate(() => window.LOEMap.dispatch('goto', 0));
       await settle(p);
@@ -231,6 +249,15 @@ for (const scheme of ['light', 'dark']) {
       await settle(p);
       const vis = await p.evaluate(() => ({ coach: getComputedStyle(document.getElementById('coach')).display, map: getComputedStyle(document.getElementById('map')).display }));
       check(`${label} ${scheme}: Map tab shows the map and hides the coach`, vis.coach === 'none' && vis.map !== 'none', JSON.stringify(vis));
+      const chipsHidden = await p.$eval('#chips', el => getComputedStyle(el).display === 'none');
+      check(`${label} ${scheme}: way filters start tucked behind the Ways button`, chipsHidden);
+      await p.tap('#btn-ways');
+      await settle(p);
+      const chips = await p.$eval('#chips', el => ({ shown: getComputedStyle(el).display !== 'none', sideways: el.scrollWidth > el.clientWidth + 1 }));
+      check(`${label} ${scheme}: Ways button opens the filters, and they wrap instead of scrolling sideways`, chips.shown && !chips.sideways, JSON.stringify(chips));
+      await shot(p, `10b-${label}-ways-open-${scheme}`);
+      await p.tap('#btn-ways');
+      await settle(p);
     }
     await p.evaluate(() => window.LOEMap.dispatch('view', 'lanes'));
     await p.waitForTimeout(300);
