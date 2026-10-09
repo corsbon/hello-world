@@ -207,8 +207,14 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .req-head .linklike { flex: 1 1 8rem; }
 .req-type { font: 500 10.5px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
 .rel-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.rel-list li { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--rule-soft); font-size: 14px; }
+.rel-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--rule-soft); font-size: 14px; }
 .rel-list li span.t { flex: 1 1 auto; min-width: 0; }
+.rel-list .rel-open { flex: 1 1 0; min-width: 0; font-weight: 400; text-decoration-color: transparent; padding: 4px 0; }
+.rel-list .rel-open:hover, .rel-list .rel-open:focus-visible { text-decoration-color: var(--ink-3); }
+.rel-list li.is-editing { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; border-bottom: 0; }
+.rel-edit { flex: 1 1 100%; display: grid; gap: 8px; }
+.kind-tag { font: 500 10px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; margin-left: 2px; white-space: nowrap; }
+.rel-note { display: block; font-size: 12.5px; color: var(--ink-3); }
 .rel-list .verb { color: var(--ink-3); font-style: italic; }
 
 .ask { border: 1px solid var(--rule); border-radius: 9px; padding: 12px 14px; background: var(--surface-2); display: grid; gap: 8px; }
@@ -510,6 +516,17 @@ const LINK_TYPES = {
   influences: { verb: 'influences', label: 'Influences' },
   tension: { verb: 'is in tension with', label: 'Is in tension with' },
 };
+// Wording choices for each relationship kind. The kind drives the analysis and the line style; the wording is what people read.
+const VERBS = {
+  uses: ['uses', 'relies on', 'operates'],
+  depends_on: ['depends on', 'waits on', 'needs approval from', 'is funded by'],
+  influences: ['influences', 'informs', 'trains', 'approves', 'supports', 'reports to', 'pays for', 'hinders'],
+  tension: ['is in tension with', 'competes with', 'disagrees with'],
+};
+const KIND_LABEL = { uses: 'Uses (a need)', depends_on: 'Depends on', influences: 'Influences', tension: 'In tension with' };
+const splitKind = tv => { const [t, ...v] = String(tv || '').split('|'); return [t, v.join('|')]; };
+const verbOf = k => (k.verb && String(k.verb).trim()) || LINK_TYPES[k.type].verb;
+const verbOptions = () => Object.entries(VERBS).map(([k, vs]) => ({ group: KIND_LABEL[k], items: vs.map(v => [`${k}|${v}`, v.charAt(0).toUpperCase() + v.slice(1)]) }));
 const TIER_LABEL = { critical: 'Critical', major: 'Major contributor', minor: 'Minor contributor', peripheral: 'Peripheral, no connections' };
 const NEXT_REASON = {
   1: 'Write an objective to open question 2.',
@@ -1109,7 +1126,7 @@ const cmd = {
     for (const k of M.links) {
       if (k.type !== 'uses' || k.source !== d || k.target !== nodeId || !k.ways.includes(loeId)) continue;
       await write(`links/${k.id}`, 'delete');
-      for (const w of k.ways) if (w !== loeId) await write(`links/${linkKey('uses', d, nodeId, w)}`, 'set', { source: d, target: nodeId, type: 'uses', loeId: w });
+      for (const w of k.ways) if (w !== loeId) await write(`links/${linkKey('uses', d, nodeId, w)}`, 'set', { source: d, target: nodeId, type: 'uses', loeId: w, ...(has(k.verb) ? { verb: k.verb } : {}), ...(has(k.notes) ? { notes: k.notes } : {}) });
     }
     return true;
   },
@@ -1165,9 +1182,11 @@ const cmd = {
     force();
     const tid = found ? found.id : await findOrCreate(label, NODE_TYPES[kind] ? kind : 'actor', src.loeId);
     if (!tid) return false;
-    return cmd.link(source, type, tid);
+    return cmd.link(source, type, tid);  // type may carry a wording as "kind|verb"
   },
-  link(source, type, target) {
+  link(source, typeVerb, target, verbArg) {
+    let [type, verb] = splitKind(typeVerb);
+    if (verbArg) verb = verbArg;
     if (!guard()) return false;
     if (!LINK_TYPES[type]) { toast('Pick a relationship.'); return false; }
     if (!source || !target) { toast('Pick an item on both sides.'); return false; }
@@ -1176,9 +1195,49 @@ const cmd = {
     const ids = new Set(model().links.map(k => k.id));
     if (ids.has(id) || (type === 'tension' && ids.has(`tension__${target}__${source}`))) { toast('That relationship is already on the map.'); return false; }
     force();
-    return write(`links/${id}`, 'set', { source, target, type });
+    verb = String(verb || '').trim();
+    return write(`links/${id}`, 'set', { source, target, type, ...(verb && verb !== LINK_TYPES[type].verb ? { verb } : {}) });
   },
-  unlink(id) { if (!guard()) return false; force(); return write(`links/${id}`, 'delete'); },
+  editLink(id) {
+    const k = model().links.find(x => x.id === id);
+    if (!k) return false;
+    const v = verbOf(k);
+    const listed = VERBS[k.type].includes(v);
+    ui.editLink = id;
+    ui.drafts.set('le-type', `${k.type}|${listed ? v : VERBS[k.type][0]}`);
+    ui.drafts.set('le-own', listed ? '' : v);
+    ui.drafts.set('le-from', k.source);
+    ui.drafts.set('le-to', k.target);
+    ui.drafts.set('le-note', k.notes || '');
+    force(); render();
+    return true;
+  },
+  cancelLink() { ui.editLink = null; force(); render(); return true; },
+  async saveLink(oldId, from, typeVerb, to, own, note) {
+    if (!guard()) return false;
+    const M = model();
+    const k = M.links.find(x => x.id === oldId);
+    if (!k) { ui.editLink = null; force(); render(); return false; }
+    const [type, listedVerb] = splitKind(typeVerb);
+    if (!LINK_TYPES[type]) { toast('Pick a relationship.'); return false; }
+    if (!from || !to || !M.nodes.has(from) || !M.nodes.has(to)) { toast('Pick an item on both ends.'); return false; }
+    if (from === to) { toast('Pick two different items.'); return false; }
+    const verb = String(own || '').trim() || listedVerb;
+    const keepWay = type === 'uses' && k.type === 'uses' && from === k.source ? k.loeId : null;
+    const newId = linkKey(type, from, to, keepWay);
+    const body = { source: from, target: to, type, verb: verb && verb !== LINK_TYPES[type].verb ? verb : '', notes: String(note || '').trim(), ...(keepWay ? { loeId: keepWay } : {}) };
+    force();
+    if (newId === oldId) await write(`links/${oldId}`, 'update', { verb: body.verb, notes: body.notes });
+    else {
+      if (M.links.some(x => x.id === newId) || (type === 'tension' && M.links.some(x => x.id === `tension__${to}__${from}`))) { toast('That relationship is already on the map.'); return false; }
+      await write(`links/${oldId}`, 'delete');
+      await write(`links/${newId}`, 'set', body);
+    }
+    ui.editLink = null;
+    render();
+    return true;
+  },
+  unlink(id) { if (!guard()) return false; if (ui.editLink === id) ui.editLink = null; force(); return write(`links/${id}`, 'delete'); },
   dismissMerge() { ui.mergeOffer = null; force(); render(); return true; },
   async mergeNodes(from, into) {
     if (!guard()) return false;
@@ -1198,7 +1257,7 @@ const cmd = {
       const id = linkKey(k.type, src, tgt, k.loeId);
       if (src === tgt || ids.has(id) || (k.type === 'tension' && ids.has(`tension__${tgt}__${src}`))) continue;
       ids.add(id);
-      await write(`links/${id}`, 'set', { source: src, target: tgt, type: k.type, ...(k.loeId ? { loeId: k.loeId } : {}), ...(has(k.notes) ? { notes: k.notes } : {}) });
+      await write(`links/${id}`, 'set', { source: src, target: tgt, type: k.type, ...(k.loeId ? { loeId: k.loeId } : {}), ...(has(k.verb) ? { verb: k.verb } : {}), ...(has(k.notes) ? { notes: k.notes } : {}) });
     }
     for (const l of M.loes) if (l.doerNodeId === from) await write(`loes/${l.id}`, 'update', { doerNodeId: into });
     if (M.P.cogNodeId === from) await write('project/main', 'update', { cogNodeId: into });
@@ -1478,6 +1537,22 @@ function needsCard(M, l) {
   </div>`;
 }
 
+function relRow(M, k) {
+  const own = verbOf(k) !== LINK_TYPES[k.type].verb;
+  const text = `${esc(M.nodes.get(k.source).label)} <span class="verb">${esc(verbOf(k))}</span> ${esc(M.nodes.get(k.target).label)}${relWays(M, k)}${own ? ` <span class="kind-tag">${esc(KIND_LABEL[k.type])}</span>` : ''}${has(k.notes) ? `<span class="rel-note">${esc(k.notes)}</span>` : ''}`;
+  if (ui.editLink === k.id) return `<li class="is-editing"><span class="t">${text}</span>${relEditor(M, k)}</li>`;
+  return `<li><button type="button" class="linklike rel-open" data-cmd="editLink" ${dargs(k.id)} title="Change this relationship">${text}</button><button type="button" class="icon-btn" data-cmd="unlink" ${dargs(k.id)} aria-label="Remove this relationship"${dis()}>×</button></li>`;
+}
+function relEditor(M, k) {
+  const items = nodeOptionGroups(M).slice(1);
+  return `<div class="rel-edit">
+    <div class="relrow-line">${draftSelect('le-from', items, k.source, 'Starts from')}${draftSelect('le-type', verbOptions(), `${k.type}|${VERBS[k.type][0]}`, 'Relationship')}${draftSelect('le-to', items, k.target, 'Ends at')}</div>
+    <div class="field"><label for="le-own">Or use your own wording</label><input type="text" id="le-own" data-draft value="${esc(ui.drafts.get('le-own') ?? '')}" placeholder="For example: co-signs" autocomplete="off"${dis()}></div>
+    <div class="field"><label for="le-note">Note</label><textarea id="le-note" data-draft rows="2" data-autosize${dis()}>${esc(ui.drafts.get('le-note') ?? '')}</textarea></div>
+    <p class="fine">The kind sets how the line looks and what the map counts. A “Uses” link makes the end item a need of the doer.</p>
+    <div class="row-actions"><button type="button" class="btn small primary" data-cmd="saveLink" ${dargs(k.id)} data-from="le-from,le-type,le-to,le-own,le-note"${dis()}>Save</button>${btn('Cancel', 'cancelLink', [], 'small')}${btn('Delete', 'unlink', [k.id], 'small ghost', { write: true, confirm: 'del-link-' + k.id, confirmLabel: 'Confirm delete' })}</div>
+  </div>`;
+}
 function relWays(M, k) {
   if (k.type !== 'uses' || !k.ways || (M.doerLoes.get(k.source) || []).length < 2) return '';
   return ` <span class="verb">(in ${esc(k.ways.map(w => M.loeById.get(w).name).join(', '))})</span>`;
@@ -1490,7 +1565,7 @@ function relTarget(M, prefix) {
 }
 function buildLinks(M) {
   const rel = M.links.slice().sort((a, b) => a.type.localeCompare(b.type) || M.nodes.get(a.source).label.localeCompare(M.nodes.get(b.source).label));
-  const relList = rel.length ? `<ul class="rel-list">${rel.map(k => `<li><span class="t">${esc(M.nodes.get(k.source).label)} <span class="verb">${esc(LINK_TYPES[k.type].verb)}</span> ${esc(M.nodes.get(k.target).label)}${relWays(M, k)}</span><button type="button" class="icon-btn" data-cmd="unlink" ${dargs(k.id)} aria-label="Remove this relationship"${dis()}>×</button></li>`).join('')}</ul>` : '<p class="muted">No relationships yet.</p>';
+  const relList = rel.length ? `<ul class="rel-list">${rel.map(k => relRow(M, k)).join('')}</ul>` : '<p class="muted">No relationships yet.</p>';
   const orph = M.orphans.length ? ask('These items have no connections. Are they relevant?', `<ul>${M.orphans.map(n => `<li><button type="button" class="linklike" data-cmd="editNode" ${dargs(n.id)}>${esc(n.label)}</button></li>`).join('')}</ul><p class="muted">Connect them below, or remove them if they do not bear on the objective.</p>`) : '';
   const shared = M.shared.length ? ask('These needs are shared by more than one doer. Is that dependency real?', `<ul>${M.shared.map(s => `<li><b>${esc(s.node.label)}</b>, used by ${esc(uniq(s.loes.map(l => M.nodes.get(l.doerNodeId).label)).join(' and '))}</li>`).join('')}</ul><p class="muted">Shared needs are often where plans break, because no single way owns them.</p>`) : '';
   const reviewed = !!M.P.relationshipsReviewed;
@@ -1503,8 +1578,8 @@ function buildLinks(M) {
   </div>
   <div class="card relrow">
     <p class="card-title">Add a relationship</p>
-    <div class="relrow-line">${draftSelect('rel-from', nodeOptionGroups(M), '', 'From item')}${draftSelect('rel-type', Object.entries(LINK_TYPES).filter(([k]) => k !== 'uses').map(([k, v]) => [k, v.label]).concat([['uses', 'Uses']]), 'depends_on', 'Relationship')}${relTarget(M, 'rel')}</div>
-    <p class="fine">Type a name that is not on the map yet to add it. It joins the same way as the item it starts from, and you can move it later.</p>
+    <div class="relrow-line">${draftSelect('rel-from', nodeOptionGroups(M), '', 'From item')}${draftSelect('rel-type', verbOptions(), 'depends_on|depends on', 'Relationship')}${relTarget(M, 'rel')}</div>
+    <p class="fine">Type a name that is not on the map yet to add it. It joins the same way as the item it starts from. Tap a relationship in the list to change it or use your own wording.</p>
     <div class="row-actions"><button type="button" class="btn" id="rel-btn" data-cmd="linkTo" data-from="rel-from,rel-type,rel-to,rel-kind" data-clear="rel-to"${dis()}>Add relationship</button></div>
     ${nodesDatalist(M)}
   </div>
@@ -1603,7 +1678,7 @@ function buildNodeEditor(M, id) {
   if (owners) roles.push(`Needed by ${uniq(owners.map(l => M.nodes.get(l.doerNodeId).label)).join(', ')}.`);
   roles.push(`Tier: ${TIER_LABEL[M.tier.get(id)]}.`);
   const mine = M.links.filter(k => k.source === id || k.target === id);
-  const relList = mine.length ? `<ul class="rel-list">${mine.map(k => `<li><span class="t">${esc(M.nodes.get(k.source).label)} <span class="verb">${esc(LINK_TYPES[k.type].verb)}</span> ${esc(M.nodes.get(k.target).label)}${relWays(M, k)}</span><button type="button" class="icon-btn" data-cmd="unlink" ${dargs(k.id)} aria-label="Remove this relationship"${dis()}>×</button></li>`).join('')}</ul>` : '<p class="muted">No relationships yet.</p>';
+  const relList = mine.length ? `<ul class="rel-list">${mine.map(k => relRow(M, k)).join('')}</ul>` : '<p class="muted">No relationships yet.</p>';
   return `${eyebrow('Item')}
   <h2 class="question">${esc(n.label)}</h2>
   ${ask('', `<ul>${roles.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`, 'From your answers')}
@@ -1614,7 +1689,7 @@ function buildNodeEditor(M, id) {
   ${field({ key: `node:${id}:owner`, label: 'Owner', value: n.owner, placeholder: 'Who on the team watches this' })}
   ${field({ key: `node:${id}:notes`, label: 'Notes', value: n.notes, multiline: true, rows: 3 })}
   <section class="rv"><h3>Relationships</h3>${relList}
-    <div class="relrow-line"><span class="muted">${esc(n.label)}</span>${draftSelect('ed-rel-type', Object.entries(LINK_TYPES).map(([k, v]) => [k, v.label]), 'depends_on', 'Relationship')}${relTarget(M, 'ed-rel')}</div>
+    <div class="relrow-line"><span class="muted">${esc(n.label)}</span>${draftSelect('ed-rel-type', verbOptions(), 'depends_on|depends on', 'Relationship')}${relTarget(M, 'ed-rel')}</div>
     <p class="fine">Type a name that is not on the map yet to add it. It joins the same way as this item, and you can move it later.</p>
     <div class="row-actions"><button type="button" class="btn small" id="ed-rel-btn" data-cmd="linkTo" ${dargs(id)} data-from="ed-rel-type,ed-rel-to,ed-rel-kind" data-clear="ed-rel-to"${dis()}>Add relationship</button></div>
     ${nodesDatalist(M)}</section>
@@ -1959,7 +2034,7 @@ function renderLanes(M) {
   const segs = [];
   for (const k of M.links) {
     const a = L.rects.get(k.source), b = L.rects.get(k.target);
-    if (a && b) segs.push({ id: k.id, type: k.type, a, b, s: k.source, t: k.target });
+    if (a && b) segs.push({ id: k.id, type: k.type, a, b, s: k.source, t: k.target, tip: `${M.nodes.get(k.source).label} ${verbOf(k)} ${M.nodes.get(k.target).label}` });
   }
   for (const c of L.caps) {
     const d = c.loe.doerNodeId && L.rects.get(c.loe.doerNodeId);
@@ -1969,7 +2044,8 @@ function renderLanes(M) {
   d3.select('#link-layer').selectAll('path.link').data(segs, d => d.id).join('path')
     .attr('class', d => `link t-${d.type}${H.hotLink(d.s, d.t) ? ' is-hot' : ''}${H.dimLink(d.s, d.t) ? ' is-dim' : ''}`)
     .attr('d', d => lanePath(d.a, d.b))
-    .attr('marker-end', d => (d.type === 'tension' ? null : `url(#mk-${d.type})`));
+    .attr('marker-end', d => (d.type === 'tension' ? null : `url(#mk-${d.type})`))
+    .each(function (d) { d3.select(this).selectAll('title').data(d.tip ? [d.tip] : []).join('title').text(t => t); });
 
   // Nodes, actions, placeholders
   const items = [
@@ -2082,7 +2158,7 @@ function netWant(M) {
   return out;
 }
 function netLinks(M) {
-  const out = M.links.map(k => ({ id: k.id, type: k.type, s: k.source, t: k.target }));
+  const out = M.links.map(k => ({ id: k.id, type: k.type, s: k.source, t: k.target, tip: `${M.nodes.get(k.source).label} ${verbOf(k)} ${M.nodes.get(k.target).label}` }));
   for (const l of M.loes) {
     if (!has(l.capability)) continue;
     if (l.doerNodeId && M.nodes.has(l.doerNodeId)) out.push({ id: 'does:' + l.id, type: 'does', s: l.doerNodeId, t: 'cap:' + l.id });
@@ -2102,7 +2178,7 @@ function syncNet(M) {
   }
   if (next.size !== G.size) topo = true;
   G = next;
-  GL = netLinks(M).filter(l => G.has(l.s) && G.has(l.t)).map(l => ({ id: l.id, type: l.type, source: G.get(l.s), target: G.get(l.t) }));
+  GL = netLinks(M).filter(l => G.has(l.s) && G.has(l.t)).map(l => ({ id: l.id, type: l.type, tip: l.tip, source: G.get(l.s), target: G.get(l.t) }));
   const sig = [...G.keys()].sort().join('|') + '#' + GL.map(l => l.id).sort().join('|');
   if (sig !== topoSig) { topo = true; topoSig = sig; }
   return topo;
@@ -2119,7 +2195,8 @@ function renderNetwork(M) {
   const H = highlighter(M);
   d3.select('#link-layer').selectAll('path.link').data(GL, d => d.id).join('path')
     .attr('class', d => `link t-${d.type}${H.hotLink(d.source.id, d.target.id) ? ' is-hot' : ''}${H.dimLink(d.source.id, d.target.id) ? ' is-dim' : ''}`)
-    .attr('marker-end', d => (d.type === 'tension' ? null : `url(#mk-${d.type})`));
+    .attr('marker-end', d => (d.type === 'tension' ? null : `url(#mk-${d.type})`))
+    .each(function (d) { d3.select(this).selectAll('title').data(d.tip ? [d.tip] : []).join('title').text(t => t); });
   const drag = d3.drag()
     .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.25).restart(); d.fx = d.x; d.fy = d.y; })
     .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })

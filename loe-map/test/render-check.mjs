@@ -445,7 +445,35 @@ for (const scheme of ['light', 'dark']) {
   check('a relationship to an existing name links to that item without a copy', rel.existingReused && rel.cleared, JSON.stringify(rel));
   await shot(p, '18-desktop-editor-new-dependency-light');
   await run('closeEditor'); await pause();
+
+  // Relationship wording: pick a verb when adding, then click the row to change it.
   await run('setCog', tech); await pause();
+  await run('addRequirement', A, 'Research database', 'system'); await pause();
+  await run('reviewLinks', true); await pause();
+  await run('goto', 5); await pause();
+  const analyst = await idOf('node', 'Non-radiology clinicians'), db = await idOf('node', 'Research database');
+  await p.selectOption('#rel-from', analyst);
+  await p.selectOption('#rel-type', 'influences|trains');
+  await p.fill('#rel-to', 'Research database');
+  await p.click('#rel-btn'); await p.waitForTimeout(400);
+  let lk = await p.evaluate(([a, b]) => window.LOEMap.model().links.find(k => k.source === a && k.target === b), [analyst, db]);
+  check('adding a relationship can use a listed verb', lk && lk.type === 'influences' && lk.verb === 'trains', JSON.stringify(lk));
+  const rowText = await p.$eval(`#coach-body button.rel-open[data-args*="${lk.id}"]`, b => b.textContent);
+  check('the relationship list shows the chosen wording', /trains/.test(rowText), rowText);
+  await p.click(`#coach-body button.rel-open[data-args*="${lk.id}"]`); await p.waitForTimeout(300);
+  await p.selectOption('#le-type', 'depends_on|waits on');
+  await p.fill('#le-note', 'Until the export is approved');
+  await p.click('#coach-body button[data-cmd="saveLink"]'); await p.waitForTimeout(400);
+  lk = await p.evaluate(([a, b]) => window.LOEMap.model().links.find(k => k.source === a && k.target === b), [analyst, db]);
+  check('editing a relationship changes its kind, wording, and note', lk && lk.type === 'depends_on' && lk.verb === 'waits on' && lk.notes === 'Until the export is approved', JSON.stringify(lk));
+  await p.click(`#coach-body button.rel-open[data-args*="${lk.id}"]`); await p.waitForTimeout(300);
+  await p.fill('#le-own', 'co-signs');
+  await p.click('#coach-body button[data-cmd="saveLink"]'); await p.waitForTimeout(400);
+  lk = await p.evaluate(([a, b]) => window.LOEMap.model().links.find(k => k.source === a && k.target === b), [analyst, db]);
+  check('own wording replaces the listed verb and keeps the kind', lk && lk.type === 'depends_on' && lk.verb === 'co-signs', JSON.stringify(lk));
+  await p.click(`#coach-body button.rel-open[data-args*="${lk.id}"]`); await p.waitForTimeout(300);
+  await shot(p, '19-desktop-edit-relationship-light');
+  await run('cancelLink'); await pause();
   await run('goto', 4); await pause();
   await shot(p, '17-desktop-shared-doer-needs-light');
   check('shared-doer flow: no errors', errors.length === 0, errors.join(' | '));
