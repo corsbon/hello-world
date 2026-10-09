@@ -384,6 +384,53 @@ for (const scheme of ['light', 'dark']) {
   await ctx.close();
 }
 
+// ---------------------------------------------------------------- 4. Two ways with the same doer keep separate needs
+{
+  const { ctx, p, errors } = await open({ width: 1200, height: 800 });
+  const run = (...a) => p.evaluate(async args => window.LOEMap.dispatch(...args), a);
+  const pause = () => p.waitForTimeout(250);
+  const needs = () => p.evaluate(() => { const M = window.LOEMap.model(); const out = {}; for (const l of M.loes) out[l.name] = (M.reqsByLoe.get(l.id) || []).map(id => M.nodes.get(id).label).sort(); return out; });
+  const idOf = (kind, name) => p.evaluate(([k, n]) => { const M = window.LOEMap.model(); return k === 'way' ? M.loes.find(l => l.name === n).id : [...M.nodes.values()].find(x => x.label === n).id; }, [kind, name]);
+  await run('setProject', { objective: 'Standard protocol used in 100% of scans by 2027' }); await pause();
+  await run('addWay', 'Education'); await pause();
+  await run('addWay', 'Adherence'); await pause();
+  const A = await idOf('way', 'Education'), B = await idOf('way', 'Adherence');
+  await run('updateWay', A, { capability: 'know when to select the protocol' });
+  await run('updateWay', B, { capability: 'execute the protocol as designed' }); await pause();
+  await run('setDoer', A, 'Technologists'); await pause();
+  await run('setDoer', B, 'Technologists'); await pause();
+  await run('addRequirement', A, 'Epic: reason for exam', 'process'); await pause();
+  await run('addRequirement', B, 'Protocol itself', 'system'); await pause();
+  let n = await needs();
+  check('same doer in two ways: each way keeps its own needs', JSON.stringify(n.Education) === '["Epic: reason for exam"]' && JSON.stringify(n.Adherence) === '["Protocol itself"]', JSON.stringify(n));
+  await run('addRequirement', B, 'Epic: reason for exam', 'process'); await pause();
+  n = await needs();
+  check('the same need can be added to a second way', n.Adherence.length === 2 && n.Education.length === 1, JSON.stringify(n));
+  const reason = await idOf('node', 'Epic: reason for exam');
+  await run('removeNeed', B, reason); await pause();
+  n = await needs();
+  check('removing a need from one way leaves it in the other', JSON.stringify(n.Education) === '["Epic: reason for exam"]' && JSON.stringify(n.Adherence) === '["Protocol itself"]', JSON.stringify(n));
+  // Older links saved without a way.
+  await run('addNode', 'Old lane need', 'resource', A);
+  await run('addNode', 'Old shared need', 'resource', ''); await pause();
+  const tech = await idOf('node', 'Technologists'), laneNeed = await idOf('node', 'Old lane need'), sharedNeed = await idOf('node', 'Old shared need');
+  await p.evaluate(([t, a, b]) => Promise.all([
+    window.__stubDb.doc(`links/uses__${t}__${a}`).set({ source: t, target: a, type: 'uses' }),
+    window.__stubDb.doc(`links/uses__${t}__${b}`).set({ source: t, target: b, type: 'uses' }),
+  ]), [tech, laneNeed, sharedNeed]); await pause();
+  n = await needs();
+  check('an older need in a way\'s lane counts for that way only', n.Education.includes('Old lane need') && !n.Adherence.includes('Old lane need'), JSON.stringify(n));
+  check('an older need outside the doer\'s lanes counts for every way of that doer', n.Education.includes('Old shared need') && n.Adherence.includes('Old shared need'), JSON.stringify(n));
+  await run('removeNeed', B, sharedNeed); await pause();
+  n = await needs();
+  check('removing an older shared need from one way keeps it in the other', n.Education.includes('Old shared need') && !n.Adherence.includes('Old shared need'), JSON.stringify(n));
+  await run('setCog', tech); await pause();
+  await run('goto', 4); await pause();
+  await shot(p, '17-desktop-shared-doer-needs-light');
+  check('shared-doer flow: no errors', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
 await browser.close();
 const failed = results.filter(r => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed. Screenshots in ${outDir}`);

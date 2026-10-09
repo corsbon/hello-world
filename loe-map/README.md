@@ -87,10 +87,12 @@ project/main   title, objective, measure, baseline, target, dueDate,
 loes/{id}      name, order, color, capability, doerNodeId
 nodes/{id}     label, type (actor | system | process | resource), loeId, vulnerable,
                rationale, owner, notes
-links/{id}     source, target, type (uses | depends_on | influences | tension)
-               id = type__source__target
+links/{id}     source, target, type (uses | depends_on | influences | tension), loeId
+               id = type__source__target, plus __loeId for a need tied to one way
 phases/{id}    name, order, start, end, mainLoeId, rationale
 ```
+
+A need belongs to a doer within one way, so two ways that share a doer can each have their own needs. A "uses" link saved before needs carried a way counts for the way whose lane the need sits in, or for every way of that doer when the need sits elsewhere.
 
 Roles are computed from these records and never stored. That includes needs, vulnerabilities, tiers, and which steps are open. The center of gravity is the one stored choice, and it only counts while that node is still a doer. The map therefore cannot drift out of step with the answers.
 

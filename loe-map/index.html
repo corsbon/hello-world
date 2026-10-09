@@ -639,6 +639,7 @@ const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(
 const dargs = (...a) => `data-args="${esc(JSON.stringify(a))}"`;
 const fid = (key, sfx) => 'f-' + (key + (sfx ? '-' + sfx : '')).replace(/[^A-Za-z0-9_-]/g, '_');
 const uniq = a => [...new Set(a)];
+const linkKey = (type, src, tgt, loeId) => (loeId ? `${type}__${src}__${tgt}__${loeId}` : `${type}__${src}__${tgt}`);
 // An essential action placed mid-sentence: lowercase its first letter unless the first word is an acronym (CT, PACS).
 const mid = v => { const t = String(v || '').trim(); const w = t.split(/\s+/)[0] || ''; return w.length > 1 && w === w.toUpperCase() && /[A-Z]/.test(w) ? t : t.charAt(0).toLowerCase() + t.slice(1); };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -718,9 +719,17 @@ function derive(src) {
   const loeById = new Map(loes.map(l => [l.id, l]));
   const nodes = new Map([...src.nodes].map(([id, d]) => [id, { id, ...d, label: d.label || 'Untitled', type: NODE_TYPES[d.type] ? d.type : 'resource', loeId: loeById.has(d.loeId) ? d.loeId : null }]));
   const links = [...src.links].map(([id, d]) => ({ id, ...d }))
-    .filter(k => LINK_TYPES[k.type] && nodes.has(k.source) && nodes.has(k.target) && k.source !== k.target);
+    .filter(k => LINK_TYPES[k.type] && nodes.has(k.source) && nodes.has(k.target) && k.source !== k.target && (!k.loeId || loeById.has(k.loeId)));
   const doerLoes = new Map();
   for (const l of loes) if (l.doerNodeId && nodes.has(l.doerNodeId)) push(doerLoes, l.doerNodeId, l);
+  // Which ways a "uses" link serves. A link saved with a way serves that way. An older link without one
+  // serves the way whose lane the need sits in, if the doer has that way, and otherwise every way of that doer.
+  for (const k of links) {
+    if (k.type !== 'uses') continue;
+    const dw = (doerLoes.get(k.source) || []).map(x => x.id);
+    const lane = nodes.get(k.target).loeId;
+    k.ways = k.loeId ? (dw.includes(k.loeId) ? [k.loeId] : []) : (dw.includes(lane) ? [lane] : dw);
+  }
   // The center of gravity is chosen by the team in question 3 and must be one of the doers.
   const cogId = P.cogNodeId && doerLoes.has(P.cogNodeId) ? P.cogNodeId : null;
   const cogStale = !!(P.cogNodeId && nodes.has(P.cogNodeId) && !cogId);
@@ -730,7 +739,7 @@ function derive(src) {
   for (const l of loes) {
     const d = l.doerNodeId;
     if (!d || !nodes.has(d)) continue;
-    const r = links.filter(k => k.type === 'uses' && k.source === d).map(k => k.target);
+    const r = uniq(links.filter(k => k.type === 'uses' && k.source === d && k.ways.includes(l.id)).map(k => k.target));
     reqsByLoe.set(l.id, r);
     for (const t of r) push(reqOwners, t, l);
   }
@@ -1060,6 +1069,7 @@ const cmd = {
     force();
     for (const n of model().nodes.values()) if (n.loeId === id) await write(`nodes/${n.id}`, 'update', { loeId: null });
     for (const ph of model().phases) if (ph.mainLoeId === id) await write(`phases/${ph.id}`, 'update', { mainLoeId: null });
+    for (const k of model().links) if (k.loeId === id) await write(`links/${k.id}`, 'delete');
     ui.lanesOn = ui.lanesOn.filter(x => x !== id);
     return write(`loes/${id}`, 'delete');
   },
@@ -1081,10 +1091,26 @@ const cmd = {
     if (!l || !model().nodes.has(l.doerNodeId)) { toast('Name the doer of this way first.'); return false; }
     const existing = findByLabel(label);
     if (existing && existing.id === l.doerNodeId) { toast('A doer cannot be its own need.'); return false; }
+    if (existing && (model().reqsByLoe.get(loeId) || []).includes(existing.id)) { toast(`“${existing.label}” is already a need in this way.`); return false; }
     force();
     const nodeId = await findOrCreate(label, NODE_TYPES[type] ? type : 'resource', loeId);
     if (!nodeId) return false;
-    return cmd.link(l.doerNodeId, 'uses', nodeId);
+    return write(`links/${linkKey('uses', l.doerNodeId, nodeId, loeId)}`, 'set', { source: l.doerNodeId, target: nodeId, type: 'uses', loeId });
+  },
+  async removeNeed(loeId, nodeId) {
+    if (!guard()) return false;
+    const M = model();
+    const l = M.loeById.get(loeId);
+    const d = l && l.doerNodeId;
+    if (!d) return false;
+    force();
+    // Remove the need from this way only; an older link that served several ways keeps serving the others.
+    for (const k of M.links) {
+      if (k.type !== 'uses' || k.source !== d || k.target !== nodeId || !k.ways.includes(loeId)) continue;
+      await write(`links/${k.id}`, 'delete');
+      for (const w of k.ways) if (w !== loeId) await write(`links/${linkKey('uses', d, nodeId, w)}`, 'set', { source: d, target: nodeId, type: 'uses', loeId: w });
+    }
+    return true;
   },
   async addNode(label, type, loeId) {
     label = String(label || '').trim();
@@ -1154,10 +1180,10 @@ const cmd = {
       const tgt = k.target === from ? into : k.target;
       await write(`links/${k.id}`, 'delete');
       ids.delete(k.id);
-      const id = `${k.type}__${src}__${tgt}`;
+      const id = linkKey(k.type, src, tgt, k.loeId);
       if (src === tgt || ids.has(id) || (k.type === 'tension' && ids.has(`tension__${tgt}__${src}`))) continue;
       ids.add(id);
-      await write(`links/${id}`, 'set', { source: src, target: tgt, type: k.type, ...(has(k.notes) ? { notes: k.notes } : {}) });
+      await write(`links/${id}`, 'set', { source: src, target: tgt, type: k.type, ...(k.loeId ? { loeId: k.loeId } : {}), ...(has(k.notes) ? { notes: k.notes } : {}) });
     }
     for (const l of M.loes) if (l.doerNodeId === from) await write(`loes/${l.id}`, 'update', { doerNodeId: into });
     if (M.P.cogNodeId === from) await write('project/main', 'update', { cogNodeId: into });
@@ -1422,25 +1448,28 @@ function needsCard(M, l) {
   const doer = M.nodes.get(l.doerNodeId);
   const reqs = (M.reqsByLoe.get(l.id) || []).map(id => M.nodes.get(id));
   const rows = reqs.map(n => {
-    const linkId = `uses__${doer.id}__${n.id}`;
     return `<div class="req${n.vulnerable ? ' is-vuln' : ''}">
       <div class="req-head"><button type="button" class="linklike" data-cmd="editNode" ${dargs(n.id)}>${esc(n.label)}</button><span class="req-type">${esc(NODE_TYPES[n.type])}</span>
         ${checkField({ key: `node:${n.id}:vulnerable`, sfx: l.id, label: 'Vulnerable', value: n.vulnerable })}
-        <button type="button" class="icon-btn" data-cmd="unlink" ${dargs(linkId)} aria-label="Remove ${esc(n.label)} from the needs of ${esc(doer.label)}"${dis()}>×</button></div>
+        <button type="button" class="icon-btn" data-cmd="removeNeed" ${dargs(l.id, n.id)} aria-label="Remove ${esc(n.label)} from the needs of ${esc(doer.label)} in ${esc(l.name)}"${dis()}>×</button></div>
       ${n.vulnerable ? field({ key: `node:${n.id}:rationale`, sfx: l.id, label: 'Why is this need vulnerable?', value: n.rationale, placeholder: 'What is deficient, weak, or at risk' }) : ''}
     </div>`;
   }).join('');
   return `<div class="card" ${laneStyle(l)}>
-    <div class="card-head top"><span class="swatch"></span><div class="grow"><div class="card-title">${esc(doer.label)}</div><div class="card-sub">What does this doer use to ${esc(mid(l.capability))}?</div></div>${doer.id === M.cogId ? '<span class="pill cog">Center of gravity</span>' : ''}</div>
+    <div class="card-head top"><span class="swatch"></span><div class="grow"><div class="card-title">${esc(doer.label)}</div><div class="card-sub">In <b>${esc(l.name)}</b>: what does this doer use to ${esc(mid(l.capability))}?</div></div>${doer.id === M.cogId ? '<span class="pill cog">Center of gravity</span>' : ''}</div>
     <div class="req-list">${rows || '<p class="muted">No needs yet.</p>'}</div>
     ${addRow({ id: `req-${l.id}`, label: `Add a need of ${doer.label}`, srLabel: true, placeholder: 'A resource, system, process, or person', cmd: 'addRequirement', pre: [l.id], button: 'Add need', list: 'dl-nodes', extra: draftSelect(`req-type-${l.id}`, typeOptions(), 'resource', 'Kind of need'), extraIds: [`req-type-${l.id}`] })}
     ${reqs.length ? `<p class="coach-line"><span class="tag">Coach asks</span>Would losing any one of these stop ${esc(doer.label)} from being able to ${esc(mid(l.capability))}? If not, it may be helpful rather than critical.</p>` : ''}
   </div>`;
 }
 
+function relWays(M, k) {
+  if (k.type !== 'uses' || !k.ways || (M.doerLoes.get(k.source) || []).length < 2) return '';
+  return ` <span class="verb">(in ${esc(k.ways.map(w => M.loeById.get(w).name).join(', '))})</span>`;
+}
 function buildLinks(M) {
   const rel = M.links.slice().sort((a, b) => a.type.localeCompare(b.type) || M.nodes.get(a.source).label.localeCompare(M.nodes.get(b.source).label));
-  const relList = rel.length ? `<ul class="rel-list">${rel.map(k => `<li><span class="t">${esc(M.nodes.get(k.source).label)} <span class="verb">${esc(LINK_TYPES[k.type].verb)}</span> ${esc(M.nodes.get(k.target).label)}</span><button type="button" class="icon-btn" data-cmd="unlink" ${dargs(k.id)} aria-label="Remove this relationship"${dis()}>×</button></li>`).join('')}</ul>` : '<p class="muted">No relationships yet.</p>';
+  const relList = rel.length ? `<ul class="rel-list">${rel.map(k => `<li><span class="t">${esc(M.nodes.get(k.source).label)} <span class="verb">${esc(LINK_TYPES[k.type].verb)}</span> ${esc(M.nodes.get(k.target).label)}${relWays(M, k)}</span><button type="button" class="icon-btn" data-cmd="unlink" ${dargs(k.id)} aria-label="Remove this relationship"${dis()}>×</button></li>`).join('')}</ul>` : '<p class="muted">No relationships yet.</p>';
   const orph = M.orphans.length ? ask('These items have no connections. Are they relevant?', `<ul>${M.orphans.map(n => `<li><button type="button" class="linklike" data-cmd="editNode" ${dargs(n.id)}>${esc(n.label)}</button></li>`).join('')}</ul><p class="muted">Connect them below, or remove them if they do not bear on the objective.</p>`) : '';
   const shared = M.shared.length ? ask('These needs are shared by more than one doer. Is that dependency real?', `<ul>${M.shared.map(s => `<li><b>${esc(s.node.label)}</b>, used by ${esc(uniq(s.loes.map(l => M.nodes.get(l.doerNodeId).label)).join(' and '))}</li>`).join('')}</ul><p class="muted">Shared needs are often where plans break, because no single way owns them.</p>`) : '';
   const reviewed = !!M.P.relationshipsReviewed;
@@ -1506,7 +1535,7 @@ function buildReview(M) {
   const needs = M.loes.filter(l => M.nodes.has(l.doerNodeId)).map(l => {
     const doer = M.nodes.get(l.doerNodeId);
     const reqs = (M.reqsByLoe.get(l.id) || []).map(id => M.nodes.get(id));
-    return `<li>Needs of <b>${esc(doer.label)}</b>: ${reqs.length ? reqs.map(n => n.vulnerable ? `<span class="missing">${esc(n.label)} (vulnerable${has(n.rationale) ? ': ' + esc(n.rationale) : ''})</span>` : esc(n.label)).join(', ') : '<span class="missing">nothing named yet</span>'}</li>`;
+    return `<li>Needs of <b>${esc(doer.label)}</b> in ${esc(l.name)}: ${reqs.length ? reqs.map(n => n.vulnerable ? `<span class="missing">${esc(n.label)} (vulnerable${has(n.rationale) ? ': ' + esc(n.rationale) : ''})</span>` : esc(n.label)).join(', ') : '<span class="missing">nothing named yet</span>'}</li>`;
   }).join('');
   return `${eyebrow('Review')}
   <h2 class="question">Your plan, as you answered it</h2>
@@ -1551,7 +1580,7 @@ function buildNodeEditor(M, id) {
   if (owners) roles.push(`Needed by ${uniq(owners.map(l => M.nodes.get(l.doerNodeId).label)).join(', ')}.`);
   roles.push(`Tier: ${TIER_LABEL[M.tier.get(id)]}.`);
   const mine = M.links.filter(k => k.source === id || k.target === id);
-  const relList = mine.length ? `<ul class="rel-list">${mine.map(k => `<li><span class="t">${esc(M.nodes.get(k.source).label)} <span class="verb">${esc(LINK_TYPES[k.type].verb)}</span> ${esc(M.nodes.get(k.target).label)}</span><button type="button" class="icon-btn" data-cmd="unlink" ${dargs(k.id)} aria-label="Remove this relationship"${dis()}>×</button></li>`).join('')}</ul>` : '<p class="muted">No relationships yet.</p>';
+  const relList = mine.length ? `<ul class="rel-list">${mine.map(k => `<li><span class="t">${esc(M.nodes.get(k.source).label)} <span class="verb">${esc(LINK_TYPES[k.type].verb)}</span> ${esc(M.nodes.get(k.target).label)}${relWays(M, k)}</span><button type="button" class="icon-btn" data-cmd="unlink" ${dargs(k.id)} aria-label="Remove this relationship"${dis()}>×</button></li>`).join('')}</ul>` : '<p class="muted">No relationships yet.</p>';
   const others = nodeOptionGroups(M).map(o => (o.group ? { group: o.group, items: o.items.filter(([v]) => v !== id) } : o)).filter(o => !o.group || o.items.length);
   return `${eyebrow('Item')}
   <h2 class="question">${esc(n.label)}</h2>
