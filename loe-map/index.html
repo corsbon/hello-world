@@ -392,6 +392,10 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
   .question { font-size: 27px; }
   .coach-body { padding: 16px 14px 22px; }
 }
+/* With a mouse, the relationship editor matches the 14px list it opens in. Touch screens keep 16px so iPhones do not zoom on tap. */
+@media (hover: hover) and (pointer: fine) {
+  .rel-edit input, .rel-edit select, .rel-edit textarea { font-size: 14px; }
+}
 </style>
 
 <div class="app" id="app" data-tab="coach">
