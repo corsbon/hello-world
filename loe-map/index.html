@@ -1294,7 +1294,7 @@ function field(o) {
   const v = fieldVal(o.key, o.value);
   const common = `id="${id}" data-bind="${esc(o.key)}"${o.placeholder ? ` placeholder="${esc(o.placeholder)}"` : ''}${dis()}`;
   const ctl = o.type === 'date'
-    ? `<input type="date" ${common} value="${esc(v)}">`
+    ? `<input type="date" ${common} value="${esc(v)}"${o.min ? ` min="${esc(o.min)}"` : ''}>`
     : `<textarea ${common} rows="${o.multiline ? o.rows || 3 : 1}" data-autosize${o.multiline ? '' : ' data-oneline'}>${esc(v)}</textarea>`;
   return `<div class="field">${o.label ? `<label for="${id}"${o.srLabel ? ' class="sr"' : ''}>${esc(o.label)}</label>` : ''}${ctl}${o.hint ? `<p class="fhint">${esc(o.hint)}</p>` : ''}</div>`;
 }
@@ -1618,7 +1618,7 @@ function phaseCard(M, ph, i) {
   if (ph.start && ph.end && ph.end < ph.start) notes.push('<p class="coach-line"><span class="tag">Coach asks</span>This phase ends before it starts. Are the dates right?</p>');
   return `<div class="card" ${main ? laneStyle(main) : ''}>
     <div class="card-head"><span class="phase-num">${i + 1}</span>${main ? '<span class="swatch"></span>' : ''}<div class="grow">${field({ key: `phase:${ph.id}:name`, label: 'Phase name', srLabel: true, value: ph.name })}</div></div>
-    <div class="grid-2">${field({ key: `phase:${ph.id}:start`, label: 'Starts', value: ph.start, type: 'date' })}${field({ key: `phase:${ph.id}:end`, label: 'Ends', value: ph.end, type: 'date' })}</div>
+    <div class="grid-2">${field({ key: `phase:${ph.id}:start`, label: 'Starts', value: ph.start, type: 'date' })}${field({ key: `phase:${ph.id}:end`, label: 'Ends', value: ph.end, type: 'date', min: fieldVal(`phase:${ph.id}:start`, ph.start) })}</div>
     ${selectField({ key: `phase:${ph.id}:mainLoeId`, label: 'Main effort in this phase', value: ph.mainLoeId || '', options: [['', 'Choose a way'], ...M.loes.map(l => [l.id, l.name])] })}
     ${main ? field({ key: `phase:${ph.id}:rationale`, label: `Why is ${main.name} the main effort here, and what must be true before the next phase starts?`, value: ph.rationale, multiline: true, rows: 2, placeholder: 'Your answer' }) : ''}
     ${notes.join('')}
@@ -1708,8 +1708,10 @@ function coachTextFocused() {
   const a = document.activeElement;
   return !!a && els.body.contains(a) && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit'].includes(a.type)));
 }
+// A date box is never redrawn under the user: it would close an open calendar or reset a half-typed date.
+const coachDateFocused = () => { const a = document.activeElement; return !!a && a.tagName === 'INPUT' && a.type === 'date' && els.body.contains(a); };
 function renderCoach(M) {
-  const forced = performance.now() < ui.forceUntil;
+  const forced = performance.now() < ui.forceUntil && !coachDateFocused();
   if (ui.composing || (!forced && coachTextFocused())) { ui.coachDirty = true; return; }
   ui.coachDirty = false;
   const a = document.activeElement;
@@ -2416,6 +2418,11 @@ async function runButton(b) {
     }
   }
 }
+function syncEndMin(t) {
+  const m = /^phase:([^:]+):start$/.exec(t.dataset.bind || '');
+  const end = m && document.getElementById(fid(`phase:${m[1]}:end`));
+  if (end) end.min = t.value;
+}
 function bindEvents() {
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-cmd]');
@@ -2435,6 +2442,7 @@ function bindEvents() {
     if (t.hasAttribute('data-autosize')) autosize(t);
     if (t.dataset.bind && t.type !== 'checkbox' && t.type !== 'radio' && t.tagName !== 'SELECT') {
       const key = t.dataset.bind;
+      if (t.type === 'date') syncEndMin(t);
       ui.pending.set(key, t.value);
       clearTimeout(timers.get(key));
       if (!/^node:[^:]+:label$/.test(key)) timers.set(key, setTimeout(() => flush(key), 700));
@@ -2448,6 +2456,14 @@ function bindEvents() {
     if (t.type === 'checkbox') { commitField(key, t.checked); return; }
     if (t.type === 'radio') { if (t.checked) commitField(key, t.value); return; }
     if (t.tagName === 'SELECT') { commitField(key, t.value || null); return; }
+    if (t.type === 'date') {
+      // Browsers fire change for every partial date typed (year 0002, 0020, ...), so dates save after a pause like text does.
+      syncEndMin(t);
+      ui.pending.set(key, t.value);
+      clearTimeout(timers.get(key));
+      timers.set(key, setTimeout(() => flush(key), 700));
+      return;
+    }
     clearTimeout(timers.get(key));
     timers.delete(key);
     const v = t.value.trim();
