@@ -424,6 +424,27 @@ for (const scheme of ['light', 'dark']) {
   await run('removeNeed', B, sharedNeed); await pause();
   n = await needs();
   check('removing an older shared need from one way keeps it in the other', n.Education.includes('Old shared need') && !n.Adherence.includes('Old shared need'), JSON.stringify(n));
+  // Relationships from the item editor can name an item that is not on the map yet.
+  await run('editNode', reason); await pause();
+  await p.fill('#ed-rel-to', 'Non-radiology clinicians');
+  await p.click('#ed-rel-btn'); await p.waitForTimeout(400);
+  await p.fill('#ed-rel-to', 'Protocol itself');
+  await p.press('#ed-rel-to', 'Enter'); await p.waitForTimeout(400);
+  const rel = await p.evaluate(([rid, way]) => {
+    const M = window.LOEMap.model();
+    const clin = [...M.nodes.values()].find(n => n.label === 'Non-radiology clinicians');
+    const proto = [...M.nodes.values()].filter(n => n.label === 'Protocol itself');
+    return {
+      created: !!clin, lane: clin && clin.loeId === way, type: clin && clin.type,
+      linked: !!clin && M.links.some(k => k.source === rid && k.target === clin.id && k.type === 'depends_on'),
+      existingReused: proto.length === 1 && M.links.some(k => k.source === rid && k.target === proto[0].id && k.type === 'depends_on'),
+      cleared: document.getElementById('ed-rel-to').value === '',
+    };
+  }, [reason, A]);
+  check('a relationship to a new name creates the item in the same way and links it', rel.created && rel.lane && rel.type === 'actor' && rel.linked, JSON.stringify(rel));
+  check('a relationship to an existing name links to that item without a copy', rel.existingReused && rel.cleared, JSON.stringify(rel));
+  await shot(p, '18-desktop-editor-new-dependency-light');
+  await run('closeEditor'); await pause();
   await run('setCog', tech); await pause();
   await run('goto', 4); await pause();
   await shot(p, '17-desktop-shared-doer-needs-light');

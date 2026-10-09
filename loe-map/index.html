@@ -176,6 +176,7 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .relrow { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
 .relrow-line { display: flex; gap: 8px; flex-wrap: wrap; }
 .relrow-line select { flex: 1 1 9rem; width: auto; }
+.relrow-line input[type="text"] { flex: 2 1 12rem; width: auto; }
 
 .stack { display: grid; gap: 12px; }
 .card { border: 1px solid var(--rule); border-radius: 9px; padding: 12px; display: grid; gap: 10px; background: var(--surface); min-width: 0; }
@@ -1152,6 +1153,20 @@ const cmd = {
     if (ui.editNode === id) ui.editNode = null;
     return write(`nodes/${id}`, 'delete');
   },
+  async linkTo(source, type, label, kind) {
+    label = String(label || '').trim();
+    if (!source) { toast('Pick the item the relationship starts from.'); return false; }
+    if (!label) { toast('Type the name of the item on the other end.'); return false; }
+    if (!guard()) return false;
+    const src = model().nodes.get(source);
+    if (!src) return false;
+    const found = findByLabel(label);
+    if (found && found.id === source) { toast('Pick two different items.'); return false; }
+    force();
+    const tid = found ? found.id : await findOrCreate(label, NODE_TYPES[kind] ? kind : 'actor', src.loeId);
+    if (!tid) return false;
+    return cmd.link(source, type, tid);
+  },
   link(source, type, target) {
     if (!guard()) return false;
     if (!LINK_TYPES[type]) { toast('Pick a relationship.'); return false; }
@@ -1411,7 +1426,7 @@ function buildDoers(M) {
   <h2 class="question">Who or what has the inherent ability to perform each action?</h2>
   <p class="hint">Name the doer: the person, group, or system that performs the action itself, not something it uses.</p>
   <blockquote class="def">“The center of gravity is the primary entity that possesses the inherent capability to achieve the objective.”<cite><a href="https://www.armyupress.army.mil/Journals/Military-Review/Online-Exclusive/2017-Online-Exclusive-Articles/The-Center-of-Gravity/" target="_blank" rel="noopener">“The Center of Gravity: Still Relevant After All These Years?”</a> Military Review, May 2017</cite></blockquote>
-  <datalist id="dl-nodes">${[...M.nodes.values()].map(n => `<option value="${esc(n.label)}"></option>`).join('')}</datalist>
+  ${nodesDatalist(M)}
   <div class="stack">${withCap.map(l => doerCard(M, l)).join('') || '<p class="muted">No ways have an essential action yet.</p>'}</div>
   ${noCap.length ? `<p class="muted">Still without an action in question 2: ${noCap.map(l => esc(l.name)).join(', ')}.</p>` : ''}
   ${M.loes.length < MAX_WAYS ? `<div class="prereq"><p>Need another way? Add it in question 2, then come back here.</p>${btn('Add a way', 'addWayPrompt', [], 'small', { write: true })}</div>` : ''}
@@ -1438,7 +1453,7 @@ function buildNeeds(M) {
   ${prereq(M, 4)}
   <h2 class="question">What does each doer require, and which of those are vulnerable?</h2>
   <p class="hint">List the people, systems, processes, and conditions each doer uses to perform its action. Then mark the ones that are deficient, weak, or at risk, and say why.</p>
-  <datalist id="dl-nodes">${[...M.nodes.values()].map(n => `<option value="${esc(n.label)}"></option>`).join('')}</datalist>
+  ${nodesDatalist(M)}
   <div class="stack">${withDoer.map(l => needsCard(M, l)).join('') || '<p class="muted">No doers yet. Name them in question 3.</p>'}</div>
   ${without.length ? `<p class="muted">Ways still without a doer: ${without.map(l => esc(l.name)).join(', ')}.</p>` : ''}
   ${M.loes.length < MAX_WAYS ? `<div class="prereq"><p>Need another way? Add it in question 2, then come back here.</p>${btn('Add a way', 'addWayPrompt', [], 'small', { write: true })}</div>` : ''}
@@ -1467,6 +1482,12 @@ function relWays(M, k) {
   if (k.type !== 'uses' || !k.ways || (M.doerLoes.get(k.source) || []).length < 2) return '';
   return ` <span class="verb">(in ${esc(k.ways.map(w => M.loeById.get(w).name).join(', '))})</span>`;
 }
+const nodesDatalist = M => `<datalist id="dl-nodes">${[...M.nodes.values()].map(n => `<option value="${esc(n.label)}"></option>`).join('')}</datalist>`;
+function relTarget(M, prefix) {
+  const v = ui.drafts.get(`${prefix}-to`) ?? '';
+  return `<input type="text" id="${prefix}-to" data-draft list="dl-nodes" data-enter="${prefix}-btn" value="${esc(v)}" placeholder="Item name" aria-label="Item on the other end" autocomplete="off"${dis()}>`
+    + draftSelect(`${prefix}-kind`, typeOptions(), 'actor', 'Kind, if it is a new item');
+}
 function buildLinks(M) {
   const rel = M.links.slice().sort((a, b) => a.type.localeCompare(b.type) || M.nodes.get(a.source).label.localeCompare(M.nodes.get(b.source).label));
   const relList = rel.length ? `<ul class="rel-list">${rel.map(k => `<li><span class="t">${esc(M.nodes.get(k.source).label)} <span class="verb">${esc(LINK_TYPES[k.type].verb)}</span> ${esc(M.nodes.get(k.target).label)}${relWays(M, k)}</span><button type="button" class="icon-btn" data-cmd="unlink" ${dargs(k.id)} aria-label="Remove this relationship"${dis()}>×</button></li>`).join('')}</ul>` : '<p class="muted">No relationships yet.</p>';
@@ -1482,8 +1503,10 @@ function buildLinks(M) {
   </div>
   <div class="card relrow">
     <p class="card-title">Add a relationship</p>
-    <div class="relrow-line">${draftSelect('rel-from', nodeOptionGroups(M), '', 'From item')}${draftSelect('rel-type', Object.entries(LINK_TYPES).filter(([k]) => k !== 'uses').map(([k, v]) => [k, v.label]).concat([['uses', 'Uses']]), 'depends_on', 'Relationship')}${draftSelect('rel-to', nodeOptionGroups(M), '', 'To item')}</div>
-    <div class="row-actions"><button type="button" class="btn" data-cmd="link" data-from="rel-from,rel-type,rel-to" data-clear="rel-to"${dis()}>Add relationship</button></div>
+    <div class="relrow-line">${draftSelect('rel-from', nodeOptionGroups(M), '', 'From item')}${draftSelect('rel-type', Object.entries(LINK_TYPES).filter(([k]) => k !== 'uses').map(([k, v]) => [k, v.label]).concat([['uses', 'Uses']]), 'depends_on', 'Relationship')}${relTarget(M, 'rel')}</div>
+    <p class="fine">Type a name that is not on the map yet to add it. It joins the same way as the item it starts from, and you can move it later.</p>
+    <div class="row-actions"><button type="button" class="btn" id="rel-btn" data-cmd="linkTo" data-from="rel-from,rel-type,rel-to,rel-kind" data-clear="rel-to"${dis()}>Add relationship</button></div>
+    ${nodesDatalist(M)}
   </div>
   ${relList}
   ${orph}${shared}
@@ -1581,7 +1604,6 @@ function buildNodeEditor(M, id) {
   roles.push(`Tier: ${TIER_LABEL[M.tier.get(id)]}.`);
   const mine = M.links.filter(k => k.source === id || k.target === id);
   const relList = mine.length ? `<ul class="rel-list">${mine.map(k => `<li><span class="t">${esc(M.nodes.get(k.source).label)} <span class="verb">${esc(LINK_TYPES[k.type].verb)}</span> ${esc(M.nodes.get(k.target).label)}${relWays(M, k)}</span><button type="button" class="icon-btn" data-cmd="unlink" ${dargs(k.id)} aria-label="Remove this relationship"${dis()}>×</button></li>`).join('')}</ul>` : '<p class="muted">No relationships yet.</p>';
-  const others = nodeOptionGroups(M).map(o => (o.group ? { group: o.group, items: o.items.filter(([v]) => v !== id) } : o)).filter(o => !o.group || o.items.length);
   return `${eyebrow('Item')}
   <h2 class="question">${esc(n.label)}</h2>
   ${ask('', `<ul>${roles.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`, 'From your answers')}
@@ -1592,8 +1614,10 @@ function buildNodeEditor(M, id) {
   ${field({ key: `node:${id}:owner`, label: 'Owner', value: n.owner, placeholder: 'Who on the team watches this' })}
   ${field({ key: `node:${id}:notes`, label: 'Notes', value: n.notes, multiline: true, rows: 3 })}
   <section class="rv"><h3>Relationships</h3>${relList}
-    <div class="relrow-line"><span class="muted">${esc(n.label)}</span>${draftSelect('ed-rel-type', Object.entries(LINK_TYPES).map(([k, v]) => [k, v.label]), 'depends_on', 'Relationship')}${draftSelect('ed-rel-to', others, '', 'To item')}</div>
-    <div class="row-actions"><button type="button" class="btn small" data-cmd="link" ${dargs(id)} data-from="ed-rel-type,ed-rel-to" data-clear="ed-rel-to"${dis()}>Add relationship</button></div></section>
+    <div class="relrow-line"><span class="muted">${esc(n.label)}</span>${draftSelect('ed-rel-type', Object.entries(LINK_TYPES).map(([k, v]) => [k, v.label]), 'depends_on', 'Relationship')}${relTarget(M, 'ed-rel')}</div>
+    <p class="fine">Type a name that is not on the map yet to add it. It joins the same way as this item, and you can move it later.</p>
+    <div class="row-actions"><button type="button" class="btn small" id="ed-rel-btn" data-cmd="linkTo" ${dargs(id)} data-from="ed-rel-type,ed-rel-to,ed-rel-kind" data-clear="ed-rel-to"${dis()}>Add relationship</button></div>
+    ${nodesDatalist(M)}</section>
   <div class="row-actions">${btn('Done', 'closeEditor', [], 'primary')}${btn('Delete item', 'deleteNode', [id], 'ghost', { write: true, confirm: 'del-node-' + id, confirmLabel: 'Confirm: delete item and its links' })}</div>`;
 }
 
