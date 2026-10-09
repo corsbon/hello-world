@@ -183,6 +183,25 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   const selfNeed = await p.evaluate(async id => window.LOEMap.dispatch('addRequirement', id, 'On-duty radiologists', 'actor'), wayId);
   check('a doer cannot be its own need', selfNeed === false);
 
+  // Renaming a typo onto an existing item's name offers a merge instead of failing quietly.
+  await p.evaluate(async () => { await window.LOEMap.dispatch('addNode', 'Conference schedul', 'process', ''); });
+  await p.waitForTimeout(300);
+  const [typoId, realId, worklistId] = await p.evaluate(() => { const M = window.LOEMap.model(); const f = l => [...M.nodes.values()].find(n => n.label === l).id; return [f('Conference schedul'), f('Conference schedule'), f('Worklist prioritization rule')]; });
+  await p.evaluate(async ([a, b]) => { await window.LOEMap.dispatch('link', a, 'influences', b); }, [typoId, worklistId]);
+  await p.evaluate(id => window.LOEMap.dispatch('editNode', id), typoId);
+  await settle(p);
+  await p.fill(`#f-node_${typoId}_label`, 'Conference schedule');
+  await p.press(`#f-node_${typoId}_label`, 'Enter');
+  await p.waitForTimeout(400);
+  const offer = await p.evaluate(id => ({ shown: !!document.querySelector('#coach-body .merge'), box: (document.getElementById(`f-node_${id}_label`) || {}).value }), typoId);
+  check('renaming onto an existing name offers a merge and shows the saved name again', offer.shown && offer.box === 'Conference schedul', JSON.stringify(offer));
+  await shot(p, '03c-desktop-merge-offer-light');
+  await p.click('#coach-body .merge button[data-cmd="mergeNodes"]');
+  await p.waitForTimeout(600);
+  const merged = await p.evaluate(([real, wl]) => { const M = window.LOEMap.model(); return { count: [...M.nodes.values()].filter(n => n.label.startsWith('Conference schedul')).length, moved: M.links.some(k => k.source === real && k.target === wl && k.type === 'influences'), kept: M.links.some(k => k.target === real && k.type === 'depends_on'), editing: window.LOEMap.ui.editNode }; }, [realId, worklistId]);
+  check('merging leaves one item with both sets of links', merged.count === 1 && merged.moved && merged.kept && merged.editing === realId, JSON.stringify(merged));
+  await p.evaluate(() => window.LOEMap.dispatch('closeEditor'));
+
   // Phases: a main effort per phase, set through the form.
   await p.evaluate(() => window.LOEMap.dispatch('goto', 6));
   await settle(p);

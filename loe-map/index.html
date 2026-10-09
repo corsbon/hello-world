@@ -148,6 +148,7 @@ blockquote.def cite { display: block; font-style: normal; font-size: 12px; color
 .recap b { color: var(--ink); font-weight: 600; }
 .prereq { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--ink-3); font-size: 14px; }
 .prereq p { margin: 0; flex: 1 1 12rem; }
+.prereq.merge { border-style: solid; border-color: var(--accent); background: var(--accent-soft); }
 
 .field { display: grid; gap: 5px; min-width: 0; }
 .field > label { font-weight: 600; font-size: 13px; }
@@ -1098,7 +1099,12 @@ const cmd = {
     if ('label' in patch) {
       if (!has(patch.label)) { toast('An item needs a name.'); return false; }
       const dup = findByLabel(patch.label);
-      if (dup && dup.id !== id) { toast('Another item already has that name.'); return false; }
+      if (dup && dup.id !== id) {
+        ui.pending.delete(`node:${id}:label`);
+        ui.mergeOffer = { from: id, into: dup.id };
+        force(); bump();
+        return false;
+      }
     }
     if ('loeId' in patch && !patch.loeId) patch.loeId = null;
     if ('vulnerable' in patch || 'loeId' in patch || 'type' in patch) force();
@@ -1132,6 +1138,41 @@ const cmd = {
     return write(`links/${id}`, 'set', { source, target, type });
   },
   unlink(id) { if (!guard()) return false; force(); return write(`links/${id}`, 'delete'); },
+  dismissMerge() { ui.mergeOffer = null; force(); render(); return true; },
+  async mergeNodes(from, into) {
+    if (!guard()) return false;
+    const M = model();
+    const a = M.nodes.get(from), b = M.nodes.get(into);
+    ui.mergeOffer = null;
+    if (!a || !b || from === into) { force(); render(); return false; }
+    force();
+    // Re-point every link from the duplicate to the item that keeps the name; drop links that would repeat or loop.
+    const ids = new Set(M.links.map(k => k.id));
+    for (const k of M.links) {
+      if (k.source !== from && k.target !== from) continue;
+      const src = k.source === from ? into : k.source;
+      const tgt = k.target === from ? into : k.target;
+      await write(`links/${k.id}`, 'delete');
+      ids.delete(k.id);
+      const id = `${k.type}__${src}__${tgt}`;
+      if (src === tgt || ids.has(id) || (k.type === 'tension' && ids.has(`tension__${tgt}__${src}`))) continue;
+      ids.add(id);
+      await write(`links/${id}`, 'set', { source: src, target: tgt, type: k.type, ...(has(k.notes) ? { notes: k.notes } : {}) });
+    }
+    for (const l of M.loes) if (l.doerNodeId === from) await write(`loes/${l.id}`, 'update', { doerNodeId: into });
+    if (M.P.cogNodeId === from) await write('project/main', 'update', { cogNodeId: into });
+    // Keep the surviving item's answers and fill its blanks from the duplicate.
+    const patch = {};
+    if (a.vulnerable && !b.vulnerable) patch.vulnerable = true;
+    for (const f of ['rationale', 'owner', 'notes']) {
+      if (has(a[f]) && !has(b[f])) patch[f] = a[f];
+      else if (has(a[f]) && has(b[f]) && a[f].trim() !== b[f].trim()) patch[f] = `${b[f].trim()} / ${a[f].trim()}`;
+    }
+    if (Object.keys(patch).length) await write(`nodes/${into}`, 'update', patch);
+    if (ui.selected === from) ui.selected = into;
+    if (ui.editNode === from) ui.editNode = into;
+    return write(`nodes/${from}`, 'delete');
+  },
   reviewLinks(on) { force(); return cmd.setProject({ relationshipsReviewed: on !== false }); },
 };
 function dispatch(name, ...args) {
@@ -1492,6 +1533,14 @@ function buildReview(M) {
   <div class="row-actions">${btn('Copy data', 'copyData', [], 'small')}</div>`;
 }
 
+function mergeBlock(M) {
+  const o = ui.mergeOffer;
+  if (!o || ui.demo) return '';
+  const a = M.nodes.get(o.from), b = M.nodes.get(o.into);
+  if (!a || !b) return '';
+  return `<div class="prereq merge" role="status"><p>Another item is already named “${esc(b.label)}”, so “${esc(a.label)}” kept its old name. If they are the same thing, merge them into one item. Its links, owner, and notes come along.</p>
+    <div class="row-actions">${btn(`Merge into “${trunc(b.label, 30)}”`, 'mergeNodes', [o.from, o.into], 'small primary', { write: true })}${btn('Keep separate', 'dismissMerge', [], 'small ghost')}</div></div>`;
+}
 function buildNodeEditor(M, id) {
   const n = M.nodes.get(id);
   if (!n) return `<p class="muted">That item is no longer on the map.</p>${btn('Back', 'closeEditor', [], 'small')}`;
@@ -1537,7 +1586,7 @@ function renderCoach(M) {
   try { if (aid && typeof a.selectionStart === 'number') { s0 = a.selectionStart; s1 = a.selectionEnd; } } catch (e) { /* not a text control */ }
   const top = els.scroll.scrollTop;
   const build = [buildStart, buildGoal, buildWays, buildDoers, buildNeeds, buildLinks, buildPhases, buildReview][ui.step] || buildStart;
-  els.body.innerHTML = ui.editNode ? buildNodeEditor(M, ui.editNode) : build(M);
+  els.body.innerHTML = mergeBlock(M) + (ui.editNode ? buildNodeEditor(M, ui.editNode) : build(M));
   autosizeAll();
   if (ui.scrollTop) { els.scroll.scrollTop = 0; ui.scrollTop = false; } else els.scroll.scrollTop = top;
   if (aid) {
@@ -2254,7 +2303,7 @@ function bindEvents() {
       const key = t.dataset.bind;
       ui.pending.set(key, t.value);
       clearTimeout(timers.get(key));
-      timers.set(key, setTimeout(() => flush(key), 700));
+      if (!/^node:[^:]+:label$/.test(key)) timers.set(key, setTimeout(() => flush(key), 700));
     } else if (t.hasAttribute('data-draft')) ui.drafts.set(t.id, t.value);
   });
   body.addEventListener('change', e => {
