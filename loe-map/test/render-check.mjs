@@ -146,6 +146,13 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   check('choosing the center of gravity opens question 4', u[4] === true, JSON.stringify(u));
   check('the chosen doer is the center of gravity', cog === 'On-duty radiologists', cog);
   await shot(p, '02b-desktop-doers-light');
+  await p.click('#coach-body button[data-cmd="addWayPrompt"]');
+  await p.waitForTimeout(300);
+  const back = await p.evaluate(() => ({ step: window.LOEMap.ui.step, focus: document.activeElement && document.activeElement.id, addAboveCards: (() => { const a = document.getElementById('new-way'); const c = document.querySelector('#coach-body .stack .card'); return !!(a && c && (a.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING)); })() }));
+  check('Add a way in question 3 returns to question 2 with the cursor in the add box', back.step === 2 && back.focus === 'new-way', JSON.stringify(back));
+  check('question 2 keeps the add box above the way cards', back.addAboveCards, JSON.stringify(back));
+  await p.evaluate(() => window.LOEMap.dispatch('goto', 3));
+  await settle(p);
 
   // Question 4
   await p.evaluate(async id => { await window.LOEMap.dispatch('addRequirement', id, 'Worklist prioritization rule', 'process'); }, wayId);
@@ -256,6 +263,7 @@ for (const scheme of ['light', 'dark']) {
       });
       check(`${label} ${scheme}: ${step === 6 ? 'phases' : 'question ' + step} answers fit with no sideways scrolling`, bad.length === 0, bad.join(', '));
       if (mobile && step === 1) await shot(p, `08-${label}-goal-${scheme}`);
+      if (mobile && step === 2) await shot(p, `08a-${label}-ways-${scheme}`);
       if (step === 6) await shot(p, `08b-${label}-phases-${scheme}`);
     }
     if (mobile) {

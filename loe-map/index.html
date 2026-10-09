@@ -985,6 +985,11 @@ const cmd = {
     return true;
   },
   closeEditor() { ui.editNode = null; ui.scrollTop = true; force(); render(); return true; },
+  addWayPrompt() {
+    if (!cmd.goto(2)) return false;
+    requestAnimationFrame(() => requestAnimationFrame(() => { const el = $('new-way'); if (el) el.focus(); }));
+    return true;
+  },
   demo(on) {
     on = !!on;
     if (on === ui.demo) return true;
@@ -1300,9 +1305,10 @@ function buildWays(M) {
   <h2 class="question">What ways will you use to reach the goal?</h2>
   <p class="hint">A way is a line of effort, a broad approach such as “Staffing,” “Technology,” or “Outreach.” For each one, name the single essential action inside it. Later, you will choose which way leads in each phase of the project.</p>
   ${goalRecap(M)}
-  <div class="stack">${M.loes.map(l => wayCard(M, l)).join('') || '<p class="muted">No ways yet. Add the first one below.</p>'}</div>
   ${full ? '<p class="muted">Eight ways is the limit. If you need more, some of them are probably the same way.</p>'
     : addRow({ id: 'new-way', label: 'Add a way', placeholder: 'Name of the way', cmd: 'addWay', button: 'Add way' })}
+  <p class="fine">${M.loes.length} of ${MAX_WAYS} ways. Most projects start with three to five. You can come back and add more at any time.</p>
+  <div class="stack">${M.loes.map(l => wayCard(M, l)).join('') || '<p class="muted">No ways yet. Add the first one above.</p>'}</div>
   ${examples('ways')}`;
 }
 function wayCard(M, l) {
@@ -1339,6 +1345,7 @@ function buildDoers(M) {
   <datalist id="dl-nodes">${[...M.nodes.values()].map(n => `<option value="${esc(n.label)}"></option>`).join('')}</datalist>
   <div class="stack">${withCap.map(l => doerCard(M, l)).join('') || '<p class="muted">No ways have an essential action yet.</p>'}</div>
   ${noCap.length ? `<p class="muted">Still without an action in question 2: ${noCap.map(l => esc(l.name)).join(', ')}.</p>` : ''}
+  ${M.loes.length < MAX_WAYS ? `<div class="prereq"><p>Need another way? Add it in question 2, then come back here.</p>${btn('Add a way', 'addWayPrompt', [], 'small', { write: true })}</div>` : ''}
   ${cogBlock}
   ${examples('doers')}`;
 }
@@ -1365,6 +1372,7 @@ function buildNeeds(M) {
   <datalist id="dl-nodes">${[...M.nodes.values()].map(n => `<option value="${esc(n.label)}"></option>`).join('')}</datalist>
   <div class="stack">${withDoer.map(l => needsCard(M, l)).join('') || '<p class="muted">No doers yet. Name them in question 3.</p>'}</div>
   ${without.length ? `<p class="muted">Ways still without a doer: ${without.map(l => esc(l.name)).join(', ')}.</p>` : ''}
+  ${M.loes.length < MAX_WAYS ? `<div class="prereq"><p>Need another way? Add it in question 2, then come back here.</p>${btn('Add a way', 'addWayPrompt', [], 'small', { write: true })}</div>` : ''}
   ${examples('needs')}`;
 }
 function needsCard(M, l) {
