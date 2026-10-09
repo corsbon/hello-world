@@ -638,6 +638,8 @@ const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(
 const dargs = (...a) => `data-args="${esc(JSON.stringify(a))}"`;
 const fid = (key, sfx) => 'f-' + (key + (sfx ? '-' + sfx : '')).replace(/[^A-Za-z0-9_-]/g, '_');
 const uniq = a => [...new Set(a)];
+// An essential action placed mid-sentence: lowercase its first letter unless the first word is an acronym (CT, PACS).
+const mid = v => { const t = String(v || '').trim(); const w = t.split(/\s+/)[0] || ''; return w.length > 1 && w === w.toUpperCase() && /[A-Z]/.test(w) ? t : t.charAt(0).toLowerCase() + t.slice(1); };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const isPhone = () => !!PHONE_MQ.matches;
 const trunc = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
@@ -803,8 +805,8 @@ function openQuestions(M) {
   for (const l of M.loes) {
     const doer = M.nodes.get(l.doerNodeId);
     if (!has(l.capability)) q.push({ step: 2, text: `What is the essential action inside “${l.name}”?` });
-    else if (!doer) q.push({ step: 3, text: `Who or what performs “${l.capability}”?` });
-    else if (!(M.reqsByLoe.get(l.id) || []).length) q.push({ step: 4, text: `What does the doer, ${doer.label}, use to ${l.capability}?` });
+    else if (!doer) q.push({ step: 3, text: `Who or what performs “${mid(l.capability)}”?` });
+    else if (!(M.reqsByLoe.get(l.id) || []).length) q.push({ step: 4, text: `What does the doer, ${doer.label}, use to ${mid(l.capability)}?` });
   }
   if (M.doerLoes.size && !M.cogId) q.push({ step: 3, text: M.cogStale ? `Your center of gravity, ${M.nodes.get(P.cogNodeId).label}, no longer performs any way's action. Which doer is it now?` : 'Which doer is your center of gravity?' });
   if (M.cogId && !has(P.cogRationale)) q.push({ step: 3, text: 'If your center of gravity vanished, could anyone else achieve the objective? Not answered yet.' });
@@ -1316,8 +1318,8 @@ function wayCard(M, l) {
   const capKey = `loe:${l.id}:capability`;
   return `<div class="card" ${laneStyle(l)}>
     <div class="card-head"><span class="swatch"></span><div class="grow">${field({ key: `loe:${l.id}:name`, label: 'Way name', srLabel: true, value: l.name })}</div></div>
-    <div class="field"><label for="${fid(capKey)}">Essential action</label><div class="prefixed"><span class="prefix">Someone must</span><textarea id="${fid(capKey)}" data-bind="${capKey}" rows="1" data-autosize data-oneline placeholder="a verb phrase"${dis()}>${esc(fieldVal(capKey, l.capability))}</textarea></div></div>
-    ${has(l.capability) ? `<p class="coach-line"><span class="tag">Coach asks</span>Is “${esc(l.capability)}” an action someone performs? If it names a thing, the thing is probably a need for question 4.</p>` : ''}
+    <div class="field"><label for="${fid(capKey)}">Essential action</label><div class="prefixed"><span class="prefix">Someone must</span><textarea id="${fid(capKey)}" data-bind="${capKey}" rows="1" data-autosize data-oneline autocapitalize="off" placeholder="a verb phrase"${dis()}>${esc(fieldVal(capKey, l.capability))}</textarea></div></div>
+    ${has(l.capability) ? `<p class="coach-line"><span class="tag">Coach asks</span>Is “${esc(mid(l.capability))}” an action someone performs? If it names a thing, the thing is probably a need for question 4.</p>` : ''}
     <div class="card-foot"><div class="colors" role="group" aria-label="Color for ${esc(l.name)}">${Array.from({ length: MAX_WAYS }, (_, i) => `<button type="button" class="color-dot" style="--lc:var(--lane-${i})" data-cmd="updateWay" ${dargs(l.id, { color: i })} aria-label="Color ${i + 1}" aria-pressed="${l.color === i}"${dis()}><span></span></button>`).join('')}</div>
       ${btn('Delete way', 'deleteWay', [l.id], 'small ghost', { write: true, confirm: 'del-way-' + l.id, confirmLabel: count ? `Delete, and move ${count} item${count > 1 ? 's' : ''} to Cross-cutting` : 'Confirm delete' })}</div>
   </div>`;
@@ -1331,7 +1333,7 @@ function buildDoers(M) {
   if (M.doerLoes.size) {
     const opts = [...M.doerLoes].map(([id, ls]) => {
       const rid = fid('project:cogNodeId', id);
-      return `<label class="radio" for="${rid}"><input type="radio" name="cog" id="${rid}" value="${esc(id)}" data-bind="project:cogNodeId"${M.cogId === id ? ' checked' : ''}${dis()}><span><b>${esc(M.nodes.get(id).label)}</b><span class="radio-sub">must ${esc(ls.map(l => l.capability).join('; '))}</span></span></label>`;
+      return `<label class="radio" for="${rid}"><input type="radio" name="cog" id="${rid}" value="${esc(id)}" data-bind="project:cogNodeId"${M.cogId === id ? ' checked' : ''}${dis()}><span><b>${esc(M.nodes.get(id).label)}</b><span class="radio-sub">must ${esc(ls.map(l => mid(l.capability)).join('; '))}</span></span></label>`;
     }).join('');
     cogBlock = ask('Which doer is your center of gravity?', `<p class="muted">Pick the doer whose own action achieves the objective. The other doers set it up or support it. Your choice stays the same in every phase of the project.</p>${M.cogStale ? `<p class="missing">Your earlier choice, ${esc(M.nodes.get(M.P.cogNodeId).label)}, no longer performs any way's action.</p>` : ''}<div class="radios" role="radiogroup" aria-label="Center of gravity">${opts}</div>`);
     if (cog) cogBlock += ask(`If ${esc(cog.label)} vanished tomorrow, could anyone else still achieve the objective?`,
@@ -1357,7 +1359,7 @@ function doerCard(M, l) {
     : addRow({ id: `doer-${l.id}`, label: 'Who or what does this?', placeholder: 'A person, group, or system', cmd: 'setDoer', pre: [l.id], button: 'Set doer', list: 'dl-nodes' });
   return `<div class="card" ${laneStyle(l)}>
     <div class="card-head top"><span class="swatch"></span><span class="card-title grow">${esc(l.name)}</span>${doer && l.doerNodeId === M.cogId ? '<span class="pill cog">Center of gravity</span>' : ''}</div>
-    <p class="muted">Someone must <b>${esc(l.capability)}</b>.</p>
+    <p class="muted">Someone must <b>${esc(mid(l.capability))}</b>.</p>
     ${body}
   </div>`;
 }
@@ -1388,10 +1390,10 @@ function needsCard(M, l) {
     </div>`;
   }).join('');
   return `<div class="card" ${laneStyle(l)}>
-    <div class="card-head top"><span class="swatch"></span><div class="grow"><div class="card-title">${esc(doer.label)}</div><div class="card-sub">What does this doer use to ${esc(l.capability)}?</div></div>${doer.id === M.cogId ? '<span class="pill cog">Center of gravity</span>' : ''}</div>
+    <div class="card-head top"><span class="swatch"></span><div class="grow"><div class="card-title">${esc(doer.label)}</div><div class="card-sub">What does this doer use to ${esc(mid(l.capability))}?</div></div>${doer.id === M.cogId ? '<span class="pill cog">Center of gravity</span>' : ''}</div>
     <div class="req-list">${rows || '<p class="muted">No needs yet.</p>'}</div>
     ${addRow({ id: `req-${l.id}`, label: `Add a need of ${doer.label}`, srLabel: true, placeholder: 'A resource, system, process, or person', cmd: 'addRequirement', pre: [l.id], button: 'Add need', list: 'dl-nodes', extra: draftSelect(`req-type-${l.id}`, typeOptions(), 'resource', 'Kind of need'), extraIds: [`req-type-${l.id}`] })}
-    ${reqs.length ? `<p class="coach-line"><span class="tag">Coach asks</span>Would losing any one of these stop ${esc(doer.label)} from being able to ${esc(l.capability)}? If not, it may be helpful rather than critical.</p>` : ''}
+    ${reqs.length ? `<p class="coach-line"><span class="tag">Coach asks</span>Would losing any one of these stop ${esc(doer.label)} from being able to ${esc(mid(l.capability))}? If not, it may be helpful rather than critical.</p>` : ''}
   </div>`;
 }
 
@@ -1473,7 +1475,7 @@ function buildReview(M) {
     <dl><dt>Measure</dt><dd>${esc(P.measure || '—')}</dd><dt>Baseline</dt><dd>${esc(P.baseline || '—')}</dd><dt>Target</dt><dd>${esc(P.target || '—')}</dd><dt>Due</dt><dd>${esc(P.dueDate || '—')}</dd></dl>
     ${has(P.objectiveRationale) ? `<p class="quote">${esc(P.objectiveRationale)}</p>` : ''}</section>
   <section class="rv"><h3><span class="num">2</span>Ways</h3>
-    <ul>${M.loes.map(l => `<li><b>${esc(l.name)}</b>${M.mainIn.has(l.id) ? ` (main effort in ${esc(M.mainIn.get(l.id).map(ph => ph.name).join(', '))})` : ''}: someone must ${has(l.capability) ? esc(l.capability) : '<span class="missing">action not named</span>'}</li>`).join('') || '<li class="missing">No ways yet.</li>'}</ul></section>
+    <ul>${M.loes.map(l => `<li><b>${esc(l.name)}</b>${M.mainIn.has(l.id) ? ` (main effort in ${esc(M.mainIn.get(l.id).map(ph => ph.name).join(', '))})` : ''}: someone must ${has(l.capability) ? esc(mid(l.capability)) : '<span class="missing">action not named</span>'}</li>`).join('') || '<li class="missing">No ways yet.</li>'}</ul></section>
   <section class="rv"><h3><span class="num">3</span>Doers and center of gravity</h3>
     <ul>${M.loes.filter(l => has(l.capability)).map(l => `<li>${esc(l.capability)}: ${M.nodes.has(l.doerNodeId) ? `<b>${esc(M.nodes.get(l.doerNodeId).label)}</b>` : '<span class="missing">no doer named</span>'}</li>`).join('')}</ul>
     ${cog ? `<p>Center of gravity: <b>${esc(cog.label)}</b>.</p>${has(P.cogRationale) ? `<p class="quote">${esc(P.cogRationale)}</p>` : ''}` : '<p class="missing">No center of gravity yet.</p>'}</section>
@@ -1495,7 +1497,7 @@ function buildNodeEditor(M, id) {
   if (!n) return `<p class="muted">That item is no longer on the map.</p>${btn('Back', 'closeEditor', [], 'small')}`;
   const roles = [];
   if (id === M.cogId) roles.push('This is your center of gravity.');
-  for (const l of M.doerLoes.get(id) || []) roles.push(`Doer of “${l.capability || l.name}”.`);
+  for (const l of M.doerLoes.get(id) || []) roles.push(`Doer of “${has(l.capability) ? mid(l.capability) : l.name}”.`);
   const owners = M.reqOwners.get(id);
   if (owners) roles.push(`Needed by ${uniq(owners.map(l => M.nodes.get(l.doerNodeId).label)).join(', ')}.`);
   roles.push(`Tier: ${TIER_LABEL[M.tier.get(id)]}.`);
@@ -2092,7 +2094,7 @@ function describe(M, id) {
     const l = M.loeById.get(id.slice(4));
     if (!l) return null;
     const mains = M.mainIn.get(l.id);
-    return { title: `Someone must ${l.capability}`, lines: [`Essential action of ${l.name}`, ...(mains ? [`Main effort in ${mains.map(ph => ph.name).join(', ')}`] : [])], action: ['Go to question 2', 'goto', [2]] };
+    return { title: `Someone must ${mid(l.capability)}`, lines: [`Essential action of ${l.name}`, ...(mains ? [`Main effort in ${mains.map(ph => ph.name).join(', ')}`] : [])], action: ['Go to question 2', 'goto', [2]] };
   }
   const n = M.nodes.get(id);
   if (!n) return null;
