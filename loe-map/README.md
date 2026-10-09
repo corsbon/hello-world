@@ -100,9 +100,12 @@ Roles are computed from these records and never stored. That includes needs, vul
 
 `test/render-check.mjs` loads the page in headless Chromium with a stub shared database. It walks the six steps, checks that each one opens only when its question is answered, and checks the worked example, read-only access, and the phone tabs. It also takes screenshots of both map views on desktop and phone, in light and dark themes.
 
+Run it from the `loe-map` folder. It needs Node.js 18 or later.
+
 ```
-npm install d3@7.9.0          # into any scratch folder
-node test/render-check.mjs <path-to>/node_modules/d3/dist/d3.min.js <output-dir>
+npm install --no-save d3@7.9.0 playwright@1.56.1
+npx playwright install chromium
+node test/render-check.mjs node_modules/d3/dist/d3.min.js test-output
 ```
 
 ## What comes next

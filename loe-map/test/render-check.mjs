@@ -12,7 +12,8 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
+// Playwright from the project's node_modules, or the cloud container's global copy.
+const { chromium } = await import('playwright').catch(() => import('/opt/node22/lib/node_modules/playwright/index.mjs'));
 
 const here = dirname(fileURLToPath(import.meta.url));
 const [d3Path, outDir] = process.argv.slice(2);
