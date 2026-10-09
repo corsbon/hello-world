@@ -804,13 +804,13 @@ function openQuestions(M) {
     const doer = M.nodes.get(l.doerNodeId);
     if (!has(l.capability)) q.push({ step: 2, text: `What is the essential action inside “${l.name}”?` });
     else if (!doer) q.push({ step: 3, text: `Who or what performs “${l.capability}”?` });
-    else if (!(M.reqsByLoe.get(l.id) || []).length) q.push({ step: 4, text: `What does ${doer.label} use to ${l.capability}?` });
+    else if (!(M.reqsByLoe.get(l.id) || []).length) q.push({ step: 4, text: `What does the doer, ${doer.label}, use to ${l.capability}?` });
   }
   if (M.doerLoes.size && !M.cogId) q.push({ step: 3, text: M.cogStale ? `Your center of gravity, ${M.nodes.get(P.cogNodeId).label}, no longer performs any way's action. Which doer is it now?` : 'Which doer is your center of gravity?' });
   if (M.cogId && !has(P.cogRationale)) q.push({ step: 3, text: 'If your center of gravity vanished, could anyone else achieve the objective? Not answered yet.' });
-  for (const v of M.vulns) if (!has(v.rationale)) q.push({ node: v.id, text: `Why is ${v.label} vulnerable?` });
-  for (const n of M.atRisk) q.push({ node: n.id, text: `You marked ${n.label} as at risk, but no doer uses it. Whose need is it?` });
-  for (const n of M.orphans) q.push({ step: 5, text: `${n.label} has no connections. Is it relevant to the objective?` });
+  for (const v of M.vulns) if (!has(v.rationale)) q.push({ node: v.id, text: `${v.label}: why is this need vulnerable?` });
+  for (const n of M.atRisk) q.push({ node: n.id, text: `${n.label}: marked at risk, but no doer uses this item. Whose need is this?` });
+  for (const n of M.orphans) q.push({ step: 5, text: `${n.label}: no connections yet. Is this item relevant to the objective?` });
   if (!M.phases.length) q.push({ step: 6, text: 'What phases will the project move through?' });
   for (const ph of M.phases) {
     if (!ph.mainLoeId) q.push({ step: 6, text: `Which way is the main effort in ${ph.name}?` });
@@ -1082,7 +1082,7 @@ const cmd = {
     label = String(label || '').trim();
     if (!label) { toast('Name the item first.'); return false; }
     if (!guard()) return false;
-    if (findByLabel(label)) { toast(`${label} is already on the map.`); return false; }
+    if (findByLabel(label)) { toast(`“${label}” is already on the map.`); return false; }
     force();
     return !!(await findOrCreate(label, type, loeId || null));
   },
@@ -1346,7 +1346,7 @@ function doerCard(M, l) {
   const doer = l.doerNodeId && M.nodes.get(l.doerNodeId);
   const body = doer
     ? `<div class="doer-row"><span class="doer-name">${esc(doer.label)}</span>${btn('Edit', 'editNode', [doer.id], 'small')}${btn('Change doer', 'clearDoer', [l.id], 'small ghost', { write: true })}</div>
-       <p class="coach-line"><span class="tag">Coach asks</span>Does ${esc(doer.label)} perform this action itself, or is it used by whoever does? If it is used, ask who uses it. That person or group is the doer, and ${esc(doer.label)} belongs in question 4.</p>`
+       <p class="coach-line"><span class="tag">Coach asks</span>Does the doer you named perform this action itself, or is it used by whoever does? If it is used, ask who uses it. That person or group is the real doer, and what you named belongs in question 4.</p>`
     : addRow({ id: `doer-${l.id}`, label: 'Who or what does this?', placeholder: 'A person, group, or system', cmd: 'setDoer', pre: [l.id], button: 'Set doer', list: 'dl-nodes' });
   return `<div class="card" ${laneStyle(l)}>
     <div class="card-head top"><span class="swatch"></span><span class="card-title grow">${esc(l.name)}</span>${doer && l.doerNodeId === M.cogId ? '<span class="pill cog">Center of gravity</span>' : ''}</div>
@@ -1376,11 +1376,11 @@ function needsCard(M, l) {
       <div class="req-head"><button type="button" class="linklike" data-cmd="editNode" ${dargs(n.id)}>${esc(n.label)}</button><span class="req-type">${esc(NODE_TYPES[n.type])}</span>
         ${checkField({ key: `node:${n.id}:vulnerable`, sfx: l.id, label: 'Vulnerable', value: n.vulnerable })}
         <button type="button" class="icon-btn" data-cmd="unlink" ${dargs(linkId)} aria-label="Remove ${esc(n.label)} from the needs of ${esc(doer.label)}"${dis()}>×</button></div>
-      ${n.vulnerable ? field({ key: `node:${n.id}:rationale`, sfx: l.id, label: `Why is ${n.label} vulnerable?`, value: n.rationale, placeholder: 'What is deficient, weak, or at risk' }) : ''}
+      ${n.vulnerable ? field({ key: `node:${n.id}:rationale`, sfx: l.id, label: 'Why is this need vulnerable?', value: n.rationale, placeholder: 'What is deficient, weak, or at risk' }) : ''}
     </div>`;
   }).join('');
   return `<div class="card" ${laneStyle(l)}>
-    <div class="card-head top"><span class="swatch"></span><div class="grow"><div class="card-title">${esc(doer.label)}</div><div class="card-sub">uses what to ${esc(l.capability)}?</div></div>${doer.id === M.cogId ? '<span class="pill cog">Center of gravity</span>' : ''}</div>
+    <div class="card-head top"><span class="swatch"></span><div class="grow"><div class="card-title">${esc(doer.label)}</div><div class="card-sub">What does this doer use to ${esc(l.capability)}?</div></div>${doer.id === M.cogId ? '<span class="pill cog">Center of gravity</span>' : ''}</div>
     <div class="req-list">${rows || '<p class="muted">No needs yet.</p>'}</div>
     ${addRow({ id: `req-${l.id}`, label: `Add a need of ${doer.label}`, srLabel: true, placeholder: 'A resource, system, process, or person', cmd: 'addRequirement', pre: [l.id], button: 'Add need', list: 'dl-nodes', extra: draftSelect(`req-type-${l.id}`, typeOptions(), 'resource', 'Kind of need'), extraIds: [`req-type-${l.id}`] })}
     ${reqs.length ? `<p class="coach-line"><span class="tag">Coach asks</span>Would losing any one of these stop ${esc(doer.label)} from being able to ${esc(l.capability)}? If not, it may be helpful rather than critical.</p>` : ''}
@@ -1455,7 +1455,7 @@ function buildReview(M) {
   const needs = M.loes.filter(l => M.nodes.has(l.doerNodeId)).map(l => {
     const doer = M.nodes.get(l.doerNodeId);
     const reqs = (M.reqsByLoe.get(l.id) || []).map(id => M.nodes.get(id));
-    return `<li><b>${esc(doer.label)}</b> uses ${reqs.length ? reqs.map(n => n.vulnerable ? `<span class="missing">${esc(n.label)} (vulnerable${has(n.rationale) ? ': ' + esc(n.rationale) : ''})</span>` : esc(n.label)).join(', ') : '<span class="missing">nothing named yet</span>'}</li>`;
+    return `<li>Needs of <b>${esc(doer.label)}</b>: ${reqs.length ? reqs.map(n => n.vulnerable ? `<span class="missing">${esc(n.label)} (vulnerable${has(n.rationale) ? ': ' + esc(n.rationale) : ''})</span>` : esc(n.label)).join(', ') : '<span class="missing">nothing named yet</span>'}</li>`;
   }).join('');
   return `${eyebrow('Review')}
   <h2 class="question">Your plan, as you answered it</h2>
@@ -2093,7 +2093,7 @@ function describe(M, id) {
   for (const l of M.doerLoes.get(id) || []) lines.push(`Doer: ${l.capability || l.name}`);
   const owners = M.reqOwners.get(id);
   if (owners) lines.push('Needed by ' + uniq(owners.map(l => M.nodes.get(l.doerNodeId).label)).join(', '));
-  if (n.vulnerable) lines.push(owners ? 'Vulnerable' + (has(n.rationale) ? `: ${n.rationale}` : '') : 'Marked at risk, but no doer uses it');
+  if (n.vulnerable) lines.push(owners ? 'Vulnerable' + (has(n.rationale) ? `: ${n.rationale}` : '') : 'Marked at risk, but no doer uses this item');
   lines.push(TIER_LABEL[M.tier.get(id)]);
   return { title: n.label, lines, action: [canWrite() ? 'Edit answers' : 'Details', 'editNode', [id]] };
 }
