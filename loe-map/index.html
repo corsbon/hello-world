@@ -1208,6 +1208,15 @@ function focusLater(id) {
     el.scrollIntoView({ block: 'center' });
   }));
 }
+// Bring a block (a way's card, say) to the top of the coach once it has redrawn, and give it focus so the keyboard and screen reader follow.
+function revealLater(id) {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const el = $(id);
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    el.scrollIntoView({ block: 'start' });
+  }));
+}
 function findByLabel(label) {
   const k = String(label || '').trim().toLowerCase();
   if (!k) return null;
@@ -1227,6 +1236,12 @@ const cmd = {
     i = Math.max(0, Math.min(STEPS.length - 1, Number(i) || 0));
     if (i > reachable(model())) { toast(NEXT_REASON[i - 1] || 'Answer the earlier questions first.'); return false; }
     ui.step = i; ui.editNode = null; ui.editStep = null; ui.scrollTop = true; ui.tab = 'coach'; force(); saveUi(); render();
+    return true;
+  },
+  // Question 2, scrolled to one way's card, so "See steps" lands on the steps instead of at the top of the page.
+  seeSteps(loeId) {
+    if (!model().loeById.has(loeId) || !cmd.goto(2)) return false;
+    revealLater(`way-${loeId}`);
     return true;
   },
   next() { return cmd.goto(ui.step + 1); },
@@ -1844,7 +1859,7 @@ function buildWays(M) {
 function wayCard(M, l) {
   const count = [...M.nodes.values()].filter(n => n.loeId === l.id).length;
   const capKey = `loe:${l.id}:capability`;
-  return `<div class="card" ${laneStyle(l)}>
+  return `<div class="card" id="way-${l.id}" tabindex="-1" ${laneStyle(l)}>
     <div class="card-head"><span class="swatch"></span><div class="grow">${field({ key: `loe:${l.id}:name`, label: 'Way name', srLabel: true, value: l.name })}</div></div>
     <div class="field"><label for="${fid(capKey)}">Essential action</label><div class="prefixed"><span class="prefix">Someone must</span><textarea id="${fid(capKey)}" data-bind="${capKey}" rows="1" data-autosize data-oneline autocapitalize="off" placeholder="a verb phrase"${dis()}>${esc(fieldVal(capKey, l.capability))}</textarea></div></div>
     ${has(l.capability) ? `<p class="coach-line"><span class="tag">Coach asks</span>Is “${esc(mid(l.capability))}” an action someone performs? If it names a thing, the thing is probably a need for question 4.</p>` : ''}
@@ -1950,7 +1965,7 @@ function doerCard(M, l) {
   return `<div class="card" ${laneStyle(l)}>
     <div class="card-head top"><span class="swatch"></span><span class="card-title grow">${esc(l.name)}</span>${doer && l.doerNodeId === M.cogId ? '<span class="pill cog">Center of gravity</span>' : ''}</div>
     <p class="muted">Someone must <b>${esc(mid(l.capability))}</b>.</p>
-    ${l.steps.length ? `<p class="fine">${l.steps.length} step${l.steps.length > 1 ? 's lead' : ' leads'} to this action. ${btn('See steps', 'goto', [2], 'small ghost')}</p>` : ''}
+    ${l.steps.length ? `<p class="fine">${l.steps.length} step${l.steps.length > 1 ? 's lead' : ' leads'} to this action. ${btn('See steps', 'seeSteps', [l.id], 'small ghost')}</p>` : ''}
     ${body}
   </div>`;
 }
@@ -3143,7 +3158,7 @@ function describe(M, id) {
     const l = M.loeById.get(id.slice(4));
     if (!l) return null;
     const mains = M.mainIn.get(l.id);
-    return { title: `Someone must ${mid(l.capability)}`, lines: [`Essential action of ${l.name}`, ...(l.steps.length ? [`${l.steps.length} step${l.steps.length > 1 ? 's' : ''}: ${l.steps.map(s => s.text).join('; ')}`] : []), ...(mains ? [`Main effort in ${mains.map(ph => ph.name).join(', ')}`] : [])], action: ['Go to question 2', 'goto', [2]] };
+    return { title: `Someone must ${mid(l.capability)}`, lines: [`Essential action of ${l.name}`, ...(l.steps.length ? [`${l.steps.length} step${l.steps.length > 1 ? 's' : ''}: ${l.steps.map(s => s.text).join('; ')}`] : []), ...(mains ? [`Main effort in ${mains.map(ph => ph.name).join(', ')}`] : [])], action: ['Go to question 2', 'seeSteps', [l.id]] };
   }
   if (String(id).startsWith('step:')) {
     const s = M.stepById.get(id.slice(5));
@@ -3379,6 +3394,10 @@ function bindEvents() {
   window.addEventListener('resize', () => { if (!sizing) sizing = requestAnimationFrame(() => { sizing = 0; autosizeAll(); }); });
   if (PHONE_MQ.addEventListener) PHONE_MQ.addEventListener('change', () => render());
   $('phase-select').addEventListener('change', e => cmd.phase(e.target.value));
+  // The Collapse and Key menus close when you tap anywhere outside them, or press Escape.
+  const closeMenus = e => { for (const d of document.querySelectorAll('#maptools details.key[open]')) if (!e || !d.contains(e.target)) d.open = false; };
+  document.addEventListener('pointerdown', closeMenus, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
   $('btn-copy').addEventListener('click', async () => {
     const ta = $('export-text');
     try { await navigator.clipboard.writeText(ta.value); $('copy-status').textContent = 'Copied.'; }

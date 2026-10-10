@@ -295,6 +295,16 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   await settle(p);
   const radios = await p.$$eval('input[name="cog"]', els => els.length);
   check('question 3 offers each doer as a center-of-gravity choice', radios === 2, String(radios));
+  await p.click('#coach-body button[data-cmd="seeSteps"]');
+  await p.waitForTimeout(400);
+  const seeSteps = await p.evaluate(id => {
+    const el = document.getElementById(`way-${id}`), sc = document.getElementById('coach-scroll');
+    const r = el && el.getBoundingClientRect(), c = sc.getBoundingClientRect();
+    return { step: window.LOEMap.ui.step, focus: document.activeElement && document.activeElement.id, inView: !!r && r.top >= c.top - 2 && r.top < c.top + 80, scrolled: sc.scrollTop };
+  }, wayId);
+  check('See steps on a doer card opens question 2 at that way\'s card', seeSteps.step === 2 && seeSteps.focus === `way-${wayId}` && seeSteps.inView && seeSteps.scrolled > 0, JSON.stringify(seeSteps));
+  await p.evaluate(() => window.LOEMap.dispatch('goto', 3));
+  await settle(p);
   await p.click('label.radio:has-text("On-duty radiologists")');
   await p.waitForTimeout(400);
   u = await p.evaluate(() => window.LOEMap.unlocks());
@@ -576,6 +586,17 @@ for (const scheme of ['light', 'dark']) {
       await p.evaluate(() => window.LOEMap.dispatch('collapse', 'none'));
       await p.waitForTimeout(300);
       const c3 = await p.evaluate(() => document.querySelectorAll('#map-svg g.lnode.step.is-collapsed').length);
+      await p.click('#collapse-summary'); await p.waitForTimeout(200);
+      const m0 = await p.evaluate(() => document.getElementById('collapse-menu').open);
+      await p.click('#collapse-statuses button'); await p.waitForTimeout(200);
+      const m1 = await p.evaluate(() => document.getElementById('collapse-menu').open);
+      await p.click('#maptools .map-title'); await p.waitForTimeout(200);
+      const m2 = await p.evaluate(() => document.getElementById('collapse-menu').open);
+      await p.click('#collapse-summary'); await p.waitForTimeout(200);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+      const m3 = await p.evaluate(() => document.getElementById('collapse-menu').open);
+      await p.evaluate(() => window.LOEMap.dispatch('collapse', 'none')); await p.waitForTimeout(300);
+      check('the Collapse menu stays open for its own buttons and closes on a tap outside or Escape', m0 === true && m1 === true && m2 === false && m3 === false, JSON.stringify({ m0, m1, m2, m3 }));
       check('collapsing by status shrinks only those steps; collapsing all shrinks every box; Show everything restores them', c1.small === 3 && c1.text === 0 && c1.label === 'Collapsed: 1' && c2.small === 14 && c2.width === '56' && c2.label === 'Collapsed: all' && c2.laneH.every(h => h === '66') && c3 === 0, JSON.stringify({ c1, c2, c3 }));
     }
     check(`${label} ${scheme}: sequence view has a column per phase, every step, both links, and statuses`, JSON.stringify(seqEx.heads) === JSON.stringify(['Prepare', 'Launch', 'Sustain', 'Essential action', 'Objective']) && seqEx.boxes === 14 && seqEx.waits === 2 && seqEx.feeds === 1 && seqEx.done === 3 && seqEx.doing === 2 && seqEx.blocked === 1 && seqEx.unknown === 1 && seqEx.dots === 6 && seqEx.tint === 1 && seqEx.main, JSON.stringify(seqEx));
