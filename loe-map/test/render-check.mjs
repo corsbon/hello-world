@@ -475,7 +475,7 @@ for (const scheme of ['light', 'dark']) {
       const M = await p.evaluate(() => { const M = window.LOEMap.model(); return { cog: M.nodes.get(M.cogId).label, vulns: M.vulns.length, nodes: M.nodes.size, links: M.links.length, steps: M.steps.length, waits: M.steps.filter(s => s.after).length, slots: M.slotCount, described: M.steps.filter(s => s.description).length, feeds: M.steps.filter(s => s.feeds).length, pr: M.progress, ends: M.phases.map(x => x.end) }; });
       check('worked example: center of gravity is the on-duty radiologists', M.cog === 'On-duty radiologists', JSON.stringify(M));
       check('worked example: fourteen steps, two hand-offs, six columns of order', M.steps === 14 && M.waits === 2 && M.slots === 6, JSON.stringify(M));
-      check('worked example: every step described, one feedback link, statuses counted', M.described === 14 && M.feeds === 1 && M.pr.done === 3 && M.pr.doing === 2 && M.pr.blocked === 1, JSON.stringify(M));
+      check('worked example: every step described, one feedback link, statuses counted', M.described === 14 && M.feeds === 1 && M.pr.done === 3 && M.pr.doing === 2 && M.pr.blocked === 1 && M.pr.unknown === 1, JSON.stringify(M));
       check('worked example: phase ends derive from the next start and the due date', JSON.stringify(M.ends) === JSON.stringify(['2026-11-30', '2027-01-31', '2027-03-31']), JSON.stringify(M.ends));
       const disabled = await p.$$eval('#coach-body input, #coach-body textarea, #coach-body select', els => els.every(e => e.disabled));
       check('worked example is read-only', disabled);
@@ -548,10 +548,12 @@ for (const scheme of ['light', 'dark']) {
       done: document.querySelectorAll('#map-svg g.lnode.step.st-done').length,
       doing: document.querySelectorAll('#map-svg g.lnode.step.st-doing').length,
       blocked: document.querySelectorAll('#map-svg g.lnode.step.st-blocked').length,
+      unknown: document.querySelectorAll('#map-svg g.lnode.step.st-unknown .ubadge').length,
+      dots: document.querySelectorAll('#map-svg g.lnode.step.st-doing .gbadge circle.dot').length,
       tint: document.querySelectorAll('#map-svg rect.col-active').length,
       main: document.querySelector('g.lane[data-key="l_read"]').classList.contains('is-main-now'),
     }));
-    check(`${label} ${scheme}: sequence view has a column per phase, every step, both links, and statuses`, JSON.stringify(seqEx.heads) === JSON.stringify(['Prepare', 'Launch', 'Sustain', 'Essential action', 'Objective']) && seqEx.boxes === 14 && seqEx.waits === 2 && seqEx.feeds === 1 && seqEx.done === 3 && seqEx.doing === 2 && seqEx.blocked === 1 && seqEx.tint === 1 && seqEx.main, JSON.stringify(seqEx));
+    check(`${label} ${scheme}: sequence view has a column per phase, every step, both links, and statuses`, JSON.stringify(seqEx.heads) === JSON.stringify(['Prepare', 'Launch', 'Sustain', 'Essential action', 'Objective']) && seqEx.boxes === 14 && seqEx.waits === 2 && seqEx.feeds === 1 && seqEx.done === 3 && seqEx.doing === 2 && seqEx.blocked === 1 && seqEx.unknown === 1 && seqEx.dots === 6 && seqEx.tint === 1 && seqEx.main, JSON.stringify(seqEx));
     await shot(p, `11b-${label}-sequence-${scheme}`);
     if (mobile) {
       const sbox = await p.evaluate(() => {

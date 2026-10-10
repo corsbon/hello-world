@@ -406,6 +406,12 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .dbadge text { fill: #fff; font: 700 10px var(--font-body); }
 .bbadge circle { fill: var(--crit); }
 .bbadge text { fill: var(--crit-ink); font: 700 11px var(--font-body); }
+.gbadge circle { fill: #fff; stroke: var(--ink); stroke-width: 1.2; }
+.gbadge circle.dot { fill: #000; stroke: none; }
+.ubadge circle { fill: var(--lane-3); }
+.ubadge text { fill: #1d1300; font: 700 11px var(--font-body); }
+.lnode.step.st-unknown .nbox { stroke: var(--lane-3); stroke-width: 1.8; stroke-dasharray: 2 3; }
+.track-row.st-unknown { border-color: var(--lane-3); }
 .due-tag { font: 500 9px var(--font-mono); letter-spacing: .04em; fill: var(--ink-3); }
 .due-tag.is-late { fill: var(--crit); font-weight: 600; }
 .link.t-waits { stroke: var(--lc, var(--ink-2)); stroke-width: 2.4; stroke-dasharray: 7 4; opacity: .95; }
@@ -499,7 +505,8 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
         <div class="key-body">
           <h5>Steps</h5>
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--surface);stroke:var(--rule)"/><rect x="-6" y="-3" width="7" height="6" rx="2" style="fill:var(--ink-3)"/></svg>Step, numbered way.step, not started</div>
-          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--surface);stroke:var(--accent);stroke-width:2"/></svg>Step in progress</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><circle r="7" style="fill:#fff;stroke:var(--ink);stroke-width:1.2"/><circle cx="-3.5" r="1.3" style="fill:#000"/><circle r="1.3" style="fill:#000"/><circle cx="3.5" r="1.3" style="fill:#000"/></svg>Step in progress</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><circle r="7" style="fill:var(--lane-3)"/><text y="4" text-anchor="middle" style="font:700 11px var(--font-body);fill:#1d1300">?</text></svg>Step with an unknown status</div>
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--surface-2);stroke:var(--rule)"/><circle cx="4" cy="-4" r="4" style="fill:var(--good)"/></svg>Step done</div>
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--crit-soft);stroke:var(--crit);stroke-width:1.8;stroke-dasharray:3 2"/></svg>Step blocked</div>
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><path d="M0,-7L7,0L0,7L-7,0Z" style="fill:var(--ink)"/></svg>Essential action of the way</div>
@@ -571,7 +578,7 @@ const STEPS = [
   { key: 'track', short: 'Track' },
   { key: 'review', short: 'Review' },
 ];
-const STATUS = { todo: 'Not started', doing: 'In progress', done: 'Done', blocked: 'Blocked' };
+const STATUS = { todo: 'Not started', doing: 'In progress', done: 'Done', blocked: 'Blocked', unknown: 'Unknown' };
 const NODE_TYPES = { actor: 'Person or group', system: 'System or tool', process: 'Process or rule', resource: 'Resource or condition' };
 const LINK_TYPES = {
   uses: { verb: 'uses', label: 'Uses' },
@@ -670,7 +677,7 @@ const DEMO_RAW = {
     s_read3: { loeId: 'l_read', order: 3, text: 'Read from the flagged worklist every shift', description: 'Every shift opens the ED worklist first and clears it before general work.', owner: '', status: 'todo', due: '', phaseId: 'ph2', afterStepId: 's_pacs3' },
     s_read4: { loeId: 'l_read', order: 4, text: 'Hold the median under target for four weeks', description: 'Four consecutive weekly medians under 30 minutes, with the addendum rate flat.', owner: '', status: 'todo', due: '2027-03-15', phaseId: 'ph3', afterStepId: null },
     s_tech1: { loeId: 'l_tech', order: 1, text: 'Adopt the standard ED CT protocols', description: 'Every technologist uses the same ED protocol set, so studies finish in a predictable time.', owner: '', status: 'done', due: '', phaseId: 'ph1', afterStepId: null },
-    s_tech2: { loeId: 'l_tech', order: 2, text: 'Send each study as it finishes', description: 'Studies go to PACS one at a time as they complete instead of in batches at shift change.', owner: '', status: 'todo', due: '', phaseId: 'ph2', afterStepId: null },
+    s_tech2: { loeId: 'l_tech', order: 2, text: 'Send each study as it finishes', description: 'Studies go to PACS one at a time as they complete instead of in batches at shift change.', owner: '', status: 'unknown', due: '', phaseId: 'ph2', afterStepId: null },
     s_pacs1: { loeId: 'l_pacs', order: 1, text: 'Write the ED routing rules', description: 'Rules that send any ED-ordered CT to the ED worklist with an ED flag.', owner: '', status: 'done', due: '', phaseId: 'ph1', afterStepId: null },
     s_pacs2: { loeId: 'l_pacs', order: 2, text: 'Get the change request approved', description: 'The routing change clears the enterprise IT change board.', owner: 'Executive sponsor', status: 'doing', due: '2026-10-31', phaseId: 'ph1', afterStepId: null },
     s_pacs3: { loeId: 'l_pacs', order: 3, text: 'Switch routing on and watch it for a week', description: 'Routing goes live; the PACS administrator checks every day that ED studies land where they should.', owner: '', status: 'todo', due: '2026-12-08', phaseId: 'ph2', afterStepId: null },
@@ -859,9 +866,9 @@ function derive(src) {
     arr.forEach((s, i) => { s.index = i; s.num = `${l.num}.${i + 1}`; s.prev = arr[i - 1] || null; s.next = arr[i + 1] || null; });
     stepsByLoe.set(l.id, arr);
     l.steps = arr;
-    l.progress = { total: arr.length, done: arr.filter(s => s.status === 'done').length, doing: arr.filter(s => s.status === 'doing').length, blocked: arr.filter(s => s.status === 'blocked').length };
+    l.progress = { total: arr.length, done: arr.filter(s => s.status === 'done').length, doing: arr.filter(s => s.status === 'doing').length, blocked: arr.filter(s => s.status === 'blocked').length, unknown: arr.filter(s => s.status === 'unknown').length };
   }
-  const progress = { total: steps.length, done: steps.filter(s => s.status === 'done').length, doing: steps.filter(s => s.status === 'doing').length, blocked: steps.filter(s => s.status === 'blocked').length };
+  const progress = { total: steps.length, done: steps.filter(s => s.status === 'done').length, doing: steps.filter(s => s.status === 'doing').length, blocked: steps.filter(s => s.status === 'blocked').length, unknown: steps.filter(s => s.status === 'unknown').length };
   for (const s of steps) {
     const a = s.afterStepId ? stepById.get(s.afterStepId) : null;
     if (!a) s.afterStepId = null;
@@ -1046,6 +1053,7 @@ function openQuestions(M) {
     for (const s of l.steps) {
       if (s.overdue) q.push({ step: 7, text: `${s.num} “${s.text}” was due on ${fmtDate(s.due)} and is not done.` });
       if (s.status === 'blocked' && !has(s.blockedReason)) q.push({ step: 7, text: `${s.num} “${s.text}” is blocked. What is blocking it, and who can clear it?` });
+      if (s.status === 'unknown') q.push({ step: 7, text: `${s.num} “${s.text}”: nobody knows where it stands. Who can find out?` });
     }
   }
   return q;
@@ -2053,7 +2061,7 @@ function buildReview(M) {
     <ul>${M.loes.map(l => `<li><b>${esc(l.name)}</b>${M.mainIn.has(l.id) ? ` (main effort in ${esc(M.mainIn.get(l.id).map(ph => ph.name).join(', '))})` : ''}: someone must ${has(l.capability) ? esc(mid(l.capability)) : '<span class="missing">action not named</span>'}
       ${l.steps.length ? `<ol class="rv-steps">${l.steps.map(s => `<li class="st-${s.status}"><span class="step-num">${s.num}</span> ${esc(s.text)}${stepMeta(M, s)}</li>`).join('')}</ol>` : (has(l.capability) ? ' <span class="missing">No steps yet.</span>' : '')}</li>`).join('') || '<li class="missing">No ways yet.</li>'}</ul></section>
   <section class="rv"><h3>Where things stand</h3>
-    ${M.steps.length ? `<p>${M.progress.done} of ${M.progress.total} steps done, ${M.progress.doing} in progress, ${M.progress.blocked} blocked.</p>` : ''}
+    ${M.steps.length ? `<p>${M.progress.done} of ${M.progress.total} steps done, ${M.progress.doing} in progress, ${M.progress.blocked} blocked${M.progress.unknown ? `, ${M.progress.unknown} unknown` : ''}.</p>` : ''}
     <ul>${M.loes.map(l => `<li><b>${l.num}. ${esc(l.name)}</b>${l.progress.total ? ` (${l.progress.done}/${l.progress.total} done)` : ''}
       ${has(l.now) ? `<br>Now: ${esc(l.now)}` : (l.steps.length ? ' <span class="missing">Where it stands now: not answered.</span>' : '')}
       ${has(l.endState) ? `<br>Done looks like: ${esc(l.endState)}` : ''}
@@ -2166,7 +2174,7 @@ function buildTrack(M) {
   ${prereq(M, 7)}
   <h2 class="question">Where does the plan stand?</h2>
   <p class="hint">Update each step as work happens. The map and the review follow. Open a step to see what it entails.</p>
-  ${pr.total ? `<p class="recap"><b>${pr.done} of ${pr.total} steps done</b> · ${pr.doing} in progress · ${pr.blocked} blocked</p>` : ''}
+  ${pr.total ? `<p class="recap"><b>${pr.done} of ${pr.total} steps done</b> · ${pr.doing} in progress · ${pr.blocked} blocked${pr.unknown ? ` · ${pr.unknown} unknown` : ''}</p>` : ''}
   <div class="stack">${M.loes.map(l => trackCard(M, l)).join('') || '<p class="muted">No ways yet. Add them in question 2.</p>'}</div>`;
 }
 function trackCard(M, l) {
@@ -2710,7 +2718,7 @@ function renderSequence(M) {
     if (!d.loe) return ['', ''];
     const n = d.loe.doerNodeId && M.nodes.get(d.loe.doerNodeId);
     const p = d.loe.progress;
-    return [n ? trunc(`${n.id === M.cogId ? 'COG' : 'Doer'} · ${n.label}`, 20) : '', p.total ? trunc(`${p.done}/${p.total} done${p.blocked ? ` · ${p.blocked} blocked` : ''}${p.doing && !p.blocked ? ` · ${p.doing} going` : ''}`, 20) : ''];
+    return [n ? trunc(`${n.id === M.cogId ? 'COG' : 'Doer'} · ${n.label}`, 20) : '', p.total ? trunc(`${p.done}/${p.total} done${p.blocked ? ` · ${p.blocked} blocked` : ''}${p.unknown ? ` · ${p.unknown} ?` : ''}${p.doing && !p.blocked && !p.unknown ? ` · ${p.doing} going` : ''}`, 20) : ''];
   };
   drawLaneBands(bandG, L, M, H, AP, laneLines);
   drawObjective(objG, L.obj, M, H);
@@ -2875,6 +2883,15 @@ function drawLaneItem(el, d, M) {
       const b = g.append('g').attr('class', 'bbadge').attr('transform', `translate(${w - 2},2)`);
       b.append('circle').attr('r', 8);
       b.append('text').attr('text-anchor', 'middle').attr('y', 4).text('!');
+    } else if (s.status === 'doing') {
+      // In progress: a white circle with three black dots.
+      const b = g.append('g').attr('class', 'gbadge').attr('transform', `translate(${w - 2},2)`);
+      b.append('circle').attr('r', 8);
+      for (const x of [-4, 0, 4]) b.append('circle').attr('class', 'dot').attr('cx', x).attr('r', 1.4);
+    } else if (s.status === 'unknown') {
+      const b = g.append('g').attr('class', 'ubadge').attr('transform', `translate(${w - 2},2)`);
+      b.append('circle').attr('r', 8);
+      b.append('text').attr('text-anchor', 'middle').attr('y', 4).text('?');
     }
     const doer = d.loe.doerNodeId && M.nodes.get(d.loe.doerNodeId);
     const who = has(s.owner) ? s.owner : doer ? doer.label : '';
