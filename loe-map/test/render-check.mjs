@@ -231,6 +231,13 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   check('a slightly wobbly tap on a step still opens its page', (await p.evaluate(() => window.LOEMap.ui.editStep)) === sIds[1]);
   await p.evaluate(() => window.LOEMap.dispatch('closeEditor'));
   await settle(p);
+  // Trackpad two-finger scroll slides the map instead of zooming it.
+  const before = await p.evaluate(() => { const m = /translate\(([-\d.]+),([-\d.]+)\) scale\(([\d.]+)\)/.exec(document.getElementById('zoom-root').getAttribute('transform') || ''); return m ? { x: +m[1], y: +m[2], k: +m[3] } : null; });
+  await p.mouse.move(b1.x, b1.y + 120);
+  await p.mouse.wheel(200, 0);
+  await p.waitForTimeout(300);
+  const after2 = await p.evaluate(() => { const m = /translate\(([-\d.]+),([-\d.]+)\) scale\(([\d.]+)\)/.exec(document.getElementById('zoom-root').getAttribute('transform') || ''); return m ? { x: +m[1], y: +m[2], k: +m[3] } : null; });
+  check('a two-finger scroll slides the map sideways and keeps the zoom', !!before && !!after2 && after2.x < before.x - 50 && Math.abs(after2.k - before.k) < 1e-6, JSON.stringify({ before, after2 }));
   await p.evaluate(id => window.LOEMap.dispatch('editStep', id), sIds[0]);
   await settle(p);
   await p.selectOption(`#f-step_${sIds[0]}_position`, '');
