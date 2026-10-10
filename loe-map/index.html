@@ -1218,7 +1218,16 @@ const cmd = {
     ui.editStep = id; ui.editNode = null; ui.selected = 'step:' + id; ui.scrollTop = true; ui.tab = 'coach'; force(); saveUi(); render();
     return true;
   },
-  closeEditor() { ui.editNode = null; ui.editStep = null; ui.scrollTop = true; force(); render(); return true; },
+  closeEditor() {
+    const s = ui.editStep && model().stepById.get(ui.editStep);
+    ui.editNode = null; ui.editStep = null; force();
+    if (s && ui.step === 2) {
+      // Back to the way the step belongs to, with the cursor in its "Add step" box, so the next step is one tap away.
+      ui.scrollTop = false; render();
+      requestAnimationFrame(() => requestAnimationFrame(() => { const el = $(`new-step-${s.loeId}`); if (el) { el.focus(); el.scrollIntoView({ block: 'center' }); } }));
+    } else { ui.scrollTop = true; render(); }
+    return true;
+  },
   editPhase(id) {
     if (!model().phaseById.has(id) || !cmd.goto(6)) return false;
     requestAnimationFrame(() => requestAnimationFrame(() => { const el = $(fid(`phase:${id}:start`)); if (el) el.focus(); }));
