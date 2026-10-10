@@ -2350,6 +2350,7 @@ function initMap() {
   svgSel.on('touchstart.cancel-drag', e => {
     if (dragging && e.touches && e.touches.length >= 2) {
       dragging.d.cancelled = true;
+      clearTimeout(dragging.d.timer);
       d3.select(dragging.el).attr('transform', `translate(${dragging.d.r.x},${dragging.d.r.y})`).classed('is-dragging', false);
     }
   }, { capture: true });
@@ -2735,7 +2736,7 @@ function renderSequence(M) {
   const sel = d3.select('#node-layer').selectAll('g.lnode').data(items, d => d.key).join(enter => {
     const g = enter.append('g').attr('tabindex', 0).attr('role', 'button');
     g.on('click', (e, d) => { e.stopPropagation(); laneItemClick(d); })
-      .on('keydown', (e, d) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); laneItemClick(d); } });
+      .on('keydown', (e, d) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (d.kind === 'step') cmd.editStep(d.s.id); else laneItemClick(d); } });
     return g;
   });
   sel.attr('transform', d => `translate(${d.r.x},${d.r.y})`)
@@ -2748,24 +2749,37 @@ function renderSequence(M) {
   stickyLabels(d3.zoomTransform(svgSel.node()));
 }
 // Drag a step left or right along its lane to change its place in the way. Dropping it in another phase's column moves it there too.
+// Press and hold for 250 ms to pick a step up; a shorter press is a tap and opens the step's page.
+const HOLD_MS = 250;
 let dragging = null;
 const stepDrag = HAS_D3 ? d3.drag()
   .filter(e => canWrite() && !e.ctrlKey && !e.button && !(e.touches && e.touches.length > 1))
-  .on('start', function (e, d) { d.dragX = 0; d.moved = false; d.cancelled = false; dragging = { d, el: this }; d3.select(this).raise().classed('is-dragging', true); })
-  .on('drag', function (e, d) { if (d.cancelled) return; d.moved = true; d.dragX = (d.dragX || 0) + e.dx; d3.select(this).attr('transform', `translate(${d.r.x + d.dragX},${d.r.y})`); })
+  .on('start', function (e, d) {
+    d.dragX = 0; d.dragY = 0; d.cancelled = false; d.armed = false;
+    dragging = { d, el: this };
+    clearTimeout(d.timer);
+    const el = this;
+    d.timer = setTimeout(() => { if (!d.cancelled && dragging && dragging.d === d) { d.armed = true; d3.select(el).raise().classed('is-dragging', true); } }, HOLD_MS);
+  })
+  .on('drag', function (e, d) {
+    if (d.cancelled) return;
+    d.dragX += e.dx; d.dragY += e.dy;
+    if (d.armed) d3.select(this).attr('transform', `translate(${d.r.x + d.dragX},${d.r.y})`);
+  })
   .on('end', function (e, d) {
+    clearTimeout(d.timer);
     dragging = null;
-    const dx = d.dragX || 0, moved = d.moved, cancelled = d.cancelled;
-    d.dragX = 0; d.moved = false; d.cancelled = false;
+    const dx = d.dragX || 0, dy = d.dragY || 0, armed = d.armed, cancelled = d.cancelled;
+    d.dragX = 0; d.dragY = 0; d.cancelled = false; d.armed = false;
     d3.select(this).classed('is-dragging', false);
     if (cancelled) { render(); return; }
-    const L = lastLanes;
-    if (!L || !L.boxes || Math.abs(dx) < 8) {
-      // A finger tap usually moves a pixel or two, which the browser then treats as a drag and drops the click. Open the step anyway.
-      render();
-      if (moved) cmd.editStep(d.s.id);
+    if (!armed) {
+      // Released before the hold: a tap. A finger wobbles a little, so a small move still counts; a big quick move is neither.
+      if (Math.hypot(dx, dy) <= 8) cmd.editStep(d.s.id); else render();
       return;
     }
+    const L = lastLanes;
+    if (!L || !L.boxes || Math.abs(dx) < 8) { render(); return; }
     const s = d.s;
     const cx = d.r.x + dx + d.r.w / 2;
     const mates = [...L.boxes.values()].filter(r => r.step.loeId === s.loeId && r.step.id !== s.id).sort((a, b) => a.x - b.x);
@@ -2787,7 +2801,7 @@ function stickyLabels(t) {
 }
 function laneItemClick(d) {
   if (d.kind === 'ph') { if (d.p.q <= reachable(model())) cmd.goto(d.p.q); else toast(NEXT_REASON[d.p.q - 1] || 'Answer the earlier questions first.'); return; }
-  if (d.kind === 'step') { cmd.editStep(d.s.id); return; }
+  if (d.kind === 'step') { if (!canWrite() || !HAS_D3) cmd.editStep(d.s.id); return; } // with edit access, the press handler opens the step
   cmd.select(ui.selected === d.id ? null : d.id);
 }
 function laneItemClass(M, H, d, AP) {

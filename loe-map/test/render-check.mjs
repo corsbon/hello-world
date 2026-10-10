@@ -216,6 +216,7 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   const b0 = await p.$eval(`#map-svg g.lnode[data-key="step:${sIds[0]}"]`, el => { const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width }; });
   await p.mouse.move(b0.x, b0.y);
   await p.mouse.down();
+  await p.waitForTimeout(350);
   await p.mouse.move(b0.x + b0.w * 1.6, b0.y, { steps: 12 });
   await p.mouse.up();
   await p.waitForTimeout(500);
@@ -231,6 +232,22 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   check('a slightly wobbly tap on a step still opens its page', (await p.evaluate(() => window.LOEMap.ui.editStep)) === sIds[1]);
   await p.evaluate(() => window.LOEMap.dispatch('closeEditor'));
   await settle(p);
+  // A press held past the hold time and released in place is a pick-up, not a tap: nothing opens and nothing moves.
+  await p.mouse.move(b1.x, b1.y);
+  await p.mouse.down();
+  await p.waitForTimeout(350);
+  await p.mouse.up();
+  await p.waitForTimeout(300);
+  const held = await p.evaluate(id => ({ edit: window.LOEMap.ui.editStep, order: window.LOEMap.model().stepsByLoe.get(id).map(s => s.text) }), wayId);
+  check('a long press released in place opens nothing and moves nothing', held.edit === null && held.order.join('|') === 'Add overnight coverage|Agree the worklist rule', JSON.stringify(held));
+  // A quick press that moves far is neither a tap nor a drag.
+  await p.mouse.move(b1.x, b1.y);
+  await p.mouse.down();
+  await p.mouse.move(b1.x + 200, b1.y, { steps: 4 });
+  await p.mouse.up();
+  await p.waitForTimeout(300);
+  const flick = await p.evaluate(id => ({ edit: window.LOEMap.ui.editStep, order: window.LOEMap.model().stepsByLoe.get(id).map(s => s.text) }), wayId);
+  check('a quick flick before the hold neither opens nor moves the step', flick.edit === null && flick.order.join('|') === 'Add overnight coverage|Agree the worklist rule', JSON.stringify(flick));
   // Trackpad two-finger scroll slides the map instead of zooming it.
   const before = await p.evaluate(() => { const m = /translate\(([-\d.]+),([-\d.]+)\) scale\(([\d.]+)\)/.exec(document.getElementById('zoom-root').getAttribute('transform') || ''); return m ? { x: +m[1], y: +m[2], k: +m[3] } : null; });
   await p.mouse.move(b1.x, b1.y + 120);
