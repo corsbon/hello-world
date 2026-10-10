@@ -401,6 +401,11 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   check('deleting the center of gravity clears it, its links, and the doer slot', after.cog === null && after.stored === null && after.doer === null, JSON.stringify(after));
   check('steps already opened stay open after an edit removes a prerequisite', after.reach === 8, JSON.stringify(after));
 
+  // Clearing the whole shared map resets the locks this browser remembered.
+  await p.evaluate(() => { window.__stubDb.docs.clear(); window.__stubDb.notify(); });
+  await p.waitForTimeout(400);
+  const fresh = await p.evaluate(() => ({ max: window.LOEMap.ui.maxReached, reach: window.LOEMap.reachable(), step: window.LOEMap.ui.step, saved: JSON.parse(localStorage.getItem('loe-map-ui-v1') || '{}').maxReached }));
+  check('an emptied map locks the later steps again and forgets the saved progress', fresh.max <= 1 && fresh.reach === 1 && fresh.step <= 1 && fresh.saved <= 1, JSON.stringify(fresh));
   check('desktop: no horizontal overflow', (await overflow(p)) <= 0);
   check('desktop flow: no console or page errors', errors.length === 0, errors.join(' | '));
   await ctx.close();

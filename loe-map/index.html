@@ -3028,6 +3028,9 @@ function reconcilePending(M) {
 function renderNow() {
   const M = model();
   if (!ui.demo && loaded()) {
+    // An empty shared map is a fresh start: forget this browser's memory of how far the coach had opened.
+    const empty = !S.projectExists && !S.loes.size && !S.nodes.size && !S.links.size && !S.phases.size && !S.steps.size;
+    if (empty && (ui.maxReached || ui.step > 1)) { ui.maxReached = 0; ui.step = Math.min(ui.step, 1); ui.editNode = null; ui.editStep = null; ui.selected = null; saveUi(); }
     const f = furthest(M);
     if (f > (ui.maxReached || 0)) { ui.maxReached = f; saveUi(); }
     if (ui.step > reachable(M)) ui.step = reachable(M);
