@@ -334,6 +334,14 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   await p.evaluate(() => window.LOEMap.dispatch('goto', 4));
   await settle(p);
   await shot(p, '03-desktop-needs-light');
+  const vulnCols = await p.evaluate(() => {
+    const rows = [...document.querySelectorAll('#coach-body .req-head')];
+    const lefts = rows.map(r => Math.round(r.querySelector('.check').getBoundingClientRect().left));
+    const xs = rows.map(r => Math.round(r.querySelector('.icon-btn').getBoundingClientRect().left));
+    const types = rows.map(r => r.querySelector('.req-type').textContent);
+    return { n: rows.length, lefts, xs, types };
+  });
+  check('the Vulnerable box sits in the same spot on every need row, whatever the kind of need', vulnCols.n === 2 && new Set(vulnCols.types).size === 2 && new Set(vulnCols.lefts).size === 1 && new Set(vulnCols.xs).size === 1, JSON.stringify(vulnCols));
 
   // Step 5 and 6
   await p.evaluate(async () => { await window.LOEMap.dispatch('addNode', 'Conference schedule', 'process', ''); });

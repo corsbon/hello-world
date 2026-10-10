@@ -51,4 +51,4 @@ npx playwright install chromium
 node test/render-check.mjs node_modules/d3/dist/d3.min.js test-output
 ```
 
-Every check must pass (163 at the time of writing).
+Every check must pass (164 at the time of writing).

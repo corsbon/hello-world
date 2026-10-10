@@ -203,9 +203,12 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .req-list { display: grid; gap: 8px; }
 .req { border: 1px solid var(--rule-soft); border-radius: 7px; padding: 6px 8px 6px 10px; display: grid; gap: 6px; }
 .req.is-vuln { border-color: var(--crit); background: var(--crit-soft); }
-.req-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.req-head .linklike { flex: 1 1 8rem; }
-.req-type { font: 500 10.5px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+/* Name and kind on the left, Vulnerable and remove pinned to the right, so the Vulnerable box sits in the same spot on every row. */
+.req-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "name vuln x" "type vuln x"; align-items: center; column-gap: 10px; }
+.req-head .linklike { grid-area: name; justify-self: start; min-width: 0; overflow-wrap: anywhere; }
+.req-head .check { grid-area: vuln; justify-self: end; }
+.req-head .icon-btn { grid-area: x; }
+.req-type { grid-area: type; font: 500 10.5px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
 .steps { display: grid; gap: 8px; padding-top: 8px; border-top: 1px solid var(--rule-soft); }
 .step-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .step-row { border: 1px solid var(--rule-soft); border-radius: 7px; padding: 8px 8px 8px 10px; display: grid; gap: 8px; min-width: 0; }
