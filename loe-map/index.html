@@ -405,12 +405,14 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .bbadge text { fill: var(--crit-ink); font: 700 11px var(--font-body); }
 .due-tag { font: 500 9px var(--font-mono); letter-spacing: .04em; fill: var(--ink-3); }
 .due-tag.is-late { fill: var(--crit); font-weight: 600; }
-.link.t-feeds { stroke: var(--ink-2); stroke-width: 1.6; stroke-dasharray: 2 4; stroke-linecap: round; opacity: .85; }
-.mk-feeds { fill: var(--ink-2); }
+.link.t-waits { stroke: var(--lc, var(--ink-2)); stroke-width: 2.4; stroke-dasharray: 7 4; opacity: .95; }
+.link.t-feeds { stroke: var(--lc, var(--ink-2)); stroke-width: 2.2; stroke-dasharray: 2 4; stroke-linecap: round; opacity: .95; }
+.mk-waits, .mk-feeds { fill: var(--ink-2); fill: context-stroke; }
+.link-lbl { font: 600 9.5px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; fill: var(--lc, var(--ink-2)); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; pointer-events: none; }
+.map-title { font: 600 15px var(--font-display); letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); padding: 0 4px; }
 .ptag rect { fill: var(--surface); stroke: var(--rule); }
 .ptag text { fill: var(--ink-3); font: 500 9px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
 .link.t-seq { stroke: var(--ink); stroke-width: 2; opacity: .8; }
-.link.t-waits { stroke: var(--ink-2); stroke-width: 1.8; stroke-dasharray: 7 4; opacity: .85; }
 .mk-seq { fill: var(--ink); }
 .mk-waits { fill: var(--ink-2); }
 
@@ -484,13 +486,7 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
 
   <section class="panel map" id="map" aria-label="Map">
     <div class="maptools" id="maptools">
-      <div class="seg" role="group" aria-label="Map view">
-        <button type="button" data-cmd="view" data-args="[&quot;lanes&quot;]" id="v-lanes">Lanes</button>
-        <button type="button" data-cmd="view" data-args="[&quot;network&quot;]" id="v-network">Network</button>
-        <button type="button" data-cmd="view" data-args="[&quot;sequence&quot;]" id="v-sequence">Sequence</button>
-      </div>
-      <button type="button" class="btn small" data-cmd="focus" id="btn-focus" aria-pressed="false" title="Fade minor and peripheral items">Focus</button>
-      <button type="button" class="btn small" data-cmd="fit" title="Fit the map to the window">Fit</button>
+      <span class="map-title">Sequence</span>
       <label class="sr" for="phase-select">Phase shown on the map</label>
       <select id="phase-select" class="phase-select" hidden></select>
       <button type="button" class="btn small" id="btn-ways" data-cmd="toggleWays" aria-expanded="false" aria-controls="chips">Ways</button>
@@ -498,32 +494,19 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
       <details class="key" id="key">
         <summary>Key</summary>
         <div class="key-body">
-          <h5>Items</h5>
-          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><circle r="6.5" style="fill:var(--ink-3)"/></svg>Person or group</div>
-          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-6" y="-6" width="12" height="12" style="fill:var(--ink-3)"/></svg>System or tool</div>
-          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><path d="M6.5,0L3.25,5.6H-3.25L-6.5,0L-3.25,-5.6H3.25Z" style="fill:var(--ink-3)"/></svg>Process or rule</div>
-          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><path d="M0,-6.5L7,5.5H-7Z" style="fill:var(--ink-3)"/></svg>Resource or condition</div>
-          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><path d="M0,-7L7,0L0,7L-7,0Z" style="fill:var(--ink)"/></svg>Essential action</div>
-          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--surface);stroke:var(--rule)"/><rect x="-6" y="-3" width="7" height="6" rx="2" style="fill:var(--ink-3)"/></svg>Step, numbered way.step, not started (Sequence view)</div>
+          <h5>Steps</h5>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--surface);stroke:var(--rule)"/><rect x="-6" y="-3" width="7" height="6" rx="2" style="fill:var(--ink-3)"/></svg>Step, numbered way.step, not started</div>
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--surface);stroke:var(--accent);stroke-width:2"/></svg>Step in progress</div>
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--surface-2);stroke:var(--rule)"/><circle cx="4" cy="-4" r="4" style="fill:var(--good)"/></svg>Step done</div>
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--crit-soft);stroke:var(--crit);stroke-width:1.8;stroke-dasharray:3 2"/></svg>Step blocked</div>
-          <h5>Roles</h5>
-          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-7" width="14" height="14" rx="2" fill="none" style="stroke:var(--ink);stroke-width:1.3"/><rect x="-4.5" y="-4.5" width="9" height="9" rx="1.5" fill="none" style="stroke:var(--ink);stroke-width:1.8"/></svg>Center of gravity</div>
-          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-6" y="-6" width="12" height="12" rx="2" fill="none" style="stroke:var(--ink);stroke-width:2"/></svg>Doer</div>
-          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-6" y="-6" width="12" height="12" rx="2" style="fill:var(--crit-soft);stroke:var(--crit);stroke-width:1.8;stroke-dasharray:3 2"/></svg>Vulnerable need</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><path d="M0,-7L7,0L0,7L-7,0Z" style="fill:var(--ink)"/></svg>Essential action of the way</div>
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--accent-soft);stroke:var(--ink);stroke-width:2"/></svg>Main effort in the phase shown</div>
-          <h5>Links</h5>
-          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink);stroke-width:2.2"/></svg>Does the action</div>
-          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink-2);stroke-width:1.6"/></svg>Uses</div>
-          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink-3);stroke-width:1.4;stroke-dasharray:6 4"/></svg>Depends on</div>
-          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M2,5H33" style="stroke:var(--ink-3);stroke-width:1.8;stroke-dasharray:1.5 4;stroke-linecap:round"/></svg>Influences</div>
-          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--crit);stroke-width:1.6;stroke-dasharray:9 3 2 3"/></svg>In tension with</div>
+          <h5>Connections</h5>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink);stroke-width:2"/></svg>One step after another in a way</div>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--lane-0);stroke-width:2.2;stroke-dasharray:7 4"/></svg>Then: a step in another way waits for this one, in the color of the way it comes from</div>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--lane-2);stroke-width:2;stroke-dasharray:2 4;stroke-linecap:round"/></svg>Feeds back into a step, with your wording</div>
           <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--accent);stroke-width:1.6"/></svg>Serves the objective</div>
-          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink);stroke-width:2"/></svg>One step after another (Sequence view)</div>
-          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink-2);stroke-width:1.8;stroke-dasharray:7 4"/></svg>Waits for a step in another way</div>
-          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink-2);stroke-width:1.6;stroke-dasharray:2 4;stroke-linecap:round"/></svg>Feeds back into an earlier step</div>
-          <p class="fine">Lanes view: the columns left of the doer count links. What the doer uses, then what those depend on.</p>
+          <p class="fine">Tap a step to open it. Its page sets both connections: Starts after, and Feeds back into.</p>
         </div>
       </details>
     </div>
@@ -1212,7 +1195,7 @@ const cmd = {
   back() { return cmd.goto(ui.step - 1); },
   tab(t) { ui.tab = t === 'map' ? 'map' : 'coach'; saveUi(); render(); return true; },
   view(v) {
-    if (!['lanes', 'network', 'sequence'].includes(v)) return false;
+    if (v !== 'sequence') return false; // Lanes and Network are kept in the code but hidden for now.
     if (ui.view !== v) { ui.view = v; saveUi(); clearLayers(); }
     render(); return true;
   },
@@ -1737,7 +1720,7 @@ function buildStart() {
   <p>Most plans happen in stages, called phases. Each phase has a <b>main effort</b>: the one way that matters most right then. The other ways support it. The main effort can change from phase to phase. The center of gravity stays the same, because it is tied to the goal.</p>
   <p>Inside each way, the steps that lead to its action happen one after another. The ways themselves run side by side, and a step in one way can wait for a step in another. The Sequence view of the map draws this by phase, and numbers each step by its way and position, such as 2.3, so a team can point at it.</p>
   <p>For the pizza shop, the first two weeks are a getting-ready phase. The main effort is scheduling drivers: hire and train a third Friday driver. After that, the main effort is delivering. The drivers are the center of gravity the whole time.</p>
-  <p class="muted">Your project works the same way. The map shows your answers in the same chain, read left to right: needs, then the doer, then the action, then the goal. After the four questions, you connect the remaining pieces, plan your phases, and review what your answers mean. Each answer opens the next question, and you can change any answer later.</p>
+  <p class="muted">Your project works the same way. The map shows your ways as rows and your phases as columns, each step in its place, with arrows for what must follow what. After the four questions, you connect the remaining pieces, plan your phases, and review what your answers mean. Each answer opens the next question, and you can change any answer later.</p>
   ${ask('', '<p class="muted">The coach asks questions and reflects your answers back. It never supplies the answers. Examples show what a good answer looks like, but everything on the map comes from your team, because the thinking is the point. Teachers call this productive struggle.</p><p class="muted">The coach takes away the drag: the look of the map, and the load of keeping many people, systems, and relationships straight in your head. It leaves you the traction: working out how things actually get done.</p>', 'How the coach works')}
   <div class="row-actions">${btn('Start with question 1', 'goto', [1], 'primary')}${ui.demo ? '' : btn('See a worked example', 'demo', [true])}</div>
   <p class="fine">Everyone who opens this page sees and edits the same map. Do not enter personal or confidential information. On a phone, tap the microphone on your keyboard to answer by voice.</p>
@@ -2053,7 +2036,7 @@ function buildReview(M) {
       ${phaseStepsLine(M, ph)}
       ${ph.mainLoeId ? (has(ph.rationale) ? `<p class="quote">${esc(ph.rationale)}</p>` : '') : '<p class="missing">No main effort chosen.</p>'}</li>`).join('')}</ol>` : '<p class="missing">No phases yet.</p>'}
     ${cog ? `<p class="muted">Center of gravity in every phase: <b>${esc(cog.label)}</b>.</p>` : ''}</section>
-  ${ask('Do these tiers match what your team believes?', `<p class="muted">Based on your links. Critical items serve the center of gravity. Major items serve the other doers. Minor items connect to something. Peripheral items connect to nothing.</p><div class="tiers">${tiers}</div><div class="row-actions">${btn(ui.focus ? 'Focus is on' : 'Fade minor and peripheral items on the map', 'focus', [true], 'small')}${isPhone() ? btn('Show the map', 'tab', ['map'], 'small') : ''}</div>`, 'From your answers')}
+  ${ask('Do these tiers match what your team believes?', `<p class="muted">Based on your links. Critical items serve the center of gravity. Major items serve the other doers. Minor items connect to something. Peripheral items connect to nothing.</p><div class="tiers">${tiers}</div>${isPhone() ? `<div class="row-actions">${btn('Show the map', 'tab', ['map'], 'small')}</div>` : ''}`, 'From your answers')}
   ${ask(oq.length ? `${oq.length} open question${oq.length > 1 ? 's' : ''}` : 'No open questions', oq.length
     ? `<ul class="oq">${oq.map(q => `<li><span>${esc(q.text)}</span>${q.node ? btn('Open item', 'editNode', [q.node], 'small') : btn(`Go to ${stepLabel(q.step)}`, 'goto', [q.step], 'small')}</li>`).join('')}</ul>`
     : okNote('Every question has an answer. Revisit them as the project changes.'))}
@@ -2625,8 +2608,8 @@ function layoutSequence(M) {
     y += SEQ_LANE_H + LV.laneGap;
   }
   for (const s of M.steps) {
-    if (s.after && boxes.has(s.id) && boxes.has(s.after.id)) segs.push({ id: 'waits:' + s.id, type: 'waits', a: boxes.get(s.after.id), b: boxes.get(s.id), s: 'step:' + s.after.id, t: 'step:' + s.id, tip: `${s.num} starts after ${s.after.num}` });
-    if (s.feeds && boxes.has(s.id) && boxes.has(s.feeds.id)) segs.push({ id: 'feeds:' + s.id, type: 'feeds', a: boxes.get(s.id), b: boxes.get(s.feeds.id), s: 'step:' + s.id, t: 'step:' + s.feeds.id, tip: `${s.num} ${s.feedsVerb} ${s.feeds.num}` });
+    if (s.after && boxes.has(s.id) && boxes.has(s.after.id)) segs.push({ id: 'waits:' + s.id, type: 'waits', a: boxes.get(s.after.id), b: boxes.get(s.id), s: 'step:' + s.after.id, t: 'step:' + s.id, lc: boxes.get(s.after.id).lane.color, label: 'then', tip: `${s.num} starts after ${s.after.num}` });
+    if (s.feeds && boxes.has(s.id) && boxes.has(s.feeds.id)) segs.push({ id: 'feeds:' + s.id, type: 'feeds', a: boxes.get(s.id), b: boxes.get(s.feeds.id), s: 'step:' + s.id, t: 'step:' + s.feeds.id, lc: boxes.get(s.id).lane.color, label: s.feedsVerb, tip: `${s.num} ${s.feedsVerb} ${s.feeds.num}` });
   }
   const height = y - LV.laneGap;
   const objX = actX + actW + LV.objGap;
@@ -2680,11 +2663,20 @@ function renderSequence(M) {
   };
   drawLaneBands(bandG, L, M, H, AP, laneLines);
   drawObjective(objG, L.obj, M, H);
-  d3.select('#link-layer').selectAll('path.link').data(L.segs, d => d.id).join('path')
+  const linkLayer = d3.select('#link-layer');
+  const paths = linkLayer.selectAll('path.link').data(L.segs, d => d.id).join('path')
     .attr('class', d => `link t-${d.type}${H.hotLink(d.s, d.t) ? ' is-hot' : ''}${H.dimLink(d.s, d.t) ? ' is-dim' : ''}`)
+    .attr('style', d => (d.lc != null ? `--lc:var(--lane-${d.lc})` : null))
     .attr('d', d => lanePath(d.a, d.b))
     .attr('marker-end', d => `url(#mk-${d.type})`)
     .each(function (d) { d3.select(this).selectAll('title').data(d.tip ? [d.tip] : []).join('title').text(t => t); });
+  // A word on each cross-way connection, at the middle of its curve.
+  const labelled = [];
+  paths.each(function (d) { if (d.label) { const len = this.getTotalLength(); const m = this.getPointAtLength(len / 2); labelled.push({ ...d, mx: m.x, my: m.y }); } });
+  linkLayer.selectAll('text.link-lbl').data(labelled, d => d.id).join('text')
+    .attr('class', d => `link-lbl${H.dimLink(d.s, d.t) ? ' is-dim' : ''}`)
+    .attr('style', d => (d.lc != null ? `--lc:var(--lane-${d.lc})` : null))
+    .attr('x', d => d.mx).attr('y', d => d.my - 5).attr('text-anchor', 'middle').text(d => trunc(d.label, 18));
   const items = [
     ...[...L.boxes.values()].map(r => ({ key: 'step:' + r.step.id, kind: 'step', id: 'step:' + r.step.id, r, s: r.step, loe: r.lane.loe })),
     ...L.caps.map(c => ({ key: c.id, kind: 'cap', id: c.id, r: c, text: c.text, loe: c.loe })),
@@ -2987,10 +2979,6 @@ function renderInfo(M) {
     <div class="info-actions">${btn(d.action[0], d.action[1], d.action[2], 'small')}<button type="button" class="icon-btn" data-cmd="select" ${dargs(null)} aria-label="Clear selection">×</button></div>`;
 }
 function renderTools(M) {
-  $('v-lanes').setAttribute('aria-pressed', String(ui.view === 'lanes'));
-  $('v-network').setAttribute('aria-pressed', String(ui.view === 'network'));
-  $('v-sequence').setAttribute('aria-pressed', String(ui.view === 'sequence'));
-  $('btn-focus').setAttribute('aria-pressed', String(!!ui.focus));
   $('maptools').classList.toggle('ways-open', !!ui.showWays);
   const wb = $('btn-ways');
   wb.textContent = ui.lanesOn.length ? `Ways (${ui.lanesOn.length})` : 'Ways';
@@ -3207,7 +3195,7 @@ function openExport() {
    ================================================================ */
 async function boot() {
   els.body = $('coach-body'); els.scroll = $('coach-scroll'); els.rail = $('rail'); els.foot = $('coach-foot'); els.banners = $('banners'); els.toast = $('toast');
-  if (!['lanes', 'network', 'sequence'].includes(ui.view)) ui.view = 'lanes';
+  ui.view = 'sequence'; // the only map for now; Lanes and Network stay in the code
   if (!['coach', 'map'].includes(ui.tab)) ui.tab = 'coach';
   ui.step = Math.max(0, Math.min(STEPS.length - 1, Number(ui.step) || 0));
   bindEvents();

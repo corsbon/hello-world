@@ -206,9 +206,9 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
     boxes: document.querySelectorAll('#map-svg g.lnode.step').length,
     seq: document.querySelectorAll('#map-svg path.link.t-seq').length,
     waits: document.querySelectorAll('#map-svg path.link.t-waits').length,
-    pressed: document.getElementById('v-sequence').getAttribute('aria-pressed'),
+    labels: [...document.querySelectorAll('#map-svg text.link-lbl')].map(t => t.textContent).sort(),
   }));
-  check('sequence view draws a box per step, arrows along the way with an action, and the hand-off', seq.boxes === 3 && seq.seq === 2 && seq.waits === 1 && seq.pressed === 'true', JSON.stringify(seq));
+  check('sequence view draws a box per step, arrows along the way with an action, and labelled connections', seq.boxes === 3 && seq.seq === 2 && seq.waits === 1 && JSON.stringify(seq.labels) === JSON.stringify(['improves', 'then']), JSON.stringify(seq));
   const xs = await p.evaluate(([a, b]) => { const x = id => Number((document.querySelector(`#map-svg g.lnode[data-key="step:${id}"]`).getAttribute('transform').match(/translate\(([\d.]+)/) || [])[1]); return { wait: x(a), after: x(b) }; }, [t2, sIds[1]]);
   check('the waiting step is drawn in a later column than the step it waits for', xs.wait > xs.after, JSON.stringify(xs));
   await p.evaluate(id => window.LOEMap.dispatch('select', 'step:' + id), t2);
@@ -221,7 +221,7 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   const landed = await p.evaluate(id => ({ edit: window.LOEMap.ui.editStep, field: !!document.getElementById(`f-step_${id}_text`) }), t2);
   check('Open step on the details bar opens that step\'s page', landed.edit === t2 && landed.field, JSON.stringify(landed));
   await shot(p, '04c-desktop-step-page-light');
-  await p.evaluate(() => { window.LOEMap.dispatch('closeEditor'); window.LOEMap.dispatch('select', null); window.LOEMap.dispatch('view', 'lanes'); });
+  await p.evaluate(() => { window.LOEMap.dispatch('closeEditor'); window.LOEMap.dispatch('select', null); });
   await settle(p);
 
   // Question 3: doers, then the team picks the center of gravity itself.
@@ -368,8 +368,8 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   // Sequence by phase: phase columns with dates, a not-placed column, way.step numbers, the feedback arrow, clickable headers.
   await p.evaluate(() => window.LOEMap.dispatch('view', 'sequence'));
   await p.waitForTimeout(400);
-  const seqB = await p.evaluate(() => ({ heads: [...document.querySelectorAll('#map-svg text.col-head')].map(t => t.textContent), feeds: document.querySelectorAll('#map-svg path.link.t-feeds').length, nums: [...document.querySelectorAll('#map-svg g.lnode.step .snum text')].map(t => t.textContent).sort(), subs: [...document.querySelectorAll('#map-svg text.col-sub')].map(t => t.textContent) }));
-  check('sequence by phase shows phase columns, a not-placed column, way.step numbers, and the feedback arrow', JSON.stringify(seqB.heads) === JSON.stringify(['Prepare', 'Launch', 'Not placed yet', 'Essential action', 'Objective']) && seqB.feeds === 1 && JSON.stringify(seqB.nums) === JSON.stringify(['1.1', '1.2', '2.1']) && /Jan 15, 2027 to Feb 28, 2027/.test(seqB.subs[0]), JSON.stringify(seqB));
+  const seqB = await p.evaluate(() => ({ heads: [...document.querySelectorAll('#map-svg text.col-head')].map(t => t.textContent), feeds: document.querySelectorAll('#map-svg path.link.t-feeds').length, labels: [...document.querySelectorAll('#map-svg text.link-lbl')].map(t => t.textContent).sort(), nums: [...document.querySelectorAll('#map-svg g.lnode.step .snum text')].map(t => t.textContent).sort(), subs: [...document.querySelectorAll('#map-svg text.col-sub')].map(t => t.textContent) }));
+  check('sequence by phase shows phase columns, a not-placed column, way.step numbers, and the feedback arrow', JSON.stringify(seqB.heads) === JSON.stringify(['Prepare', 'Launch', 'Not placed yet', 'Essential action', 'Objective']) && seqB.feeds === 1 && JSON.stringify(seqB.labels) === JSON.stringify(['improves', 'then']) && JSON.stringify(seqB.nums) === JSON.stringify(['1.1', '1.2', '2.1']) && /Jan 15, 2027 to Feb 28, 2027/.test(seqB.subs[0]), JSON.stringify(seqB));
   await shot(p, '04d-desktop-sequence-phases-light');
   await p.click('#map-svg g.col-btn.is-link text.col-head');
   await p.waitForTimeout(400);
@@ -381,9 +381,6 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   const rvText = await p.$eval('#coach-body', el => el.textContent);
   check('the review lists the numbered steps, where things stand, and the unplaced ones', /1\.1/.test(rvText) && /Agree the worklist rule/.test(rvText) && /not placed yet/.test(rvText) && /general worklist/.test(rvText) && /is blocked/.test(rvText), rvText.slice(0, 80));
   await shot(p, '04-desktop-review-light');
-  await p.evaluate(() => window.LOEMap.dispatch('view', 'network'));
-  await p.waitForTimeout(400);
-  await shot(p, '05-desktop-network-light');
 
   // Re-render must not steal text the user is typing.
   await p.evaluate(() => window.LOEMap.dispatch('goto', 1));
@@ -479,29 +476,11 @@ for (const scheme of ['light', 'dark']) {
       await p.tap('#btn-ways');
       await settle(p);
     }
-    await p.evaluate(() => window.LOEMap.dispatch('view', 'lanes'));
+    check(`${label} ${scheme}: the map offers only the Sequence view for now`, (await p.evaluate(() => ({ v: window.LOEMap.ui.view, btns: document.querySelectorAll('#maptools .seg, #btn-focus').length, lanes: window.LOEMap.dispatch('view', 'lanes') }))).v === 'sequence');
     await p.evaluate(() => window.LOEMap.dispatch('phase', 'ph2'));
     await p.waitForTimeout(300);
     const lanesNow = await p.evaluate(() => ({ read: document.querySelector('g.lane[data-key="l_read"]').classList.contains('is-main-now'), pacs: document.querySelector('g.lane[data-key="l_pacs"]').classList.contains('is-main-now'), select: document.getElementById('phase-select').value }));
     check(`${label} ${scheme}: choosing the Launch phase highlights its main-effort lane only`, lanesNow.read && !lanesNow.pacs && lanesNow.select === 'ph2', JSON.stringify(lanesNow));
-    await shot(p, `11-${label}-lanes-${scheme}`);
-    if (mobile) {
-      const box = await p.evaluate(() => {
-        const c = document.getElementById('canvas').getBoundingClientRect();
-        for (const g of document.querySelectorAll('#map-svg g.lnode.node')) {
-          const r = g.getBoundingClientRect();
-          const x = r.x + r.width / 2, y = r.y + r.height / 2;
-          if (x > c.left + 10 && x < c.right - 10 && y > c.top + 10 && y < c.bottom - 80) return { x, y };
-        }
-        return null;
-      });
-      check(`${label} ${scheme}: a node is visible on the initial phone framing`, !!box);
-      if (box) await p.touchscreen.tap(box.x, box.y);
-      await settle(p);
-      const infoShown = await p.$eval('#info', el => !el.hidden);
-      check(`${label} ${scheme}: tapping a node shows its details bar`, infoShown);
-      await shot(p, `12-${label}-lanes-selected-${scheme}`);
-    }
     await p.evaluate(() => { window.LOEMap.dispatch('select', null); window.LOEMap.dispatch('view', 'sequence'); });
     await p.waitForTimeout(400);
     const seqEx = await p.evaluate(() => ({
@@ -536,19 +515,13 @@ for (const scheme of ['light', 'dark']) {
       await p.evaluate(() => { window.LOEMap.dispatch('closeEditor'); window.LOEMap.dispatch('tab', 'map'); });
       await settle(p);
     }
-    await p.evaluate(() => { window.LOEMap.dispatch('select', null); window.LOEMap.dispatch('view', 'network'); });
-    await p.waitForTimeout(500);
-    await shot(p, `13-${label}-network-${scheme}`);
     if (label === 'desktop') {
       await p.click('#key summary');
       await settle(p);
       await shot(p, `13b-${label}-key-${scheme}`);
       await p.click('#key summary');
     }
-    await p.evaluate(() => window.LOEMap.dispatch('focus', true));
-    await p.waitForTimeout(250);
-    await shot(p, `14-${label}-network-focus-${scheme}`);
-    await p.evaluate(() => { window.LOEMap.dispatch('focus', false); window.LOEMap.dispatch('tab', 'coach'); window.LOEMap.dispatch('goto', 8); });
+    await p.evaluate(() => { window.LOEMap.dispatch('tab', 'coach'); window.LOEMap.dispatch('goto', 8); });
     await settle(p);
     await shot(p, `15-${label}-review-${scheme}`);
     await p.$eval('#coach-scroll', el => { const t = document.querySelector('.phase-list'); el.scrollTop += t.getBoundingClientRect().top - el.getBoundingClientRect().top - 60; });
