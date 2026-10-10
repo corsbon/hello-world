@@ -210,6 +210,12 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
     labels: [...document.querySelectorAll('#map-svg text.link-lbl')].map(t => t.textContent).sort(),
   }));
   check('sequence view draws a box per step, arrows along the way with an action, and labelled connections', seq.boxes === 3 && seq.seq === 2 && seq.waits === 1 && JSON.stringify(seq.labels) === JSON.stringify(['improves', 'then']), JSON.stringify(seq));
+  // The map's "What is the action?" placeholder drops the cursor into that way's essential-action box.
+  await p.click(`#map-svg g.lnode[data-key="ph:${way2}:C"]`);
+  await p.waitForTimeout(400);
+  const toAction = await p.evaluate(() => ({ step: window.LOEMap.ui.step, focus: document.activeElement && document.activeElement.id }));
+  check('the action placeholder on the map opens question 2 with the cursor in that way\'s action box', toAction.step === 2 && toAction.focus === `f-loe_${way2}_capability`, JSON.stringify(toAction));
+  await p.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
   const xs = await p.evaluate(([a, b]) => { const x = id => Number((document.querySelector(`#map-svg g.lnode[data-key="step:${id}"]`).getAttribute('transform').match(/translate\(([\d.]+)/) || [])[1]); return { wait: x(a), after: x(b) }; }, [t2, sIds[1]]);
   check('the waiting step is drawn in a later column than the step it waits for', xs.wait > xs.after, JSON.stringify(xs));
   // Reordering: drag the first step of way 1 past the second on the map, then put it back from the step page's position menu.

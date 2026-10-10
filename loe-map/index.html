@@ -1181,6 +1181,15 @@ function guard() {
   return false;
 }
 const force = () => { ui.forceUntil = performance.now() + 2000; };
+// Put the cursor in a box once the coach has redrawn, scrolled into view. Used when the map sends you to a question.
+function focusLater(id) {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const el = $(id);
+    if (!el || el.disabled) return;
+    el.focus({ preventScroll: true });
+    el.scrollIntoView({ block: 'center' });
+  }));
+}
 function findByLabel(label) {
   const k = String(label || '').trim().toLowerCase();
   if (!k) return null;
@@ -1241,12 +1250,12 @@ const cmd = {
   },
   editPhase(id) {
     if (!model().phaseById.has(id) || !cmd.goto(6)) return false;
-    requestAnimationFrame(() => requestAnimationFrame(() => { const el = $(fid(`phase:${id}:start`)); if (el) el.focus(); }));
+    focusLater(fid(`phase:${id}:start`));
     return true;
   },
   addWayPrompt() {
     if (!cmd.goto(2)) return false;
-    requestAnimationFrame(() => requestAnimationFrame(() => { const el = $('new-way'); if (el) el.focus(); }));
+    focusLater('new-way');
     return true;
   },
   demo(on) {
@@ -2450,8 +2459,8 @@ function layoutLanes(M) {
       ph.push({ col: '1', q: 4, text: 'What does the doer use?' }, { col: '0', q: 3, text: 'Who does the action?' });
     } else if (!lane.cross) {
       const l = lane.loe;
-      if (!(l.doerNodeId && M.nodes.has(l.doerNodeId))) ph.push({ col: '0', q: 3, text: 'Who does the action?' });
-      else if (!(M.reqsByLoe.get(l.id) || []).length) ph.push({ col: '1', q: 4, text: 'What does the doer use?' });
+      if (!(l.doerNodeId && M.nodes.has(l.doerNodeId))) ph.push({ col: '0', q: 3, text: 'Who does the action?', focus: `doer-${l.id}` });
+      else if (!(M.reqsByLoe.get(l.id) || []).length) ph.push({ col: '1', q: 4, text: 'What does the doer use?', focus: `req-${l.id}` });
     }
     const count = c => cells.get(c).length + ph.filter(p => p.col === c).length;
     const rows = Math.max(1, ...cols.map(count));
@@ -2467,7 +2476,7 @@ function layoutLanes(M) {
       const cx = cell('C'), cy = y + (lane.h - LV.nodeH) / 2;
       const l = lane.loe;
       if (l && has(l.capability)) caps.push({ id: 'cap:' + l.id, loe: l, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, text: l.capability });
-      else placeholders.push({ key: `${lane.key}:C`, col: 'C', q: 2, text: 'What is the action?', chevron: true, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, lane });
+      else placeholders.push({ key: `${lane.key}:C`, col: 'C', q: 2, text: 'What is the action?', focus: l ? fid(`loe:${l.id}:capability`) : 'new-way', chevron: true, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, lane });
     }
     y += lane.h + LV.laneGap;
   }
@@ -2646,8 +2655,8 @@ function layoutSequence(M) {
     const cy = y + (SEQ_LANE_H - LV.nodeH) / 2;
     const cx = actX + (actW - LV.nodeW) / 2;
     if (lane.ph) {
-      placeholders.push({ key: '__ph:0', q: 2, text: 'What ways will you use?', x: cellX(0, 0), y: cy, w: LV.nodeW, h: LV.nodeH, lane });
-      placeholders.push({ key: '__ph:C', q: 2, text: 'What is the action?', chevron: true, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, lane });
+      placeholders.push({ key: '__ph:0', q: 2, text: 'What ways will you use?', focus: 'new-way', x: cellX(0, 0), y: cy, w: LV.nodeW, h: LV.nodeH, lane });
+      placeholders.push({ key: '__ph:C', q: 2, text: 'What is the action?', focus: 'new-way', chevron: true, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, lane });
     } else {
       const l = lane.loe;
       let prev = null;
@@ -2661,8 +2670,8 @@ function layoutSequence(M) {
         const c = { id: 'cap:' + l.id, loe: l, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, text: l.capability };
         caps.push(c);
         if (prev) segs.push({ id: 'seq:last:' + l.id, type: 'seq', a: prev, b: c, s: 'step:' + prev.step.id, t: c.id });
-        else placeholders.push({ key: `${lane.key}:0`, q: 2, text: 'What steps come first?', x: cellX(0, 0), y: cy, w: LV.nodeW, h: LV.nodeH, lane });
-      } else placeholders.push({ key: `${lane.key}:C`, q: 2, text: 'What is the action?', chevron: true, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, lane });
+        else placeholders.push({ key: `${lane.key}:0`, q: 2, text: 'What steps come first?', focus: `new-step-${l.id}`, x: cellX(0, 0), y: cy, w: LV.nodeW, h: LV.nodeH, lane });
+      } else placeholders.push({ key: `${lane.key}:C`, q: 2, text: 'What is the action?', focus: fid(`loe:${l.id}:capability`), chevron: true, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, lane });
     }
     y += SEQ_LANE_H + LV.laneGap;
   }
@@ -2808,7 +2817,11 @@ function stickyLabels(t) {
   d3.select('#lane-layer').selectAll('g.lane-mini').attr('transform', `translate(${Math.max(0, lx)},0)`).attr('display', lx > 60 ? null : 'none');
 }
 function laneItemClick(d) {
-  if (d.kind === 'ph') { if (d.p.q <= reachable(model())) cmd.goto(d.p.q); else toast(NEXT_REASON[d.p.q - 1] || 'Answer the earlier questions first.'); return; }
+  if (d.kind === 'ph') {
+    if (d.p.q > reachable(model())) { toast(NEXT_REASON[d.p.q - 1] || 'Answer the earlier questions first.'); return; }
+    if (cmd.goto(d.p.q) && d.p.focus) focusLater(d.p.focus);
+    return;
+  }
   if (d.kind === 'step') { if (!canWrite() || !HAS_D3) cmd.editStep(d.s.id); return; } // with edit access, the press handler opens the step
   cmd.select(ui.selected === d.id ? null : d.id);
 }
