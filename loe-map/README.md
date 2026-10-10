@@ -30,6 +30,8 @@ The tool asks questions. The team answers them. It never supplies an answer, pro
 - The challenge questions that matter most keep a one-line written answer: why the objective is the right level, why the center of gravity is the real one, and why each vulnerability is vulnerable.
 - Each answer opens the next question. Earlier answers stay editable, and editing never locks a step you have already reached.
 
+Teachers call this productive struggle. The coach takes away the drag: the look of the map, and the load of keeping many people, systems, and relationships straight in your head. It leaves the traction: working out how things actually get done. The drag-and-traction framing comes from ["Drag or Traction: Understanding How Designers Appropriate Friction in AI Ideation Outputs"](https://arxiv.org/abs/2603.27550), 2026.
+
 ## The four questions
 
 Source: ["The Center of Gravity: Still Relevant After All These Years?"](https://www.armyupress.army.mil/Journals/Military-Review/Online-Exclusive/2017-Online-Exclusive-Articles/The-Center-of-Gravity/), Military Review, online exclusive, May 2017. The four questions are on page 6.
@@ -37,7 +39,7 @@ Source: ["The Center of Gravity: Still Relevant After All These Years?"](https:/
 | Step | The article's question | What your answer becomes on the map |
 |---|---|---|
 | 1 Goal | What is the system's goal or purpose? | The objective block, with measure, baseline, target, and due date |
-| 2 Ways | What probable ways or actions will the system use to achieve the goal? | One lane per way, each with an essential action |
+| 2 Ways | What probable ways or actions will the system use to achieve the goal? | One lane per way, each with an essential action and the series of steps that lead to it |
 | 3 Doers | What entity, actor, or node has the inherent ability to perform the action? | The doer of each way. The team then picks one doer as the center of gravity, and it stays fixed for the whole project. |
 | 4 Needs | What does the doer require, and which of those are vulnerable? | Needs linked to each doer. Vulnerable needs are flagged with your reason. |
 | Links | (Relationships, actors, function, tensions) | Depends-on, influences, and in-tension-with links between any items |
@@ -45,6 +47,8 @@ Source: ["The Center of Gravity: Still Relevant After All These Years?"](https:/
 | Review | | Your answers laid out as the four questions, the phases, a tier list, and open questions |
 
 **Main effort and center of gravity are separate.** The main effort is the way that matters most at a given point in time, so it can change from phase to phase. The center of gravity is tied to the objective, so it stays the same. When a phase's main effort is led by a doer other than the center of gravity, the coach asks what keeps the center of gravity ready while the focus is elsewhere. The map's phase menu highlights the main-effort lane for the phase you pick, and it opens on the phase whose dates include today.
+
+**Steps run in series inside a way and in parallel across ways.** Each way lists the steps that must happen, in order, for its essential action to come true. Different ways run side by side. A step can start after a step in another way, which the coach calls a hand-off. Each step records its wording, an optional owner (blank means the way's doer), an optional phase, the hand-off, and whether it is done. The Sequence view of the map draws the result: steps in the same column can happen at the same time, and arrows show what cannot.
 
 The article's definition, shown in step 3: "The center of gravity is the primary entity that possesses the inherent capability to achieve the objective."
 
@@ -56,7 +60,7 @@ The tier list sorts every item the way the article describes. Critical items ser
 2. Answer question 1. The map draws the objective. Question 2 opens.
 3. Keep going. The map fills in as each answer lands.
 4. Use **Worked example** to see a finished map for a hospital project to cut emergency CT report turnaround. It is read-only and never touches your team's map.
-5. Switch the map between **Lanes** and **Network**. Lanes shows the structure: needs, then doer, then action, then objective. Network shows the tangle.
+5. Switch the map between **Lanes**, **Network**, and **Sequence**. Lanes shows the structure: needs, then doer, then action, then objective. Network shows the tangle. Sequence shows the order: one row per way, its steps left to right in the order they can happen, solid arrows for one after another, dashed arrows for hand-offs between ways, and each row ending in its essential action.
 6. Tap any item on the map to see its role. Use **Edit answers** to change it.
 7. **Copy data** gives you a text backup of everything your team has entered.
 
@@ -90,7 +94,10 @@ nodes/{id}     label, type (actor | system | process | resource), loeId, vulnera
 links/{id}     source, target, type (uses | depends_on | influences | tension), loeId
                id = type__source__target, plus __loeId for a need tied to one way
 phases/{id}    name, order, start, end, mainLoeId, rationale
+steps/{id}     loeId, order, text, owner, phaseId, afterStepId, done
 ```
+
+A step belongs to one way, and `order` is its place in that way's series. `afterStepId` names a step in another way that must finish first. The page refuses a hand-off to a step in the same way, or one that would make steps wait on each other in a circle. A step's column on the Sequence view is computed from these, never stored.
 
 A need belongs to a doer within one way, so two ways that share a doer can each have their own needs. A "uses" link saved before needs carried a way counts for the way whose lane the need sits in, or for every way of that doer when the need sits elsewhere.
 
@@ -98,7 +105,7 @@ Roles are computed from these records and never stored. That includes needs, vul
 
 ## Local check
 
-`test/render-check.mjs` loads the page in headless Chromium with a stub shared database. It walks the six steps, checks that each one opens only when its question is answered, and checks the worked example, read-only access, and the phone tabs. It also takes screenshots of both map views on desktop and phone, in light and dark themes.
+`test/render-check.mjs` loads the page in headless Chromium with a stub shared database. It walks the six steps, checks that each one opens only when its question is answered, and checks the steps under each way, the Sequence view, the worked example, read-only access, and the phone tabs. It also takes screenshots of both map views on desktop and phone, in light and dark themes.
 
 Run it from the `loe-map` folder. It needs Node.js 18 or later.
 
@@ -114,7 +121,7 @@ These are listed in priority order. Each item is a choice between building it no
 
 1. **Ideas on demand.** A "Give me ideas" button appears only after you have typed an attempt. It asks Claude for three example answers in your domain, labeled as ideas, with no button to insert them.
 2. **Spoken commands, basic.** A command box at the top of the coach. You dictate into it with the keyboard microphone, and the page matches a fixed list of commands. No AI is involved. Every action in the page already runs through a single command list, so this adds a parser and nothing else.
-3. **Decisive points.** For each vulnerability: what you will do, who owns it, by when, and in which phase. These tasks would appear inside their phase on the lanes.
+3. **Decisive points tied to vulnerabilities.** For each vulnerability, which step answers it, who owns that step, and by when. Steps already exist; this would link them to the vulnerabilities.
 4. **Spoken commands, free-form.** Free speech mapped to one command from the fixed list, shown back for you to confirm before it runs. Build this only if the fixed list feels too rigid.
 5. **More challenge questions** in the review, each with a stored answer.
 6. **Export** of PNG, SVG, and JSON files, plus importing a backup.
