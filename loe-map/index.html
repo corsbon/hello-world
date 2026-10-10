@@ -203,11 +203,11 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .req-list { display: grid; gap: 8px; }
 .req { border: 1px solid var(--rule-soft); border-radius: 7px; padding: 6px 8px 6px 10px; display: grid; gap: 6px; }
 .req.is-vuln { border-color: var(--crit); background: var(--crit-soft); }
-/* Name and kind on the left, Vulnerable and remove pinned to the right, so the Vulnerable box sits in the same spot on every row. */
-.req-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "name vuln x" "type vuln x"; align-items: center; column-gap: 10px; }
+/* Name on its own line; kind on the left below it, Vulnerable and Delete need pinned to the right, so both sit in the same spot on every row at any width. */
+.req-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "name name name" "type vuln x"; align-items: center; column-gap: 10px; row-gap: 2px; }
 .req-head .linklike { grid-area: name; justify-self: start; min-width: 0; overflow-wrap: anywhere; }
 .req-head .check { grid-area: vuln; justify-self: end; }
-.req-head .icon-btn { grid-area: x; }
+.req-head .btn { grid-area: x; }
 .req-type { grid-area: type; font: 500 10.5px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
 .steps { display: grid; gap: 8px; padding-top: 8px; border-top: 1px solid var(--rule-soft); }
 .step-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -1993,7 +1993,7 @@ function needsCard(M, l) {
     return `<div class="req${n.vulnerable ? ' is-vuln' : ''}">
       <div class="req-head"><button type="button" class="linklike" data-cmd="editNode" ${dargs(n.id)}>${esc(n.label)}</button><span class="req-type">${esc(NODE_TYPES[n.type])}</span>
         ${checkField({ key: `node:${n.id}:vulnerable`, sfx: l.id, label: 'Vulnerable', value: n.vulnerable })}
-        <button type="button" class="icon-btn" data-cmd="removeNeed" ${dargs(l.id, n.id)} aria-label="Remove ${esc(n.label)} from the needs of ${esc(doer.label)} in ${esc(l.name)}"${dis()}>×</button></div>
+        <button type="button" class="btn small ghost" data-cmd="removeNeed" ${dargs(l.id, n.id)} aria-label="Delete ${esc(n.label)} from the needs of ${esc(doer.label)} in ${esc(l.name)}"${dis()}>Delete need</button></div>
       ${n.vulnerable ? field({ key: `node:${n.id}:rationale`, sfx: l.id, label: 'Why is this need vulnerable?', value: n.rationale, placeholder: 'What is deficient, weak, or at risk' }) : ''}
     </div>`;
   }).join('');

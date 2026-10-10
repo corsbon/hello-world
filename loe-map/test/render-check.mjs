@@ -337,11 +337,12 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   const vulnCols = await p.evaluate(() => {
     const rows = [...document.querySelectorAll('#coach-body .req-head')];
     const lefts = rows.map(r => Math.round(r.querySelector('.check').getBoundingClientRect().left));
-    const xs = rows.map(r => Math.round(r.querySelector('.icon-btn').getBoundingClientRect().left));
+    const xs = rows.map(r => Math.round(r.querySelector('.btn').getBoundingClientRect().left));
     const types = rows.map(r => r.querySelector('.req-type').textContent);
-    return { n: rows.length, lefts, xs, types };
+    const labels = rows.map(r => r.querySelector('.btn').textContent);
+    return { n: rows.length, lefts, xs, types, labels };
   });
-  check('the Vulnerable box sits in the same spot on every need row, whatever the kind of need', vulnCols.n === 2 && new Set(vulnCols.types).size === 2 && new Set(vulnCols.lefts).size === 1 && new Set(vulnCols.xs).size === 1, JSON.stringify(vulnCols));
+  check('the Vulnerable box sits in the same spot on every need row, whatever the kind of need', vulnCols.n === 2 && new Set(vulnCols.types).size === 2 && new Set(vulnCols.lefts).size === 1 && new Set(vulnCols.xs).size === 1 && vulnCols.labels.every(l => l === 'Delete need'), JSON.stringify(vulnCols));
 
   // Step 5 and 6
   await p.evaluate(async () => { await window.LOEMap.dispatch('addNode', 'Conference schedule', 'process', ''); });
@@ -529,6 +530,7 @@ for (const scheme of ['light', 'dark']) {
       if (step === 7 && mobile) await shot(p, `08c-${label}-track-${scheme}`);
       if (mobile && step === 1) await shot(p, `08-${label}-goal-${scheme}`);
       if (mobile && step === 2) await shot(p, `08a-${label}-ways-${scheme}`);
+      if (mobile && step === 4) await shot(p, `08d-${label}-needs-${scheme}`);
       if (step === 6) await shot(p, `08b-${label}-phases-${scheme}`);
     }
     if (mobile) {
