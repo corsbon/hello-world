@@ -559,6 +559,19 @@ for (const scheme of ['light', 'dark']) {
       tint: document.querySelectorAll('#map-svg rect.col-active').length,
       main: document.querySelector('g.lane[data-key="l_read"]').classList.contains('is-main-now'),
     }));
+    if (label === 'desktop' && scheme === 'light') {
+      await p.evaluate(() => window.LOEMap.dispatch('collapse', 'done'));
+      await p.waitForTimeout(300);
+      const c1 = await p.evaluate(() => ({ small: document.querySelectorAll('#map-svg g.lnode.step.is-collapsed').length, text: [...document.querySelectorAll('#map-svg g.lnode.step.is-collapsed .nlabel')].length, label: document.getElementById('collapse-summary').textContent }));
+      await p.evaluate(() => window.LOEMap.dispatch('collapse', 'all'));
+      await p.waitForTimeout(300);
+      const c2 = await p.evaluate(() => ({ small: document.querySelectorAll('#map-svg g.lnode.step.is-collapsed').length, width: document.querySelector('#map-svg g.lnode.step.is-collapsed rect.nbox').getAttribute('width'), label: document.getElementById('collapse-summary').textContent }));
+      await shot(p, `11c-${label}-sequence-collapsed-${scheme}`);
+      await p.evaluate(() => window.LOEMap.dispatch('collapse', 'none'));
+      await p.waitForTimeout(300);
+      const c3 = await p.evaluate(() => document.querySelectorAll('#map-svg g.lnode.step.is-collapsed').length);
+      check('collapsing by status shrinks only those steps; collapsing all shrinks every box; Show everything restores them', c1.small === 3 && c1.text === 0 && c1.label === 'Collapsed: 1' && c2.small === 14 && c2.width === '56' && c2.label === 'Collapsed: all' && c3 === 0, JSON.stringify({ c1, c2, c3 }));
+    }
     check(`${label} ${scheme}: sequence view has a column per phase, every step, both links, and statuses`, JSON.stringify(seqEx.heads) === JSON.stringify(['Prepare', 'Launch', 'Sustain', 'Essential action', 'Objective']) && seqEx.boxes === 14 && seqEx.waits === 2 && seqEx.feeds === 1 && seqEx.done === 3 && seqEx.doing === 2 && seqEx.blocked === 1 && seqEx.unknown === 1 && seqEx.dots === 6 && seqEx.tint === 1 && seqEx.main, JSON.stringify(seqEx));
     await shot(p, `11b-${label}-sequence-${scheme}`);
     if (mobile) {

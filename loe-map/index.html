@@ -419,6 +419,8 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .mk-waits, .mk-feeds { fill: var(--ink-2); fill: context-stroke; }
 .link-lbl { font: 600 9.5px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; fill: var(--lc, var(--ink-2)); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; pointer-events: none; }
 .map-title { font: 600 15px var(--font-display); letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); padding: 0 4px; }
+.collapse-body { right: auto; left: 10px; }
+.collapse-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .ptag rect { fill: var(--surface); stroke: var(--rule); }
 .ptag text { fill: var(--ink-3); font: 500 9px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
 .link.t-seq { stroke: var(--ink); stroke-width: 2; opacity: .8; }
@@ -496,6 +498,16 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
   <section class="panel map" id="map" aria-label="Map">
     <div class="maptools" id="maptools">
       <span class="map-title">Sequence</span>
+      <details class="key" id="collapse-menu">
+        <summary id="collapse-summary">Collapse</summary>
+        <div class="key-body collapse-body">
+          <h5>Shrink step boxes to their number</h5>
+          <button type="button" class="btn small" data-cmd="collapse" data-args="[&quot;all&quot;]" id="col-all" aria-pressed="false">All steps</button>
+          <h5>Or only steps that are</h5>
+          <div class="collapse-row" id="collapse-statuses"></div>
+          <button type="button" class="btn small ghost" data-cmd="collapse" data-args="[&quot;none&quot;]">Show everything</button>
+        </div>
+      </details>
       <label class="sr" for="phase-select">Phase shown on the map</label>
       <select id="phase-select" class="phase-select" hidden></select>
       <button type="button" class="btn small" id="btn-ways" data-cmd="toggleWays" aria-expanded="false" aria-controls="chips">Ways</button>
@@ -794,7 +806,7 @@ function wrap(text, max, maxLines) {
    State
    ================================================================ */
 const S = { project: {}, projectExists: false, loes: new Map(), nodes: new Map(), links: new Map(), phases: new Map(), steps: new Map(), got: new Set() };
-const ui = Object.assign({ step: 0, maxReached: 0, view: 'sequence', tab: 'coach', focus: false }, loadUi(), {
+const ui = Object.assign({ step: 0, maxReached: 0, view: 'sequence', tab: 'coach', focus: false, collapse: { all: false, status: {} } }, loadUi(), {
   lanesOn: [], selected: null, editNode: null, editStep: null, confirm: null, demo: false, savedStep: null,
   readOnly: false, mode: 'connecting', phaseSel: 'auto',
   pending: new Map(), drafts: new Map(), openDetails: new Set(),
@@ -809,7 +821,7 @@ function loadUi() {
 }
 function saveUi() {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify({ step: ui.demo ? (ui.savedStep ?? 0) : ui.step, maxReached: ui.maxReached, view: ui.view, tab: ui.tab, focus: ui.focus }));
+    localStorage.setItem(LS_KEY, JSON.stringify({ step: ui.demo ? (ui.savedStep ?? 0) : ui.step, maxReached: ui.maxReached, view: ui.view, tab: ui.tab, focus: ui.focus, collapse: ui.collapse }));
   } catch (e) { /* storage unavailable: per-visit only */ }
 }
 const loaded = () => S.got.size >= 6;
@@ -1220,6 +1232,14 @@ const cmd = {
     render(); return true;
   },
   focus(on) { ui.focus = on === undefined || on === null ? !ui.focus : !!on; saveUi(); render(); return true; },
+  // Collapse step boxes to their number and status badge: every box, or only those with a given status.
+  collapse(which) {
+    if (which === 'all') ui.collapse.all = !ui.collapse.all;
+    else if (which === 'none') { ui.collapse.all = false; ui.collapse.status = {}; }
+    else if (STATUS[which]) ui.collapse.status[which] = !ui.collapse.status[which];
+    else return false;
+    saveUi(); render(); return true;
+  },
   fit() { ui.userZoomed[ui.view] = false; fitView(true); return true; },
   toggleWays() { ui.showWays = !ui.showWays; render(); return true; },
   filterLane(id) { const i = ui.lanesOn.indexOf(id); if (i >= 0) ui.lanesOn.splice(i, 1); else ui.lanesOn.push(id); render(); return true; },
@@ -2638,16 +2658,25 @@ function layoutSequence(M) {
     const n = Math.max(1, M.slotCount);
     for (let i = 0; i < n; i++) cols.push({ key: 's' + i, text: M.steps.length ? String(i + 1) : 'Steps', sub: '', w: 1 });
   }
-  const GAP = 24, PADX = 12;
+  const GAP = 24, PADX = 12, SMALL_W = 56;
+  const collapsed = s => !!(ui.collapse.all || ui.collapse.status[s.status]);
+  for (const s of M.steps) { s.collapsed = collapsed(s); s.bw = s.collapsed ? SMALL_W : LV.nodeW; }
+  const colOf = s => (byPhase ? s.phaseIdx : s.slot);
+  // Each column is as wide as the widest run of a way's boxes in it, so collapsed boxes tighten the map.
+  const need = cols.map(() => SMALL_W);
+  for (const l of M.loes) {
+    const run = new Map();
+    for (const s of l.steps) { const ci = colOf(s); run.set(ci, (run.has(ci) ? run.get(ci) + GAP : 0) + s.bw); }
+    for (const [ci, w] of run) need[ci] = Math.max(need[ci], w);
+  }
   let x = LV.labelW;
-  for (const c of cols) { c.x = x; c.width = c.w * LV.nodeW + (c.w - 1) * GAP + 2 * PADX; x += c.width; }
+  cols.forEach((c, i) => { c.x = x; c.width = need[i] + 2 * PADX; x += c.width; });
   const actX = x, actW = LV.colW;
   const top = LV.headH + 26;
   const boxes = new Map();
   const caps = [];
   const placeholders = [];
   const segs = [];
-  const colOf = s => (byPhase ? s.phaseIdx : s.slot);
   const cellX = (ci, sub) => cols[ci].x + PADX + sub * (LV.nodeW + GAP);
   let y = top;
   for (const lane of lanes) {
@@ -2660,8 +2689,12 @@ function layoutSequence(M) {
     } else {
       const l = lane.loe;
       let prev = null;
+      const offset = new Map();
       for (const s of l.steps) {
-        const r = { x: cellX(colOf(s), byPhase ? s.sub : 0), y: cy, w: LV.nodeW, h: LV.nodeH, step: s, lane };
+        const ci = colOf(s);
+        const off = offset.get(ci) || 0;
+        const r = { x: cols[ci].x + PADX + off, y: cy + (s.collapsed ? (LV.nodeH - 30) / 2 : 0), w: s.bw, h: s.collapsed ? 30 : LV.nodeH, step: s, lane };
+        offset.set(ci, off + s.bw + GAP);
         boxes.set(s.id, r);
         if (prev) segs.push({ id: 'seq:' + prev.step.id, type: 'seq', a: prev, b: r, s: 'step:' + prev.step.id, t: 'step:' + s.id });
         prev = r;
@@ -2715,7 +2748,7 @@ function renderSequence(M) {
     .attr('aria-label', d => (d.phase ? `Phase ${d.text}: change its start date` : d.none ? 'Steps not placed in a phase: place them in question 2' : null))
     .attr('class', d => `col-btn${d.phase || d.none ? ' is-link' : ''}`);
   heads.select('rect.col-hit').attr('x', d => (d.left != null ? d.left : d.x - 60)).attr('y', 4).attr('width', d => (d.width != null ? d.width : 120)).attr('height', 36);
-  heads.select('text.col-head').attr('x', d => d.x).text(d => trunc(d.text, 22));
+  heads.select('text.col-head').attr('x', d => d.x).text(d => trunc(d.text, Math.max(5, Math.min(22, Math.floor((d.width || 150) / 6.6)))));
   heads.select('text.col-sub').attr('x', d => d.x).text(d => d.sub || '');
   d3.select(headG).selectAll('text.seq-caption').data(L.caption ? [L.caption] : []).join('text')
     .attr('class', 'seq-caption').attr('x', LV.labelW + 12).attr('y', L.top - 6).text(d => d);
@@ -2830,6 +2863,7 @@ function laneItemClass(M, H, d, AP) {
   const c = ['lnode', d.kind];
   if (d.kind === 'step') {
     c.push('st-' + d.s.status);
+    if (d.s.collapsed) c.push('is-collapsed');
     if (d.s.overdue) c.push('is-overdue');
     if (!has(d.s.owner) && !(d.loe.doerNodeId && M.nodes.has(d.loe.doerNodeId))) c.push('is-noowner');
     if (M.cogId && d.loe.doerNodeId === M.cogId) c.push('is-cogway');
@@ -2859,6 +2893,27 @@ function laneItemLabel(M, d) {
   if (d.n.vulnerable) parts.push('vulnerable');
   return parts.join(', ');
 }
+// The status mark at a step box's top-right corner.
+function drawStatusBadge(g, s, w) {
+  if (s.status === 'done') {
+    const b = g.append('g').attr('class', 'dbadge').attr('transform', `translate(${w - 2},2)`);
+    b.append('circle').attr('r', 8);
+    b.append('text').attr('text-anchor', 'middle').attr('y', 3.5).text('✓');
+  } else if (s.status === 'blocked') {
+    const b = g.append('g').attr('class', 'bbadge').attr('transform', `translate(${w - 2},2)`);
+    b.append('circle').attr('r', 8);
+    b.append('text').attr('text-anchor', 'middle').attr('y', 4).text('!');
+  } else if (s.status === 'doing') {
+    // In progress: a white circle with three black dots.
+    const b = g.append('g').attr('class', 'gbadge').attr('transform', `translate(${w - 2},2)`);
+    b.append('circle').attr('r', 8);
+    for (const x of [-4, 0, 4]) b.append('circle').attr('class', 'dot').attr('cx', x).attr('r', 1.4);
+  } else if (s.status === 'unknown') {
+    const b = g.append('g').attr('class', 'ubadge').attr('transform', `translate(${w - 2},2)`);
+    b.append('circle').attr('r', 8);
+    b.append('text').attr('text-anchor', 'middle').attr('y', 4).text('?');
+  }
+}
 function drawLaneItem(el, d, M) {
   const g = d3.select(el);
   g.selectAll('*').remove();
@@ -2878,6 +2933,17 @@ function drawLaneItem(el, d, M) {
     g.append('title').text(`Someone must ${d.text}${d.loe.steps.length ? `. Steps: ${d.loe.steps.map(s => s.text).join('; ')}` : ''}`);
     return;
   }
+  if (d.kind === 'step' && d.s.collapsed) {
+    const s = d.s;
+    g.append('rect').attr('class', 'nbox').attr('width', w).attr('height', h).attr('rx', 7);
+    const numW = 10 + s.num.length * 6.2;
+    const num = g.append('g').attr('class', 'snum').attr('transform', `translate(${(w - numW) / 2 - 4},${h / 2 - 8})`);
+    num.append('rect').attr('width', numW).attr('height', 16).attr('rx', 8);
+    num.append('text').attr('x', numW / 2).attr('text-anchor', 'middle').attr('y', 11.5).text(s.num);
+    drawStatusBadge(g, s, w);
+    g.append('title').text(`${s.num} ${s.text}. ${STATUS[s.status]}.`);
+    return;
+  }
   if (d.kind === 'step') {
     const s = d.s;
     g.append('rect').attr('class', 'nbox').attr('width', w).attr('height', h).attr('rx', 7);
@@ -2888,24 +2954,7 @@ function drawLaneItem(el, d, M) {
     const lines = wrap(s.text, 17, 2);
     const t = g.append('text').attr('class', 'nlabel').attr('y', h / 2 - (lines.length - 1) * 7 + 4);
     setLines(t.node(), lines, 10 + numW, 14);
-    if (s.status === 'done') {
-      const b = g.append('g').attr('class', 'dbadge').attr('transform', `translate(${w - 2},2)`);
-      b.append('circle').attr('r', 8);
-      b.append('text').attr('text-anchor', 'middle').attr('y', 3.5).text('✓');
-    } else if (s.status === 'blocked') {
-      const b = g.append('g').attr('class', 'bbadge').attr('transform', `translate(${w - 2},2)`);
-      b.append('circle').attr('r', 8);
-      b.append('text').attr('text-anchor', 'middle').attr('y', 4).text('!');
-    } else if (s.status === 'doing') {
-      // In progress: a white circle with three black dots.
-      const b = g.append('g').attr('class', 'gbadge').attr('transform', `translate(${w - 2},2)`);
-      b.append('circle').attr('r', 8);
-      for (const x of [-4, 0, 4]) b.append('circle').attr('class', 'dot').attr('cx', x).attr('r', 1.4);
-    } else if (s.status === 'unknown') {
-      const b = g.append('g').attr('class', 'ubadge').attr('transform', `translate(${w - 2},2)`);
-      b.append('circle').attr('r', 8);
-      b.append('text').attr('text-anchor', 'middle').attr('y', 4).text('?');
-    }
+    drawStatusBadge(g, s, w);
     const doer = d.loe.doerNodeId && M.nodes.get(d.loe.doerNodeId);
     const who = has(s.owner) ? s.owner : doer ? doer.label : '';
     if (who) {
@@ -3108,6 +3157,11 @@ function renderInfo(M) {
 }
 function renderTools(M) {
   $('maptools').classList.toggle('ways-open', !!ui.showWays);
+  const cAll = !!ui.collapse.all, cOn = Object.keys(STATUS).filter(k => ui.collapse.status[k]);
+  $('col-all').setAttribute('aria-pressed', String(cAll));
+  $('collapse-summary').textContent = cAll ? 'Collapsed: all' : cOn.length ? `Collapsed: ${cOn.length}` : 'Collapse';
+  const ch = Object.entries(STATUS).map(([k, l]) => `<button type="button" class="btn small" data-cmd="collapse" ${dargs(k)} aria-pressed="${!!ui.collapse.status[k]}"${cAll ? ' disabled' : ''}>${esc(l)}</button>`).join('');
+  if ($('collapse-statuses').innerHTML !== ch) $('collapse-statuses').innerHTML = ch;
   const wb = $('btn-ways');
   wb.textContent = ui.lanesOn.length ? `Ways (${ui.lanesOn.length})` : 'Ways';
   wb.setAttribute('aria-expanded', String(!!ui.showWays));
@@ -3328,6 +3382,8 @@ function openExport() {
 async function boot() {
   els.body = $('coach-body'); els.scroll = $('coach-scroll'); els.rail = $('rail'); els.foot = $('coach-foot'); els.banners = $('banners'); els.toast = $('toast');
   ui.view = 'sequence'; // the only map for now; Lanes and Network stay in the code
+  if (!ui.collapse || typeof ui.collapse !== 'object') ui.collapse = { all: false, status: {} };
+  if (!ui.collapse.status || typeof ui.collapse.status !== 'object') ui.collapse.status = {};
   if (!['coach', 'map'].includes(ui.tab)) ui.tab = 'coach';
   ui.step = Math.max(0, Math.min(STEPS.length - 1, Number(ui.step) || 0));
   bindEvents();
