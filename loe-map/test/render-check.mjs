@@ -221,6 +221,16 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   await p.waitForTimeout(500);
   const dragged = await p.evaluate(id => window.LOEMap.model().stepsByLoe.get(id).map(s => s.num + ' ' + s.text), wayId);
   check('dragging a step past the next one on the map reorders the way', dragged[0] === '1.1 Add overnight coverage' && dragged[1] === '1.2 Agree the worklist rule' && !(await p.evaluate(() => window.LOEMap.ui.editStep)), JSON.stringify(dragged));
+  // A tap that wobbles a couple of pixels, as fingers do, still opens the step.
+  const b1 = await p.$eval(`#map-svg g.lnode[data-key="step:${sIds[1]}"]`, el => { const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  await p.mouse.move(b1.x, b1.y);
+  await p.mouse.down();
+  await p.mouse.move(b1.x + 3, b1.y + 2, { steps: 2 });
+  await p.mouse.up();
+  await p.waitForTimeout(400);
+  check('a slightly wobbly tap on a step still opens its page', (await p.evaluate(() => window.LOEMap.ui.editStep)) === sIds[1]);
+  await p.evaluate(() => window.LOEMap.dispatch('closeEditor'));
+  await settle(p);
   await p.evaluate(id => window.LOEMap.dispatch('editStep', id), sIds[0]);
   await settle(p);
   await p.selectOption(`#f-step_${sIds[0]}_position`, '');

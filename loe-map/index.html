@@ -2734,14 +2734,19 @@ function renderSequence(M) {
 // Drag a step left or right along its lane to change its place in the way. Dropping it in another phase's column moves it there too.
 const stepDrag = HAS_D3 ? d3.drag()
   .filter(e => canWrite() && !e.ctrlKey && !e.button)
-  .on('start', function () { d3.select(this).raise().classed('is-dragging', true); })
-  .on('drag', function (e, d) { d.dragX = (d.dragX || 0) + e.dx; d3.select(this).attr('transform', `translate(${d.r.x + d.dragX},${d.r.y})`); })
+  .on('start', function (e, d) { d.dragX = 0; d.moved = false; d3.select(this).raise().classed('is-dragging', true); })
+  .on('drag', function (e, d) { d.moved = true; d.dragX = (d.dragX || 0) + e.dx; d3.select(this).attr('transform', `translate(${d.r.x + d.dragX},${d.r.y})`); })
   .on('end', function (e, d) {
-    const dx = d.dragX || 0;
-    d.dragX = 0;
+    const dx = d.dragX || 0, moved = d.moved;
+    d.dragX = 0; d.moved = false;
     d3.select(this).classed('is-dragging', false);
     const L = lastLanes;
-    if (!L || !L.boxes || Math.abs(dx) < 8) { render(); return; }
+    if (!L || !L.boxes || Math.abs(dx) < 8) {
+      // A finger tap usually moves a pixel or two, which the browser then treats as a drag and drops the click. Open the step anyway.
+      render();
+      if (moved) cmd.editStep(d.s.id);
+      return;
+    }
     const s = d.s;
     const cx = d.r.x + dx + d.r.w / 2;
     const mates = [...L.boxes.values()].filter(r => r.step.loeId === s.loeId && r.step.id !== s.id).sort((a, b) => a.x - b.x);
