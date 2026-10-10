@@ -127,10 +127,79 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   await p.waitForTimeout(300);
   u = await p.evaluate(() => window.LOEMap.unlocks());
   check('a way with an essential action opens question 3, with no main effort needed', u[3] === true, JSON.stringify(u));
+  const way2 = await p.evaluate(() => window.LOEMap.model().loes.find(l => l.name === 'Technologist throughput').id);
+
+  // Steps under the essential action: added through the form, kept in order, moved, ticked, removed.
+  await p.evaluate(() => window.LOEMap.dispatch('goto', 2));
+  await settle(p);
+  for (const t of ['Agree the worklist rule', 'Add overnight coverage', 'Read from the flagged worklist']) {
+    await p.fill(`#new-step-${wayId}`, t);
+    await p.press(`#new-step-${wayId}`, 'Enter');
+    await p.waitForTimeout(300);
+  }
+  let st = await p.evaluate(id => window.LOEMap.model().stepsByLoe.get(id).map(s => [s.order, s.text, s.slot]), wayId);
+  check('three steps added through the add box, in order', JSON.stringify(st) === JSON.stringify([[1, 'Agree the worklist rule', 0], [2, 'Add overnight coverage', 1], [3, 'Read from the flagged worklist', 2]]), JSON.stringify(st));
+  const stepFocus = await p.evaluate(() => document.activeElement && document.activeElement.id);
+  check('focus stays in the step add box for the next entry', stepFocus === `new-step-${wayId}`, stepFocus);
+  const sIds = await p.evaluate(id => window.LOEMap.model().stepsByLoe.get(id).map(s => s.id), wayId);
+  await p.evaluate(async id => { await window.LOEMap.dispatch('moveStep', id, 1); }, sIds[1]);
+  await p.waitForTimeout(300);
+  st = await p.evaluate(id => window.LOEMap.model().stepsByLoe.get(id).map(s => s.text), wayId);
+  check('moving a step down swaps it with the next one', st[1] === 'Read from the flagged worklist' && st[2] === 'Add overnight coverage', JSON.stringify(st));
+  await p.evaluate(async id => { await window.LOEMap.dispatch('moveStep', id, -1); }, sIds[1]);
+  await p.waitForTimeout(300);
+  st = await p.evaluate(id => window.LOEMap.model().stepsByLoe.get(id).map(s => s.text), wayId);
+  check('moving it back restores the order', st[1] === 'Add overnight coverage', JSON.stringify(st));
+  await p.click(`#f-step_${sIds[0]}_done`);
+  await p.waitForTimeout(300);
+  const done = await p.evaluate(id => window.LOEMap.model().stepById.get(id).done, sIds[0]);
+  check('ticking Done on a step saves it', done === true);
+  const blank = await p.evaluate(id => window.LOEMap.dispatch('updateStep', id, { text: '  ' }), sIds[0]);
+  check('a step cannot be blanked', blank === false);
+  const sameWay = await p.evaluate(([a, b]) => window.LOEMap.dispatch('updateStep', a, { afterStepId: b }), [sIds[2], sIds[0]]);
+  check('a step cannot wait for a step in its own way', sameWay === false);
+  // Way 2 gets a step that waits for way 1's second step: it lands one column after it.
+  await p.evaluate(async id => { await window.LOEMap.dispatch('addStep', id, 'Adopt standard protocols'); }, way2);
+  await p.waitForTimeout(300);
+  const t2 = await p.evaluate(id => window.LOEMap.model().stepsByLoe.get(id)[0].id, way2);
+  await p.evaluate(async ([a, b]) => { await window.LOEMap.dispatch('updateStep', a, { afterStepId: b }); }, [t2, sIds[1]]);
+  await p.waitForTimeout(300);
+  const slots = await p.evaluate(([a, b]) => { const M = window.LOEMap.model(); return { wait: M.stepById.get(a).slot, after: M.stepById.get(b).slot, count: M.slotCount }; }, [t2, sIds[1]]);
+  check('a step that waits for a step in another way sits in a later column', slots.wait === 2 && slots.after === 1 && slots.count === 3, JSON.stringify(slots));
+  const cycle = await p.evaluate(([a, b]) => window.LOEMap.dispatch('updateStep', a, { afterStepId: b }), [sIds[0], t2]);
+  check('a hand-off that would form a circle is refused', cycle === false);
+  await p.evaluate(async id => { await window.LOEMap.dispatch('deleteStep', id); }, sIds[2]);
+  await p.waitForTimeout(300);
+  const nSteps = await p.evaluate(id => window.LOEMap.model().stepsByLoe.get(id).length, wayId);
+  check('removing a step takes it off the list', nSteps === 2, String(nSteps));
+  await shot(p, '02a-desktop-ways-steps-light');
+
+  // Sequence view: one box per step, an arrow along each way, a dashed hand-off between ways.
+  await p.evaluate(() => window.LOEMap.dispatch('view', 'sequence'));
+  await p.waitForTimeout(400);
+  const seq = await p.evaluate(() => ({
+    boxes: document.querySelectorAll('#map-svg g.lnode.step').length,
+    seq: document.querySelectorAll('#map-svg path.link.t-seq').length,
+    waits: document.querySelectorAll('#map-svg path.link.t-waits').length,
+    pressed: document.getElementById('v-sequence').getAttribute('aria-pressed'),
+  }));
+  check('sequence view draws a box per step, arrows along the way with an action, and the hand-off', seq.boxes === 3 && seq.seq === 2 && seq.waits === 1 && seq.pressed === 'true', JSON.stringify(seq));
+  const xs = await p.evaluate(([a, b]) => { const x = id => Number((document.querySelector(`#map-svg g.lnode[data-key="step:${id}"]`).getAttribute('transform').match(/translate\(([\d.]+)/) || [])[1]); return { wait: x(a), after: x(b) }; }, [t2, sIds[1]]);
+  check('the waiting step is drawn in a later column than the step it waits for', xs.wait > xs.after, JSON.stringify(xs));
+  await p.evaluate(id => window.LOEMap.dispatch('select', 'step:' + id), t2);
+  await settle(p);
+  const infoTitle = await p.$eval('#info', el => (el.hidden ? '' : el.querySelector('.info-title').textContent));
+  check('selecting a step shows its details bar', /^Step 1 of Technologist throughput/.test(infoTitle), infoTitle);
+  await shot(p, '04b-desktop-sequence-light');
+  await p.click('#info button[data-cmd="editNode"]');
+  await p.waitForTimeout(400);
+  const landed = await p.evaluate(() => ({ step: window.LOEMap.ui.step, focus: document.activeElement && document.activeElement.id }));
+  check('Edit answers on a step opens question 2 with that step\'s text box focused', landed.step === 2 && landed.focus === `f-step_${t2}_text`, JSON.stringify(landed));
+  await p.evaluate(() => { window.LOEMap.dispatch('select', null); window.LOEMap.dispatch('view', 'lanes'); });
+  await settle(p);
 
   // Question 3: doers, then the team picks the center of gravity itself.
   await p.evaluate(async id => { await window.LOEMap.dispatch('setDoer', id, 'On-duty radiologists'); }, wayId);
-  const way2 = await p.evaluate(() => window.LOEMap.model().loes.find(l => l.name === 'Technologist throughput').id);
   await p.evaluate(async id => { await window.LOEMap.dispatch('updateWay', id, { capability: 'complete and send studies without delay' }); }, way2);
   await p.evaluate(async id => { await window.LOEMap.dispatch('setDoer', id, 'CT technologists'); }, way2);
   await p.waitForTimeout(300);
@@ -247,8 +316,18 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   await p.click('h2.question');
   await p.waitForTimeout(1100);
   await shot(p, '03b-desktop-phases-light');
+  // Steps can be placed in phases once phases exist; the review asks about the ones that are not.
+  await p.evaluate(() => window.LOEMap.dispatch('goto', 2));
+  await settle(p);
+  check('once a phase exists, each step offers a phase menu', !!(await p.$(`#f-step_${sIds[0]}_phaseId`)));
+  await p.selectOption(`#f-step_${sIds[0]}_phaseId`, phId);
+  await p.waitForTimeout(300);
+  const placed = await p.evaluate(id => window.LOEMap.model().stepById.get(id).phaseId, sIds[0]);
+  check('choosing a phase for a step saves it', placed === phId, String(placed));
   await p.evaluate(() => window.LOEMap.dispatch('goto', 7));
   await settle(p);
+  const rvText = await p.$eval('#coach-body', el => el.textContent);
+  check('the review lists the steps and asks about the unplaced ones', /Agree the worklist rule/.test(rvText) && /not placed yet/.test(rvText));
   await shot(p, '04-desktop-review-light');
   await p.evaluate(() => window.LOEMap.dispatch('view', 'network'));
   await p.waitForTimeout(400);
@@ -287,8 +366,9 @@ for (const scheme of ['light', 'dark']) {
     const reach = await p.evaluate(() => window.LOEMap.reachable());
     check(`${label} ${scheme}: worked example opens all steps`, reach === 7, String(reach));
     if (label === 'desktop' && scheme === 'light') {
-      const M = await p.evaluate(() => { const M = window.LOEMap.model(); return { cog: M.nodes.get(M.cogId).label, vulns: M.vulns.length, nodes: M.nodes.size, links: M.links.length }; });
+      const M = await p.evaluate(() => { const M = window.LOEMap.model(); return { cog: M.nodes.get(M.cogId).label, vulns: M.vulns.length, nodes: M.nodes.size, links: M.links.length, steps: M.steps.length, waits: M.steps.filter(s => s.after).length, slots: M.slotCount }; });
       check('worked example: center of gravity is the on-duty radiologists', M.cog === 'On-duty radiologists', JSON.stringify(M));
+      check('worked example: fourteen steps, two hand-offs, six columns of order', M.steps === 14 && M.waits === 2 && M.slots === 6, JSON.stringify(M));
       const disabled = await p.$$eval('#coach-body input, #coach-body textarea, #coach-body select', els => els.every(e => e.disabled));
       check('worked example is read-only', disabled);
     }
@@ -308,6 +388,10 @@ for (const scheme of ['light', 'dark']) {
         return out;
       });
       check(`${label} ${scheme}: ${step === 6 ? 'phases' : 'question ' + step} answers fit with no sideways scrolling`, bad.length === 0, bad.join(', '));
+      if (step === 2 && label === 'desktop' && scheme === 'light') {
+        const dd = await p.$$eval('#coach-body input[type="checkbox"][id$="_done"]', els => ({ n: els.length, dis: els.every(e => e.disabled) }));
+        check('worked example: step done boxes shown and read-only', dd.n === 14 && dd.dis, JSON.stringify(dd));
+      }
       if (mobile && step === 1) await shot(p, `08-${label}-goal-${scheme}`);
       if (mobile && step === 2) await shot(p, `08a-${label}-ways-${scheme}`);
       if (step === 6) await shot(p, `08b-${label}-phases-${scheme}`);
@@ -362,6 +446,33 @@ for (const scheme of ['light', 'dark']) {
       const infoShown = await p.$eval('#info', el => !el.hidden);
       check(`${label} ${scheme}: tapping a node shows its details bar`, infoShown);
       await shot(p, `12-${label}-lanes-selected-${scheme}`);
+    }
+    await p.evaluate(() => { window.LOEMap.dispatch('select', null); window.LOEMap.dispatch('view', 'sequence'); });
+    await p.waitForTimeout(400);
+    const seqEx = await p.evaluate(() => ({
+      boxes: document.querySelectorAll('#map-svg g.lnode.step').length,
+      waits: document.querySelectorAll('#map-svg path.link.t-waits').length,
+      cols: [...document.querySelectorAll('#map-svg text.col-head')].filter(t => /^\d+$/.test(t.textContent)).length,
+      main: document.querySelector('g.lane[data-key="l_read"]').classList.contains('is-main-now'),
+    }));
+    check(`${label} ${scheme}: sequence view shows the example's steps, hand-offs, and six columns`, seqEx.boxes === 14 && seqEx.waits === 2 && seqEx.cols === 6 && seqEx.main, JSON.stringify(seqEx));
+    await shot(p, `11b-${label}-sequence-${scheme}`);
+    if (mobile) {
+      const sbox = await p.evaluate(() => {
+        const c = document.getElementById('canvas').getBoundingClientRect();
+        for (const g of document.querySelectorAll('#map-svg g.lnode.step')) {
+          const r = g.getBoundingClientRect();
+          const x = r.x + r.width / 2, y = r.y + r.height / 2;
+          if (x > c.left + 10 && x < c.right - 10 && y > c.top + 10 && y < c.bottom - 80) return { x, y };
+        }
+        return null;
+      });
+      check(`${label} ${scheme}: a step is visible on the initial phone framing`, !!sbox);
+      if (sbox) await p.touchscreen.tap(sbox.x, sbox.y);
+      await settle(p);
+      const stepInfo = await p.$eval('#info', el => !el.hidden && /^Step \d/.test(el.querySelector('.info-title').textContent));
+      check(`${label} ${scheme}: tapping a step shows its details bar`, stepInfo);
+      await shot(p, `12b-${label}-sequence-selected-${scheme}`);
     }
     await p.evaluate(() => { window.LOEMap.dispatch('select', null); window.LOEMap.dispatch('view', 'network'); });
     await p.waitForTimeout(500);

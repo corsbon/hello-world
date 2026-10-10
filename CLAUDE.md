@@ -21,6 +21,7 @@ The project lives in `loe-map/`. Read `loe-map/README.md` first: it covers the m
 - **Cite the source article by title and link only.** Never name its author in the app or the docs.
 - **Keep the app general-purpose.** The hospital radiology project is only the worked example.
 - **The center of gravity stays fixed for the whole project.** The main effort can change from phase to phase.
+- **A way keeps its essential action, and its steps happen in series.** Parallel is across ways. A step can start after a step in another way, and that is the only cross-way sequencing.
 - **Phone-first.**
   - Pages scroll up and down only, never sideways.
   - Answer boxes stay at 16px on touch screens, so iPhones do not zoom when a box is tapped.
@@ -48,4 +49,4 @@ npx playwright install chromium
 node test/render-check.mjs node_modules/d3/dist/d3.min.js test-output
 ```
 
-Every check must pass (104 at the time of writing).
+Every check must pass (131 at the time of writing).
