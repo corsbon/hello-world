@@ -2749,7 +2749,7 @@ function renderSequence(M) {
     .attr('class', d => `col-btn${d.phase || d.none ? ' is-link' : ''}`);
   heads.select('rect.col-hit').attr('x', d => (d.left != null ? d.left : d.x - 60)).attr('y', 4).attr('width', d => (d.width != null ? d.width : 120)).attr('height', 36);
   heads.select('text.col-head').attr('x', d => d.x).text(d => trunc(d.text, Math.max(5, Math.min(22, Math.floor((d.width || 150) / 6.6)))));
-  heads.select('text.col-sub').attr('x', d => d.x).text(d => d.sub || '');
+  heads.select('text.col-sub').attr('x', d => d.x).text(d => (d.sub ? trunc(d.sub, Math.max(6, Math.floor((d.width || 150) / 5.8))) : ''));
   d3.select(headG).selectAll('text.seq-caption').data(L.caption ? [L.caption] : []).join('text')
     .attr('class', 'seq-caption').attr('x', LV.labelW + 12).attr('y', L.top - 6).text(d => d);
   d3.select(headG).selectAll('line.col-sep').data(L.seps).join('line')
