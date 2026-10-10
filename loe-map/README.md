@@ -43,12 +43,13 @@ Source: ["The Center of Gravity: Still Relevant After All These Years?"](https:/
 | 3 Doers | What entity, actor, or node has the inherent ability to perform the action? | The doer of each way. The team then picks one doer as the center of gravity, and it stays fixed for the whole project. |
 | 4 Needs | What does the doer require, and which of those are vulnerable? | Needs linked to each doer. Vulnerable needs are flagged with your reason. |
 | Links | (Relationships, actors, function, tensions) | Depends-on, influences, and in-tension-with links between any items |
-| Phases | (Sequence the ways in main and supporting efforts) | Named, dated phases, each with one way as its main effort and a reason |
-| Review | | Your answers laid out as the four questions, the phases, a tier list, and open questions |
+| Phases | (Sequence the ways in main and supporting efforts) | Named phases with a start date each. A phase ends when the next begins, and the last ends at the project due date. Each has one way as its main effort and a reason |
+| Track | | Status, owner, and due date for every step, plus where each way stands now and what done looks like |
+| Review | | Your answers laid out as the four questions, the phases, where things stand, a tier list, and open questions |
 
 **Main effort and center of gravity are separate.** The main effort is the way that matters most at a given point in time, so it can change from phase to phase. The center of gravity is tied to the objective, so it stays the same. When a phase's main effort is led by a doer other than the center of gravity, the coach asks what keeps the center of gravity ready while the focus is elsewhere. The map's phase menu highlights the main-effort lane for the phase you pick, and it opens on the phase whose dates include today.
 
-**Steps run in series inside a way and in parallel across ways.** Each way lists the steps that must happen, in order, for its essential action to come true. Different ways run side by side. A step can start after a step in another way, which the coach calls a hand-off. Each step records its wording, an optional owner (blank means the way's doer), an optional phase, the hand-off, and whether it is done. The Sequence view of the map draws the result: steps in the same column can happen at the same time, and arrows show what cannot.
+**Steps run in series inside a way and in parallel across ways.** Each way lists the steps that must happen, in order, for its essential action to come true. Different ways run side by side. A step can start after a step in another way, which the coach calls a hand-off, and it can feed back into any other step, which is drawn but never changes the order. Each step records its wording, what it entails, an owner (blank means the way's doer), a status (not started, in progress, done, blocked, with a reason), a due date, a phase, the hand-off, the feedback link, and notes. Steps are numbered by their way and position, such as 2.3 for the third step of the second way. The number is computed, never typed, and follows the order of the ways in question 2. The Sequence view draws each step in its phase; within a way the order still runs left to right.
 
 The article's definition, shown in step 3: "The center of gravity is the primary entity that possesses the inherent capability to achieve the objective."
 
@@ -60,9 +61,10 @@ The tier list sorts every item the way the article describes. Critical items ser
 2. Answer question 1. The map draws the objective. Question 2 opens.
 3. Keep going. The map fills in as each answer lands.
 4. Use **Worked example** to see a finished map for a hospital project to cut emergency CT report turnaround. It is read-only and never touches your team's map.
-5. Switch the map between **Lanes**, **Network**, and **Sequence**. Lanes shows the structure: needs, then doer, then action, then objective. Network shows the tangle. Sequence shows the order: one row per way, its steps left to right in the order they can happen, solid arrows for one after another, dashed arrows for hand-offs between ways, and each row ending in its essential action.
-6. Tap any item on the map to see its role. Use **Edit answers** to change it.
-7. **Copy data** gives you a text backup of everything your team has entered.
+5. The map opens on **Sequence**: one row per way, a column per phase with its dates, each step as a numbered box, solid arrows for one after another, dashed arrows for hand-offs between ways, dotted arrows for feedback, and each row ending in its essential action. The actions point at the objective, which names the center of gravity. **Lanes** shows the structure: needs, then doer, then action, then objective. The columns left of the doer count links, what the doer uses and then what those depend on. They come from the relationships you enter, not from the source article. **Network** shows the tangle.
+6. Tap a step to open its page: what it entails, owner, status, due date, phase, hand-off, feedback link, and notes. Tap a phase name on the map to change its start date. Tap any other item to see its role, and use **Edit answers** to change it.
+7. **Track** lists every step by way with its status, owner, and due date, plus where each way stands now and what done looks like. The map and the review follow it. The coach asks about blocked and overdue steps there.
+8. **Copy data** gives you a text backup of everything your team has entered.
 
 ### On a phone
 
@@ -88,16 +90,19 @@ The map lives in the artifact's shared database, in five collections.
 ```
 project/main   title, objective, measure, baseline, target, dueDate,
                objectiveRationale, cogNodeId, cogRationale, relationshipsReviewed
-loes/{id}      name, order, color, capability, doerNodeId
+loes/{id}      name, order, color, capability, doerNodeId, now, endState
 nodes/{id}     label, type (actor | system | process | resource), loeId, vulnerable,
                rationale, owner, notes
 links/{id}     source, target, type (uses | depends_on | influences | tension), loeId
                id = type__source__target, plus __loeId for a need tied to one way
-phases/{id}    name, order, start, end, mainLoeId, rationale
-steps/{id}     loeId, order, text, owner, phaseId, afterStepId, done
+phases/{id}    name, order, start, mainLoeId, rationale
+steps/{id}     loeId, order, text, description, owner, status, blockedReason, due,
+               phaseId, afterStepId, feedsStepId, feedsVerb, notes
 ```
 
-A step belongs to one way, and `order` is its place in that way's series. `afterStepId` names a step in another way that must finish first. The page refuses a hand-off to a step in the same way, or one that would make steps wait on each other in a circle. A step's column on the Sequence view is computed from these, never stored.
+A phase stores only its start date. Its end is the day before the next phase starts, or the project due date for the last phase, so phases can never overlap or leave a gap. Older phase records may still carry an `end` field; it is ignored.
+
+A step belongs to one way, and `order` is its place in that way's series. `afterStepId` names a step in another way that must finish first. The page refuses a hand-off to a step in the same way, or one that would make steps wait on each other in a circle. `feedsStepId` is a feedback link to any other step; it is drawn and never sequenced. `status` is one of `todo`, `doing`, `done`, `blocked`; older records that carry only `done` still read correctly. A step's number and its column on the Sequence view are computed, never stored.
 
 A need belongs to a doer within one way, so two ways that share a doer can each have their own needs. A "uses" link saved before needs carried a way counts for the way whose lane the need sits in, or for every way of that doer when the need sits elsewhere.
 
