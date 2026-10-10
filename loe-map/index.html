@@ -395,6 +395,9 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .snum text { fill: var(--surface); font: 600 9.5px var(--font-mono); }
 .lnode.step.is-cogway .nbox { stroke: var(--ink); stroke-width: 1.8; }
 .lnode.step.is-noowner .nbox { stroke: var(--ink-3); stroke-dasharray: 4 3; }
+.lnode.step { cursor: grab; }
+.lnode.step.is-dragging { cursor: grabbing; opacity: .85; }
+.lnode.step.is-dragging .nbox { stroke: var(--accent); stroke-width: 2.5; }
 .lnode.step.st-doing .nbox { stroke: var(--accent); stroke-width: 2.2; stroke-dasharray: none; }
 .lnode.step.st-done .nbox { fill: var(--surface-2); }
 .lnode.step.st-done .nlabel { fill: var(--ink-3); }
@@ -1399,6 +1402,27 @@ const cmd = {
     if (ui.editStep === id) ui.editStep = null;
     return write(`steps/${id}`, 'delete');
   },
+  async placeStep(id, afterId, phaseId) {
+    if (!guard()) return false;
+    const M = model();
+    const s = M.stepById.get(id);
+    if (!s) return false;
+    afterId = afterId || null;
+    if (afterId === id) return false;
+    const after = afterId ? M.stepById.get(afterId) : null;
+    if (afterId && (!after || after.loeId !== s.loeId)) { toast('Pick a step in the same way.'); return false; }
+    const rest = M.stepsByLoe.get(s.loeId).filter(x => x.id !== id);
+    const at = after ? rest.indexOf(after) + 1 : 0;
+    rest.splice(at, 0, s);
+    force();
+    for (let i = 0; i < rest.length; i++) {
+      const p = {};
+      if (rest[i].order !== i + 1) p.order = i + 1;
+      if (rest[i].id === id && phaseId !== undefined && (phaseId || null) !== s.phaseId) p.phaseId = phaseId || null;
+      if (Object.keys(p).length) await write(`steps/${rest[i].id}`, 'update', p);
+    }
+    return true;
+  },
   async moveStep(id, dir) {
     if (!guard()) return false;
     const M = model();
@@ -2126,6 +2150,7 @@ function buildStepEditor(M, id) {
     ${field({ key: `step:${id}:due`, label: 'Due', value: s.due, type: 'date' })}
     ${M.phases.length ? selectField({ key: `step:${id}:phaseId`, label: 'Phase', value: s.phaseId || '', options: [['', 'No phase yet'], ...M.phases.map(p => [p.id, p.name])] }) : ''}
   </div>
+  ${l.steps.length > 1 ? selectField({ key: `step:${id}:position`, label: 'Position in this way', value: s.prev ? s.prev.id : '', options: [['', 'First'], ...l.steps.filter(x => x.id !== s.id).map(x => [x.id, `After ${x.num} ${trunc(x.text, 40)}`])] }) : ''}
   ${others.length ? selectField({ key: `step:${id}:afterStepId`, label: 'Starts after a step in another way', value: s.afterStepId || '', options: [['', 'Nothing in another way'], ...stepOpts(others)] }) : ''}
   ${any.length ? `<div class="grid-2">${selectField({ key: `step:${id}:feedsStepId`, label: 'Feeds back into', value: s.feedsStepId || '', options: [['', 'Nothing'], ...stepOpts(any)] })}${field({ key: `step:${id}:feedsVerb`, label: 'How', value: s.feedsVerb, placeholder: 'informs' })}</div>
   <p class="fine">A feedback link is drawn on the map as a dotted arrow. It does not change the order of steps.</p>` : ''}
@@ -2703,8 +2728,34 @@ function renderSequence(M) {
     .attr('style', d => laneItemStyle(M, d))
     .attr('aria-label', d => laneItemLabel(M, d));
   sel.each(function (d) { drawLaneItem(this, d, M); });
+  sel.filter(d => d.kind === 'step').call(stepDrag);
   stickyLabels(d3.zoomTransform(svgSel.node()));
 }
+// Drag a step left or right along its lane to change its place in the way. Dropping it in another phase's column moves it there too.
+const stepDrag = HAS_D3 ? d3.drag()
+  .filter(e => canWrite() && !e.ctrlKey && !e.button)
+  .on('start', function () { d3.select(this).raise().classed('is-dragging', true); })
+  .on('drag', function (e, d) { d.dragX = (d.dragX || 0) + e.dx; d3.select(this).attr('transform', `translate(${d.r.x + d.dragX},${d.r.y})`); })
+  .on('end', function (e, d) {
+    const dx = d.dragX || 0;
+    d.dragX = 0;
+    d3.select(this).classed('is-dragging', false);
+    const L = lastLanes;
+    if (!L || !L.boxes || Math.abs(dx) < 8) { render(); return; }
+    const s = d.s;
+    const cx = d.r.x + dx + d.r.w / 2;
+    const mates = [...L.boxes.values()].filter(r => r.step.loeId === s.loeId && r.step.id !== s.id).sort((a, b) => a.x - b.x);
+    const before = mates.filter(r => r.x + r.w / 2 < cx);
+    const afterId = before.length ? before[before.length - 1].step.id : null;
+    let phaseId;
+    if (L.cols && L.cols.some(c => c.phase)) {
+      const col = L.cols.find(c => cx >= c.x && cx < c.x + c.width);
+      if (col) phaseId = col.phase ? col.phase.id : null;
+    }
+    const samePlace = afterId === (s.prev ? s.prev.id : null) && (phaseId === undefined || (phaseId || null) === s.phaseId);
+    if (samePlace) { render(); return; }
+    cmd.placeStep(s.id, afterId, phaseId);
+  }) : null;
 function stickyLabels(t) {
   if (ui.view === 'network') return;
   const lx = -t.x / t.k;
@@ -3069,6 +3120,7 @@ function commitField(key, value) {
   if (kind === 'phase') return cmd.updatePhase(a, { [b]: value });
   if (kind === 'project') return cmd.setProject({ [a]: value });
   if (kind === 'loe') return cmd.updateWay(a, { [b]: value });
+  if (kind === 'step' && b === 'position') return cmd.placeStep(a, value);
   if (kind === 'step') return cmd.updateStep(a, { [b]: value });
   if (kind === 'node') return cmd.updateNode(a, { [b]: value });
   return false;
