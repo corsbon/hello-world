@@ -261,6 +261,8 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   await p.waitForTimeout(300);
   const after2 = await p.evaluate(() => { const m = /translate\(([-\d.]+),([-\d.]+)\) scale\(([\d.]+)\)/.exec(document.getElementById('zoom-root').getAttribute('transform') || ''); return m ? { x: +m[1], y: +m[2], k: +m[3] } : null; });
   check('a two-finger scroll slides the map sideways and keeps the zoom', !!before && !!after2 && after2.x < before.x - 50 && Math.abs(after2.k - before.k) < 1e-6, JSON.stringify({ before, after2 }));
+  await p.evaluate(() => window.LOEMap.dispatch('fit'));
+  await p.waitForTimeout(400);
   await p.evaluate(id => window.LOEMap.dispatch('editStep', id), sIds[0]);
   await settle(p);
   await p.selectOption(`#f-step_${sIds[0]}_position`, '');
@@ -427,7 +429,7 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   await p.evaluate(() => window.LOEMap.dispatch('view', 'sequence'));
   await p.waitForTimeout(400);
   const seqB = await p.evaluate(() => ({ heads: [...document.querySelectorAll('#map-svg text.col-head')].map(t => t.textContent), feeds: document.querySelectorAll('#map-svg path.link.t-feeds').length, labels: [...document.querySelectorAll('#map-svg text.link-lbl')].map(t => t.textContent).sort(), nums: [...document.querySelectorAll('#map-svg g.lnode.step .snum text')].map(t => t.textContent).sort(), subs: [...document.querySelectorAll('#map-svg text.col-sub')].map(t => t.textContent) }));
-  check('sequence by phase shows phase columns, a not-placed column, way.step numbers, and the feedback arrow', JSON.stringify(seqB.heads) === JSON.stringify(['Prepare', 'Launch', 'Not placed yet', 'Essential action', 'Objective']) && seqB.feeds === 1 && JSON.stringify(seqB.labels) === JSON.stringify(['improves', 'then']) && JSON.stringify(seqB.nums) === JSON.stringify(['1.1', '1.2', '2.1']) && /Jan 15, 2027 to Feb 28, 2027/.test(seqB.subs[0]), JSON.stringify(seqB));
+  check('sequence by phase shows phase columns, a not-placed column, way.step numbers, and the feedback arrow', JSON.stringify(seqB.heads) === JSON.stringify(['Prepare', 'Launch', 'Not placed yet', 'Essential action', 'Objective']) && seqB.feeds === 1 && JSON.stringify(seqB.labels) === JSON.stringify(['improves', 'then']) && JSON.stringify(seqB.nums) === JSON.stringify(['1.1', '1.2', '2.1']) && /^Jan 15(, 2027 to Feb 28, 2027|–Feb 28)$/.test(seqB.subs[0]), JSON.stringify(seqB));
   await shot(p, '04d-desktop-sequence-phases-light');
   await p.click('#map-svg g.col-btn.is-link text.col-head');
   await p.waitForTimeout(400);
@@ -560,17 +562,21 @@ for (const scheme of ['light', 'dark']) {
       main: document.querySelector('g.lane[data-key="l_read"]').classList.contains('is-main-now'),
     }));
     if (label === 'desktop' && scheme === 'light') {
+      const c0 = await p.evaluate(() => ({ small: document.querySelectorAll('#map-svg g.lnode.step.is-collapsed').length, label: document.getElementById('collapse-summary').textContent }));
+      check('by default, Done and Not started fold away once any step is under way', c0.small === 10 && c0.label === 'Collapsed: 2', JSON.stringify(c0));
+      await p.evaluate(() => window.LOEMap.dispatch('collapse', 'none'));
+      await p.waitForTimeout(300);
       await p.evaluate(() => window.LOEMap.dispatch('collapse', 'done'));
       await p.waitForTimeout(300);
       const c1 = await p.evaluate(() => ({ small: document.querySelectorAll('#map-svg g.lnode.step.is-collapsed').length, text: [...document.querySelectorAll('#map-svg g.lnode.step.is-collapsed .nlabel')].length, label: document.getElementById('collapse-summary').textContent }));
       await p.evaluate(() => window.LOEMap.dispatch('collapse', 'all'));
       await p.waitForTimeout(300);
-      const c2 = await p.evaluate(() => ({ small: document.querySelectorAll('#map-svg g.lnode.step.is-collapsed').length, width: document.querySelector('#map-svg g.lnode.step.is-collapsed rect.nbox').getAttribute('width'), label: document.getElementById('collapse-summary').textContent }));
+      const c2 = await p.evaluate(() => ({ small: document.querySelectorAll('#map-svg g.lnode.step.is-collapsed').length, width: document.querySelector('#map-svg g.lnode.step.is-collapsed rect.nbox').getAttribute('width'), label: document.getElementById('collapse-summary').textContent, laneH: [...document.querySelectorAll('#map-svg rect.lane-band')].map(r => r.getAttribute('height')) }));
       await shot(p, `11c-${label}-sequence-collapsed-${scheme}`);
       await p.evaluate(() => window.LOEMap.dispatch('collapse', 'none'));
       await p.waitForTimeout(300);
       const c3 = await p.evaluate(() => document.querySelectorAll('#map-svg g.lnode.step.is-collapsed').length);
-      check('collapsing by status shrinks only those steps; collapsing all shrinks every box; Show everything restores them', c1.small === 3 && c1.text === 0 && c1.label === 'Collapsed: 1' && c2.small === 14 && c2.width === '56' && c2.label === 'Collapsed: all' && c3 === 0, JSON.stringify({ c1, c2, c3 }));
+      check('collapsing by status shrinks only those steps; collapsing all shrinks every box; Show everything restores them', c1.small === 3 && c1.text === 0 && c1.label === 'Collapsed: 1' && c2.small === 14 && c2.width === '56' && c2.label === 'Collapsed: all' && c2.laneH.every(h => h === '66') && c3 === 0, JSON.stringify({ c1, c2, c3 }));
     }
     check(`${label} ${scheme}: sequence view has a column per phase, every step, both links, and statuses`, JSON.stringify(seqEx.heads) === JSON.stringify(['Prepare', 'Launch', 'Sustain', 'Essential action', 'Objective']) && seqEx.boxes === 14 && seqEx.waits === 2 && seqEx.feeds === 1 && seqEx.done === 3 && seqEx.doing === 2 && seqEx.blocked === 1 && seqEx.unknown === 1 && seqEx.dots === 6 && seqEx.tint === 1 && seqEx.main, JSON.stringify(seqEx));
     await shot(p, `11b-${label}-sequence-${scheme}`);
