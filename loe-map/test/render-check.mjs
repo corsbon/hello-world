@@ -561,7 +561,38 @@ for (const scheme of ['light', 'dark']) {
       await p.tap('#btn-ways');
       await settle(p);
     }
-    check(`${label} ${scheme}: the map offers only the Sequence view for now`, (await p.evaluate(() => ({ v: window.LOEMap.ui.view, btns: document.querySelectorAll('#maptools .seg, #btn-focus').length, lanes: window.LOEMap.dispatch('view', 'lanes') }))).v === 'sequence');
+    const views = await p.evaluate(() => ({ v: window.LOEMap.ui.view, btns: [...document.querySelectorAll('#maptools .seg button')].map(b => b.textContent), pressed: document.getElementById('v-sequence').getAttribute('aria-pressed'), focusHidden: document.getElementById('btn-focus').hidden, collapseShown: !document.getElementById('collapse-menu').hidden, keySecs: [...document.querySelectorAll('#key .key-sec')].filter(e => !e.hidden).map(e => e.dataset.views) }));
+    check(`${label} ${scheme}: the map starts on Sequence, with Lanes and Network a tap away`, views.v === 'sequence' && JSON.stringify(views.btns) === JSON.stringify(['Sequence', 'Lanes', 'Network']) && views.pressed === 'true' && views.focusHidden && views.collapseShown && JSON.stringify(views.keySecs) === JSON.stringify(['sequence']), JSON.stringify(views));
+    await p.evaluate(() => window.LOEMap.dispatch('view', 'lanes'));
+    await p.waitForTimeout(400);
+    const lanesT = await p.evaluate(() => ({ v: window.LOEMap.ui.view, pressed: document.getElementById('v-lanes').getAttribute('aria-pressed'), focusHidden: document.getElementById('btn-focus').hidden, collapseShown: !document.getElementById('collapse-menu').hidden, keySecs: [...document.querySelectorAll('#key .key-sec')].filter(e => !e.hidden).map(e => e.dataset.views), nodes: document.querySelectorAll('#map-svg g.lnode.node').length }));
+    check(`${label} ${scheme}: Lanes view draws the items, shows Focus, and hides the Collapse menu and the step key`, lanesT.v === 'lanes' && lanesT.pressed === 'true' && !lanesT.focusHidden && !lanesT.collapseShown && JSON.stringify(lanesT.keySecs) === JSON.stringify(['lanes network']) && lanesT.nodes > 5, JSON.stringify(lanesT));
+    await shot(p, `11-${label}-lanes-${scheme}`);
+    if (mobile) {
+      const box = await p.evaluate(() => {
+        const c = document.getElementById('canvas').getBoundingClientRect();
+        for (const g of document.querySelectorAll('#map-svg g.lnode.node')) {
+          const r = g.getBoundingClientRect();
+          const x = r.x + r.width / 2, y = r.y + r.height / 2;
+          if (x > c.left + 10 && x < c.right - 10 && y > c.top + 10 && y < c.bottom - 80) return { x, y };
+        }
+        return null;
+      });
+      check(`${label} ${scheme}: a node is visible on the initial phone framing`, !!box);
+      if (box) await p.touchscreen.tap(box.x, box.y);
+      await settle(p);
+      const infoShown = await p.$eval('#info', el => !el.hidden);
+      check(`${label} ${scheme}: tapping a node shows its details bar`, infoShown);
+      await shot(p, `12-${label}-lanes-selected-${scheme}`);
+    }
+    await p.evaluate(() => { window.LOEMap.dispatch('select', null); window.LOEMap.dispatch('view', 'network'); });
+    await p.waitForTimeout(500);
+    await shot(p, `13-${label}-network-${scheme}`);
+    await p.evaluate(() => window.LOEMap.dispatch('focus', true));
+    await p.waitForTimeout(250);
+    await shot(p, `14-${label}-network-focus-${scheme}`);
+    await p.evaluate(() => { window.LOEMap.dispatch('focus', false); window.LOEMap.dispatch('view', 'sequence'); });
+    await p.waitForTimeout(400);
     await p.evaluate(() => window.LOEMap.dispatch('phase', 'ph2'));
     await p.waitForTimeout(300);
     const lanesNow = await p.evaluate(() => ({ read: document.querySelector('g.lane[data-key="l_read"]').classList.contains('is-main-now'), pacs: document.querySelector('g.lane[data-key="l_pacs"]').classList.contains('is-main-now'), select: document.getElementById('phase-select').value }));
@@ -600,7 +631,7 @@ for (const scheme of ['light', 'dark']) {
       const m0 = await p.evaluate(() => document.getElementById('collapse-menu').open);
       await p.click('#collapse-statuses button'); await p.waitForTimeout(200);
       const m1 = await p.evaluate(() => document.getElementById('collapse-menu').open);
-      await p.click('#maptools .map-title'); await p.waitForTimeout(200);
+      await p.click('#v-sequence'); await p.waitForTimeout(200);
       const m2 = await p.evaluate(() => document.getElementById('collapse-menu').open);
       await p.click('#collapse-summary'); await p.waitForTimeout(200);
       await p.keyboard.press('Escape'); await p.waitForTimeout(200);

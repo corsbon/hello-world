@@ -500,7 +500,13 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
 
   <section class="panel map" id="map" aria-label="Map">
     <div class="maptools" id="maptools">
-      <span class="map-title">Sequence</span>
+      <div class="seg" role="group" aria-label="Map view">
+        <button type="button" data-cmd="view" data-args="[&quot;sequence&quot;]" id="v-sequence">Sequence</button>
+        <button type="button" data-cmd="view" data-args="[&quot;lanes&quot;]" id="v-lanes">Lanes</button>
+        <button type="button" data-cmd="view" data-args="[&quot;network&quot;]" id="v-network">Network</button>
+      </div>
+      <button type="button" class="btn small" data-cmd="focus" id="btn-focus" aria-pressed="false" title="Fade minor and peripheral items" hidden>Focus</button>
+      <button type="button" class="btn small" data-cmd="fit" title="Fit the map to the window">Fit</button>
       <details class="key" id="collapse-menu">
         <summary id="collapse-summary">Collapse</summary>
         <div class="key-body collapse-body">
@@ -518,6 +524,27 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
       <details class="key" id="key">
         <summary>Key</summary>
         <div class="key-body">
+          <div class="key-sec" data-views="lanes network" hidden>
+          <h5>Items</h5>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><circle r="6.5" style="fill:var(--ink-3)"/></svg>Person or group</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-6" y="-6" width="12" height="12" style="fill:var(--ink-3)"/></svg>System or tool</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><path d="M6.5,0L3.25,5.6H-3.25L-6.5,0L-3.25,-5.6H3.25Z" style="fill:var(--ink-3)"/></svg>Process or rule</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><path d="M0,-6.5L7,5.5H-7Z" style="fill:var(--ink-3)"/></svg>Resource or condition</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><path d="M0,-7L7,0L0,7L-7,0Z" style="fill:var(--ink)"/></svg>Essential action</div>
+          <h5>Roles</h5>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-7" width="14" height="14" rx="2" fill="none" style="stroke:var(--ink);stroke-width:1.3"/><rect x="-4.5" y="-4.5" width="9" height="9" rx="1.5" fill="none" style="stroke:var(--ink);stroke-width:1.8"/></svg>Center of gravity</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-6" y="-6" width="12" height="12" rx="2" fill="none" style="stroke:var(--ink);stroke-width:2"/></svg>Doer</div>
+          <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-6" y="-6" width="12" height="12" rx="2" style="fill:var(--crit-soft);stroke:var(--crit);stroke-width:1.8;stroke-dasharray:3 2"/></svg>Vulnerable need</div>
+          <h5>Links</h5>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink);stroke-width:2.2"/></svg>Does the action</div>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink-2);stroke-width:1.6"/></svg>Uses</div>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink-3);stroke-width:1.4;stroke-dasharray:6 4"/></svg>Depends on</div>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M2,5H33" style="stroke:var(--ink-3);stroke-width:1.8;stroke-dasharray:1.5 4;stroke-linecap:round"/></svg>Influences</div>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--crit);stroke-width:1.6;stroke-dasharray:9 3 2 3"/></svg>In tension with</div>
+          <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--accent);stroke-width:1.6"/></svg>Serves the objective</div>
+          <p class="fine">Lanes view: the columns left of the doer count links. What the doer uses, then what those depend on.</p>
+          </div>
+          <div class="key-sec" data-views="sequence">
           <h5>Steps</h5>
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--surface);stroke:var(--rule)"/><rect x="-6" y="-3" width="7" height="6" rx="2" style="fill:var(--ink-3)"/></svg>Step, numbered way.step, not started</div>
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><circle r="7" style="fill:#fff;stroke:var(--ink);stroke-width:1.2"/><circle cx="-3.5" r="1.3" style="fill:#000"/><circle r="1.3" style="fill:#000"/><circle cx="3.5" r="1.3" style="fill:#000"/></svg>Step in progress</div>
@@ -532,6 +559,7 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
           <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--lane-2);stroke-width:2;stroke-dasharray:2 4;stroke-linecap:round"/></svg>Feeds back into a step, with your wording</div>
           <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--accent);stroke-width:1.6"/></svg>Serves the objective</div>
           <p class="fine">Tap a step to open it. Its page sets both connections: Starts after, and Feeds back into.</p>
+          </div>
         </div>
       </details>
     </div>
@@ -1251,7 +1279,7 @@ const cmd = {
   back() { return cmd.goto(ui.step - 1); },
   tab(t) { ui.tab = t === 'map' ? 'map' : 'coach'; saveUi(); render(); return true; },
   view(v) {
-    if (v !== 'sequence') return false; // Lanes and Network are kept in the code but hidden for now.
+    if (!['lanes', 'network', 'sequence'].includes(v)) return false;
     if (ui.view !== v) { ui.view = v; saveUi(); clearLayers(); }
     render(); return true;
   },
@@ -2055,7 +2083,7 @@ function buildLinks(M) {
   ${orph}${shared}
   ${ask('Have you mapped the relationships that matter?', reviewed
     ? okNote('Marked as reviewed. You can keep adding relationships at any time.') + `<div class="row-actions">${btn('Mark not reviewed', 'reviewLinks', [false], 'small ghost', { write: true })}</div>`
-    : `<p class="muted">When the map shows the dependencies and frictions your team knows about, mark this step reviewed to open phases.</p><div class="row-actions">${btn('Mark relationships reviewed', 'reviewLinks', [true], 'primary', { write: true })}</div>`)}
+    : `<p class="muted">The Lanes and Network views of the map draw these relationships. When they show the dependencies and frictions your team knows about, mark this step reviewed to open phases.</p><div class="row-actions">${btn('Mark relationships reviewed', 'reviewLinks', [true], 'primary', { write: true })}</div>`)}
   ${examples('links')}`;
 }
 
@@ -2132,7 +2160,7 @@ function buildReview(M) {
       ${phaseStepsLine(M, ph)}
       ${ph.mainLoeId ? (has(ph.rationale) ? `<p class="quote">${esc(ph.rationale)}</p>` : '') : '<p class="missing">No main effort chosen.</p>'}</li>`).join('')}</ol>` : '<p class="missing">No phases yet.</p>'}
     ${cog ? `<p class="muted">Center of gravity in every phase: <b>${esc(cog.label)}</b>.</p>` : ''}</section>
-  ${ask('Do these tiers match what your team believes?', `<p class="muted">Based on your links. Critical items serve the center of gravity. Major items serve the other doers. Minor items connect to something. Peripheral items connect to nothing.</p><div class="tiers">${tiers}</div>${isPhone() ? `<div class="row-actions">${btn('Show the map', 'tab', ['map'], 'small')}</div>` : ''}`, 'From your answers')}
+  ${ask('Do these tiers match what your team believes?', `<p class="muted">Based on your links. Critical items serve the center of gravity. Major items serve the other doers. Minor items connect to something. Peripheral items connect to nothing.</p><div class="tiers">${tiers}</div><div class="row-actions">${ui.view !== 'sequence' ? btn(ui.focus ? 'Focus is on' : 'Fade minor and peripheral items on the map', 'focus', [true], 'small') : ''}${isPhone() ? btn('Show the map', 'tab', ['map'], 'small') : ''}</div>`, 'From your answers')}
   ${ask(oq.length ? `${oq.length} open question${oq.length > 1 ? 's' : ''}` : 'No open questions', oq.length
     ? `<ul class="oq">${oq.map(q => `<li><span>${esc(q.text)}</span>${q.node ? btn('Open item', 'editNode', [q.node], 'small') : btn(`Go to ${stepLabel(q.step)}`, 'goto', [q.step], 'small')}</li>`).join('')}</ul>`
     : okNote('Every question has an answer. Revisit them as the project changes.'))}
@@ -3199,6 +3227,11 @@ function renderInfo(M) {
 }
 function renderTools(M) {
   $('maptools').classList.toggle('ways-open', !!ui.showWays);
+  for (const v of ['lanes', 'network', 'sequence']) $(`v-${v}`).setAttribute('aria-pressed', String(ui.view === v));
+  const seq = ui.view === 'sequence';
+  $('btn-focus').hidden = seq; $('btn-focus').setAttribute('aria-pressed', String(!!ui.focus));
+  $('collapse-menu').hidden = !seq;
+  for (const sec of document.querySelectorAll('#key .key-sec')) sec.hidden = !sec.dataset.views.split(' ').includes(ui.view);
   const cs = collapseState(M);
   const cAll = cs.all, cOn = Object.keys(STATUS).filter(k => cs.status[k]);
   $('col-all').setAttribute('aria-pressed', String(cAll));
@@ -3428,7 +3461,7 @@ function openExport() {
    ================================================================ */
 async function boot() {
   els.body = $('coach-body'); els.scroll = $('coach-scroll'); els.rail = $('rail'); els.foot = $('coach-foot'); els.banners = $('banners'); els.toast = $('toast');
-  ui.view = 'sequence'; // the only map for now; Lanes and Network stay in the code
+  if (!['lanes', 'network', 'sequence'].includes(ui.view)) ui.view = 'sequence';
   if (!ui.collapse || typeof ui.collapse !== 'object') ui.collapse = { auto: true, all: false, status: {} };
   if (!ui.collapse.status || typeof ui.collapse.status !== 'object') ui.collapse.status = {};
   if (!['coach', 'map'].includes(ui.tab)) ui.tab = 'coach';
