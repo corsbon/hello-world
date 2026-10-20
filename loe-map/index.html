@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Lines of Effort Map</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,6 +21,7 @@
   --crit-ink: #ffffff;
   --crit-soft: #fbe9e7;
   --good: #1e7639;
+  --warn: #9a5b00;
   --lane-0: #2a78d6;
   --lane-1: #eb6834;
   --lane-2: #1baf7a;
@@ -37,7 +39,7 @@
   :root:not([data-theme="light"]) {
     --bg: #0c1013; --surface: #151b20; --surface-2: #1b2329; --ink: #e6eaee; --ink-2: #b2bcc5; --ink-3: #8c97a1;
     --rule: #2d363e; --rule-soft: #222a31; --accent: #6aa5ea; --accent-ink: #0a1523; --accent-soft: #182a3f;
-    --crit: #f2776d; --crit-ink: #1d0b09; --crit-soft: #3a1b18; --good: #62c585;
+    --crit: #f2776d; --crit-ink: #1d0b09; --crit-soft: #3a1b18; --good: #62c585; --warn: #e3a83c;
     --lane-0: #3987e5; --lane-1: #d95926; --lane-2: #199e70; --lane-3: #c98500; --lane-4: #d55181; --lane-5: #2f9a2f; --lane-6: #9085e9; --lane-7: #8a97a8;
     color-scheme: dark;
   }
@@ -45,7 +47,7 @@
 :root[data-theme="dark"] {
   --bg: #0c1013; --surface: #151b20; --surface-2: #1b2329; --ink: #e6eaee; --ink-2: #b2bcc5; --ink-3: #8c97a1;
   --rule: #2d363e; --rule-soft: #222a31; --accent: #6aa5ea; --accent-ink: #0a1523; --accent-soft: #182a3f;
-  --crit: #f2776d; --crit-ink: #1d0b09; --crit-soft: #3a1b18; --good: #62c585;
+  --crit: #f2776d; --crit-ink: #1d0b09; --crit-soft: #3a1b18; --good: #62c585; --warn: #e3a83c;
   --lane-0: #3987e5; --lane-1: #d95926; --lane-2: #199e70; --lane-3: #c98500; --lane-4: #d55181; --lane-5: #2f9a2f; --lane-6: #9085e9; --lane-7: #8a97a8;
   color-scheme: dark;
 }
@@ -57,14 +59,65 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---------- Shell ---------- */
-.app { height: 100%; display: grid; grid-template-columns: minmax(21rem, 27rem) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px; padding: 12px 16px 16px; }
+.app { height: 100%; display: grid; grid-template-columns: var(--coach-w, minmax(21rem, 27rem)) 14px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px 0; padding: 12px 16px 16px; }
+.app.coach-collapsed { grid-template-columns: 0 14px minmax(0, 1fr); }
+.app > .coach { grid-column: 1; grid-row: 2; }
+.app > .splitter { grid-column: 2; grid-row: 2; }
+.app > .map { grid-column: 3; grid-row: 2; }
+.app.coach-collapsed .coach { display: none; }
+/* The bar between the coach and the map: drag it to make the coach wider or narrower; its button hides or shows the coach. */
+.splitter { position: relative; z-index: 4; display: flex; align-items: center; justify-content: center; cursor: col-resize; touch-action: none; }
+.splitter::before { content: ""; width: 4px; height: 44px; border-radius: 2px; background: var(--rule); }
+.splitter:hover::before, .splitter.is-dragging::before, .splitter:focus-visible::before { background: var(--ink-3); }
+.splitter:focus-visible { outline: none; }
+.split-btn { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--rule); background: var(--surface); color: var(--ink-2); font-size: 14px; line-height: 1; cursor: pointer; display: grid; place-items: center; box-shadow: 0 1px 4px rgba(0, 0, 0, .12); }
+.split-btn:hover { color: var(--ink); border-color: var(--ink-3); }
+body.is-resizing, body.is-resizing * { cursor: col-resize !important; user-select: none; }
 .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
-.brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
-.brand svg { flex: none; color: var(--ink); }
-.brand-text { min-width: 0; }
-.brand-name { margin: 0; font: 700 20px/1 var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
-.brand-sub { margin: 2px 0 0; font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
-.top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.brand { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+.brand > svg { flex: none; color: var(--ink); }
+.brand-text { min-width: 0; display: block; }
+.brand-name { display: block; margin: 0; font: 700 20px/1 var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
+.brand-sub { display: block; margin: 2px 0 0; font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+.map-menu { min-width: 0; }
+.map-menu > summary { list-style: none; cursor: pointer; padding: 4px 8px; margin: -4px -8px; border-radius: 8px; }
+.map-menu > summary::-webkit-details-marker { display: none; }
+.map-menu > summary:hover { background: var(--surface-2); }
+.map-menu > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.brand-name .nobr { white-space: nowrap; }
+.map-menu .caret { display: inline-block; vertical-align: middle; margin: -3px 0 0 6px; color: var(--ink-2); transition: transform .15s; }
+.map-menu[open] .caret { transform: rotate(180deg); }
+.map-menu.is-fixed > summary { cursor: default; }
+.map-menu.is-fixed > summary:hover { background: none; }
+.map-menu.is-fixed .caret { display: none; }
+.map-body { position: absolute; left: 0; top: calc(100% + 8px); z-index: 12; width: min(22rem, calc(100vw - 32px)); padding: 12px; display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--rule); border-radius: 9px; box-shadow: 0 6px 22px rgba(0, 0, 0, .16); }
+.map-head { margin: 0; font: 700 13px/1 var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.map-list { display: grid; gap: 4px; max-height: 50vh; overflow-y: auto; }
+.map-item { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 6px; align-items: start; width: 100%; text-align: left; padding: 7px 8px; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--ink); font: inherit; font-size: 14.5px; line-height: 1.3; cursor: pointer; }
+.map-item:hover { background: var(--surface-2); }
+.map-item[aria-current="true"] { background: var(--surface-2); border-color: var(--rule); font-weight: 600; cursor: default; }
+.map-item .tick { color: var(--ink); visibility: hidden; }
+.map-item[aria-current="true"] .tick { visibility: visible; }
+.map-item .sub { display: block; font-size: 12.5px; font-weight: 400; color: var(--ink-3); }
+.map-new { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--rule); }
+.map-new label { font-weight: 600; font-size: 14px; }
+.map-new .addrow-ctl { display: flex; gap: 6px; }
+.map-new input { flex: 1 1 auto; min-width: 0; }
+.map-new .fine { margin: 0; }
+.map-del:empty { display: none; }
+.map-del { padding-top: 10px; border-top: 1px solid var(--rule); }
+.tagline { margin: 0; flex: 0 1 22rem; min-width: 0; font-size: 13px; font-style: italic; color: var(--ink-2); text-align: right; line-height: 1.35; }
+.tagline .who { display: block; font-style: normal; font-size: 11.5px; color: var(--ink-3); }
+.top-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.share-menu { position: relative; }
+.share-menu > summary { list-style: none; }
+.share-menu > summary::-webkit-details-marker { display: none; }
+.share-menu[open] > summary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.share-body { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; width: min(19rem, calc(100vw - 32px)); padding: 12px; display: grid; gap: 8px; background: var(--surface); border: 1px solid var(--rule); border-radius: 9px; box-shadow: 0 6px 22px rgba(0, 0, 0, .16); }
+.share-body .btn { justify-content: flex-start; }
+.import-preview:empty { display: none; }
+.import-preview { display: grid; gap: 6px; }
+.import-preview ul { margin: 0; padding-left: 1.1em; display: grid; gap: 3px; font-size: 13.5px; max-height: 14rem; overflow-y: auto; }
 
 .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; min-height: 0; min-width: 0; overflow: hidden; }
 .coach { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto auto; }
@@ -72,16 +125,21 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tabbar { display: none; }
 
 @media (max-width: 820px) {
-  .app { grid-template-columns: minmax(0, 1fr); padding: 8px 16px calc(var(--tabbar-h) + 10px); gap: 8px; }
+  .app, .app.coach-collapsed { grid-template-columns: minmax(0, 1fr); padding: 8px 16px calc(var(--tabbar-h) + 10px); gap: 8px; }
+  .splitter { display: none; }
+  .app > .coach, .app > .map { grid-column: 1; }
+  .app.coach-collapsed[data-tab="coach"] .coach { display: grid; }
   .app[data-tab="coach"] .map, .app[data-tab="map"] .coach { display: none; }
   .tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); padding: 0 16px env(safe-area-inset-bottom, 0px); gap: 8px; align-items: center; background: var(--surface); border-top: 1px solid var(--rule); }
   .tabbar button { flex: 1; height: 42px; border-radius: 8px; border: 1px solid var(--rule); background: var(--surface-2); font: 600 17px var(--font-display); letter-spacing: .04em; text-transform: uppercase; }
   .tabbar button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
   .brand-name { font-size: 16px; }
-  .brand svg { width: 28px; height: 28px; }
+  .brand > svg { width: 28px; height: 28px; }
   .topbar { flex-wrap: nowrap; gap: 8px; }
   .top-actions { flex: none; }
   #btn-copydata { display: none; }
+  .share-body .fine { display: none; }
+  .tagline { display: none; }
   .banner .long { display: none; }
 }
 
@@ -173,6 +231,9 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .addrow-ctl { display: flex; gap: 8px; flex-wrap: wrap; }
 .addrow-ctl input { flex: 1 1 12rem; }
 .addrow-ctl select { flex: 0 1 11rem; width: auto; }
+/* Long names in a dropdown must never widen the coach column: every box in a card may shrink, and dropdowns cut their text instead. */
+.card > *, .addrow > *, .phase-steps > *, .stack > *, .relrow > * { min-width: 0; }
+.addrow-ctl > *, .relrow-line > * { min-width: 0; max-width: 100%; }
 .relrow { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
 .relrow-line { display: flex; gap: 8px; flex-wrap: wrap; }
 .relrow-line select { flex: 1 1 9rem; width: auto; }
@@ -279,11 +340,26 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .tier h4 { margin: 0 0 4px; font: 500 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
 .tier ul { padding-left: 1.1em; margin: 0; font-size: 13px; }
 .oq { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
-.oq li { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 8px 10px; border-radius: 7px; border: 1px dashed var(--ink-3); font-size: 14px; }
-.oq li span { flex: 1 1 12rem; }
+.oq li { display: grid; gap: 8px; padding: 8px 10px; border-radius: 7px; border: 1px dashed var(--ink-3); font-size: 14px; min-width: 0; }
+.oq-top { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.oq-top span { flex: 1 1 12rem; min-width: 0; }
+.oq-answer { display: grid; gap: 8px; min-width: 0; }
+.oq-answer > * { min-width: 0; }
 
 .coach-foot { display: flex; gap: 8px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--rule); background: var(--surface); }
 .coach-foot .why { flex: 1 1 auto; font-size: 12.5px; color: var(--ink-3); text-align: center; }
+.next-wrap { position: relative; flex: none; }
+.btn.primary.is-blocked { opacity: .5; cursor: help; }
+.btn.primary.is-blocked:hover { filter: none; }
+/* The list stays up a moment after the pointer leaves, so a diagonal move from Next onto it does not lose it. */
+.left-panel { display: grid; visibility: hidden; opacity: 0; transition: opacity .12s ease .3s, visibility 0s linear .42s; position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 6; width: min(21rem, calc(100vw - 48px)); padding: 12px 14px; gap: 6px;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 9px; box-shadow: 0 6px 22px rgba(0, 0, 0, .16); }
+.left-panel::after { content: ""; position: absolute; left: 0; right: 0; bottom: -10px; height: 10px; }
+.next-wrap:hover .left-panel, .next-wrap:focus-within .left-panel, .next-wrap.open .left-panel { visibility: visible; opacity: 1; transition-delay: 0s; }
+@media (prefers-reduced-motion: reduce) { .left-panel { transition: visibility 0s linear .42s; } }
+.left-h { margin: 0; font: 600 12.5px var(--font-display); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.left-panel ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: 14px; }
+.left-panel .linklike { font-weight: 500; }
 .toast { margin: 0; padding: 0 16px; font-size: 13px; color: var(--ink); min-height: 0; }
 .toast:not(:empty) { padding: 8px 16px; background: var(--accent-soft); border-top: 1px solid var(--rule-soft); }
 
@@ -336,6 +412,7 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .lane-swatch { fill: var(--lc); }
 .lane-name { font: 600 15px var(--font-display); letter-spacing: .02em; fill: var(--ink); }
 .lane-effort { font: 500 9.5px var(--font-mono); letter-spacing: .1em; fill: var(--ink-3); text-transform: uppercase; }
+.main-cell { fill: color-mix(in srgb, var(--lc) 30%, var(--surface)); pointer-events: none; }
 .lane.is-main-now .lane-band { stroke: var(--ink); stroke-width: 2; fill: color-mix(in srgb, var(--lc, var(--ink-3)) 16%, var(--surface)); }
 .lane.is-main-now .lane-effort { fill: var(--ink); font-weight: 600; }
 .link { fill: none; stroke: var(--ink-3); stroke-width: 1.4; opacity: .55; transition: opacity .15s; }
@@ -393,7 +470,9 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .col-btn.is-link:hover .col-head, .col-btn.is-link:focus-visible .col-head { fill: var(--accent); }
 .col-btn:focus-visible { outline: none; }
 .col-sep { stroke: var(--rule); stroke-dasharray: 4 4; }
-.col-active { fill: var(--accent); opacity: .07; pointer-events: none; }
+/* The phase shown is marked by its header alone, so the lanes look the same in every phase. */
+.col-btn.is-now .col-head { fill: var(--accent); font-weight: 600; }
+.col-btn.is-now .col-sub { fill: var(--accent); }
 .snum rect { fill: var(--lc, var(--ink-3)); }
 .snum text { fill: var(--surface); font: 600 9.5px var(--font-mono); }
 .lnode.step.is-cogway .nbox { stroke: var(--ink); stroke-width: 1.8; }
@@ -417,6 +496,10 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
 .track-row.st-unknown { border-color: var(--lane-3); }
 .due-tag { font: 500 9px var(--font-mono); letter-spacing: .04em; fill: var(--ink-3); }
 .due-tag.is-late { fill: var(--crit); font-weight: 600; }
+.due-tag.is-off { fill: var(--warn); font-weight: 600; }
+.status-warn { margin: 0; font-size: 13px; color: var(--warn); }
+.ask.warn { border-color: var(--warn); }
+.ask.warn .ask-tag { color: var(--warn); }
 .link.t-waits { stroke: var(--lc, var(--ink-2)); stroke-width: 2.4; stroke-dasharray: 7 4; opacity: .95; }
 .link.t-feeds { stroke: var(--lc, var(--ink-2)); stroke-width: 2.2; stroke-dasharray: 2 4; stroke-linecap: round; opacity: .95; }
 .mk-waits, .mk-feeds { fill: var(--ink-2); fill: context-stroke; }
@@ -477,14 +560,38 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
   <header class="topbar">
     <div class="brand">
       <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 11h10M7 17h14M7 23h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M17 11c5 0 4 6 9 6M21 17h5M15 23c6 0 5-6 11-6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="27" cy="17" r="2.6" fill="currentColor"/></svg>
-      <div class="brand-text">
-        <p class="brand-name">Lines of Effort Map</p>
-        <p class="brand-sub" id="proj-title">Center-of-gravity planning coach</p>
-      </div>
+      <details class="map-menu" id="map-menu">
+        <summary class="brand-text" id="map-menu-btn" title="Switch maps, or start a new one">
+          <span class="brand-name">Lines of Effort <span class="nobr">Map<svg class="caret" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
+          <span class="brand-sub" id="proj-title">Center-of-gravity planning coach</span>
+        </summary>
+        <div class="map-body" role="group" aria-label="Your maps">
+          <p class="map-head">Your maps</p>
+          <div class="map-list" id="map-list"></div>
+          <div class="map-new" id="map-new">
+            <label for="new-map-name">Start a new map</label>
+            <div class="addrow-ctl"><input type="text" id="new-map-name" placeholder="Name, e.g. Stroke CT protocol" autocomplete="off" maxlength="120"><button type="button" class="btn small primary" id="btn-new-map" data-cmd="newMap" data-from="new-map-name" data-clear="new-map-name">Create</button></div>
+            <p class="fine">Each map has its own goal, ways, steps and phases. Everyone with access sees every map.</p>
+          </div>
+          <div class="map-del" id="map-del"></div>
+        </div>
+      </details>
     </div>
+    <p class="tagline" title="George E. P. Box, “Robustness in the strategy of scientific model building,” in Robustness in Statistics (Launer and Wilkinson, eds.), Academic Press, 1979">“All models are wrong but some are useful.”<span class="who">George E. P. Box, statistician, 1979</span></p>
     <div class="top-actions">
       <button class="btn small" id="btn-demo" data-cmd="demo" data-args="[true]" aria-pressed="false">Worked example</button>
-      <button class="btn small" id="btn-copydata" data-cmd="copyData">Copy data</button>
+      <details class="share-menu" id="share-menu">
+        <summary class="btn small">Share</summary>
+        <div class="share-body">
+          <button type="button" class="btn small" data-cmd="exportStatic">Download a read-only copy</button>
+          <p class="fine">Information only, laid out for reading on a phone: the goal, the map, and every way, step and phase. Nothing can be changed. Opens even in an email preview.</p>
+          <button type="button" class="btn small" data-cmd="exportShare">Download a copy they can update</button>
+          <p class="fine">The full map in one file, no account needed. They can look around and change step statuses, nothing else, and send their changes back to you as a small file.</p>
+          <button type="button" class="btn small" data-cmd="importStatuses">Bring in status changes</button>
+          <button type="button" class="btn small ghost" id="btn-copydata" data-cmd="copyData">Copy data</button>
+        </div>
+      </details>
+      <button type="button" class="btn small primary" id="btn-send" data-cmd="sendStatuses" hidden>Send my changes</button>
     </div>
   </header>
 
@@ -497,6 +604,10 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
     <p class="toast" id="toast" role="status" aria-live="polite"></p>
     <div class="coach-foot" id="coach-foot"></div>
   </section>
+
+  <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" aria-controls="coach" aria-label="Coach width. Drag, or use the arrow keys, to resize." tabindex="0" title="Drag to make the coach wider or narrower. Double-click to reset.">
+    <button type="button" class="split-btn" id="split-btn" aria-controls="coach" aria-expanded="true" title="Hide the coach">‹</button>
+  </div>
 
   <section class="panel map" id="map" aria-label="Map">
     <div class="maptools" id="maptools">
@@ -553,12 +664,14 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--crit-soft);stroke:var(--crit);stroke-width:1.8;stroke-dasharray:3 2"/></svg>Step blocked</div>
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><path d="M0,-7L7,0L0,7L-7,0Z" style="fill:var(--ink)"/></svg>Essential action of the way</div>
           <div class="key-row"><svg width="16" height="16" viewBox="-8 -8 16 16"><rect x="-7" y="-6" width="14" height="12" rx="2" style="fill:var(--accent-soft);stroke:var(--ink);stroke-width:2"/></svg>Main effort in the phase shown</div>
+          <div class="key-row"><svg width="34" height="16" viewBox="0 0 34 16"><rect x="1" y="1" width="16" height="14" style="fill:color-mix(in srgb, var(--lane-0) 8%, var(--surface))"/><rect x="17" y="1" width="16" height="14" style="fill:color-mix(in srgb, var(--lane-0) 30%, var(--surface))"/></svg>Brighter stretch of a lane: that way is the phase's main effort</div>
+          <div class="key-row"><svg width="34" height="16" viewBox="0 0 34 16"><rect x="1" y="2" width="32" height="12" rx="2" style="fill:var(--surface);stroke:var(--rule)"/><path d="M17,2V14" style="stroke:var(--rule);stroke-dasharray:2 2"/></svg>A wide step box spans every phase it runs through</div>
           <h5>Connections</h5>
           <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--ink);stroke-width:2"/></svg>One step after another in a way</div>
           <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--lane-0);stroke-width:2.2;stroke-dasharray:7 4"/></svg>Then: a step in another way waits for this one, in the color of the way it comes from</div>
           <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--lane-2);stroke-width:2;stroke-dasharray:2 4;stroke-linecap:round"/></svg>Feeds back into a step, with your wording</div>
           <div class="key-row"><svg width="34" height="10" viewBox="0 0 34 10"><path d="M1,5H33" style="stroke:var(--accent);stroke-width:1.6"/></svg>Serves the objective</div>
-          <p class="fine">Tap a step to open it. Its page sets both connections: Starts after, and Feeds back into.</p>
+          <p class="fine">Tap a step to open it. Its page sets both connections: Starts after, and Feeds back into. Press and hold a step to drag it: left or right to change its order or phase, up or down to move it to another row of its lane, or onto another way's lane to move it into that way.</p>
           </div>
         </div>
       </details>
@@ -590,15 +703,32 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
 
 <dialog id="dlg-export">
   <form method="dialog" class="dlg">
-    <h3>Copy your map's data</h3>
-    <p class="muted">This is everything your team has entered, as text. Paste it into a file to keep a backup.</p>
+    <h3 id="export-h">Copy your map's data</h3>
+    <p class="muted" id="export-p">This is everything your team has entered, as text. Paste it into a file to keep a backup.</p>
     <label class="sr" for="export-text">Map data</label>
     <textarea id="export-text" rows="12" readonly></textarea>
     <div class="row-actions">
-      <button type="button" class="btn primary" id="btn-copy">Copy to clipboard</button>
+      <button type="button" class="btn primary" id="btn-download-export" hidden>Download the file</button>
+      <button type="button" class="btn" id="btn-copy">Copy to clipboard</button>
       <button class="btn" value="close">Close</button>
     </div>
     <p class="fine" id="copy-status" role="status"></p>
+  </form>
+</dialog>
+
+<dialog id="dlg-import">
+  <form method="dialog" class="dlg">
+    <h3>Bring in status changes</h3>
+    <p class="muted">Choose the file someone sent back from a shareable copy of this map, or paste its text. You will see every change before anything is applied.</p>
+    <label class="sr" for="import-file">Status changes file</label>
+    <input type="file" id="import-file" accept=".json,.txt,application/json,text/plain">
+    <label class="sr" for="import-text">Status changes text</label>
+    <textarea id="import-text" rows="5" placeholder="Or paste the text here"></textarea>
+    <div class="import-preview" id="import-preview"></div>
+    <div class="row-actions">
+      <button type="button" class="btn primary" id="btn-import-apply" disabled>Apply these changes</button>
+      <button class="btn" value="close">Close</button>
+    </div>
   </form>
 </dialog>
 
@@ -606,6 +736,20 @@ dialog::backdrop { background: rgba(10, 14, 18, .45); }
 <script>
 (function () {
 'use strict';
+
+// The page as it was before the coach drew anything, kept so a shareable copy can be built from it.
+const BOOT = (() => {
+  const pick = sel => [...document.querySelectorAll(sel)].map(e => e.outerHTML).join('\n');
+  return {
+    script: document.currentScript ? document.currentScript.textContent : '',
+    head: pick('body > link, head > link[rel="preconnect"], head > link[rel="stylesheet"], body > style, head > style[data-loe]'),
+    app: (document.getElementById('app') || {}).outerHTML || '',
+    dialogs: pick('body > dialog'),
+  };
+})();
+// A shareable copy carries the map in the page itself. When it is here, the page runs as that copy.
+let SHARED = null;
+try { const el = document.getElementById('loe-shared-data'); SHARED = el ? JSON.parse(el.textContent) : null; } catch (e) { SHARED = null; }
 
 /* ================================================================
    Constants
@@ -651,7 +795,12 @@ const NEXT_REASON = {
 };
 const stepLabel = i => (i >= 1 && i <= 4 ? 'question ' + i : STEPS[i].short.toLowerCase());
 const MAX_WAYS = 8;
-const MAX_STEPS = 12;
+const MAX_STEPS = 30;
+// A step can feed back into up to MAX_FEEDS other steps. Slot 1 keeps the original field names.
+const MAX_FEEDS = 4;
+const feedKey = n => (n === 1 ? 'feedsStepId' : `feeds${n}StepId`);
+const feedVerbKey = n => (n === 1 ? 'feedsVerb' : `feeds${n}Verb`);
+const FEED_RE = /^feeds(\d)?(StepId|Verb)$/;
 const LS_KEY = 'loe-map-ui-v1';
 const HAS_D3 = typeof window.d3 !== 'undefined';
 const REDUCED = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -833,10 +982,93 @@ function wrap(text, max, maxLines) {
   return out.length ? out : [''];
 }
 
+// Wrap text to lines of at most `max` characters with nothing cut; a word longer than a line is split with a hyphen.
+function wrapWords(text, max) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean)
+    .flatMap(w => (w.length <= max ? [w] : w.match(new RegExp(`.{1,${max - 1}}`, 'g')).map((p, i, a) => (i < a.length - 1 ? p + '-' : p))));
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    if (!cur) cur = w;
+    else if ((cur + ' ' + w).length <= max) cur += ' ' + w;
+    else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [''];
+}
+// Like wrapWords, but keeps each " · " part of a label line together where it fits ("1 blocked" never splits).
+function wrapUnits(text, max) {
+  const lines = [];
+  let cur = '';
+  for (const unit of String(text || '').split(' · ')) {
+    const pieces = unit.length <= max ? [unit] : wrapWords(unit, max);
+    pieces.forEach((piece, i) => {
+      if (i === 0 && cur && (cur + ' · ' + piece).length <= max) cur += ' · ' + piece;
+      else { if (cur) lines.push(cur); cur = piece; }
+    });
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+// Wrap text to lines that fit a width in pixels, measured in the font the map draws with, with nothing cut.
+// A word wider than a line is split with a hyphen. Without a canvas to measure on, it falls back to a character count.
+let measureCtx = null;
+const measureCache = new Map();
+function textWidth(t, font) {
+  const k = font + '|' + t;
+  if (measureCache.has(k)) return measureCache.get(k);
+  if (!measureCtx) { try { measureCtx = document.createElement('canvas').getContext('2d'); } catch (e) { measureCtx = null; } }
+  if (!measureCtx) return t.length * 6.6;
+  measureCtx.font = font;
+  const w = measureCtx.measureText(t).width;
+  if (measureCache.size > 4000) measureCache.clear();
+  measureCache.set(k, w);
+  return w;
+}
+function wrapPx(text, maxPx, font) {
+  const fits = t => textWidth(t, font) <= maxPx;
+  const words = [];
+  for (const w of String(text || '').trim().split(/\s+/).filter(Boolean)) {
+    if (fits(w)) { words.push(w); continue; }
+    let rest = w;
+    while (rest && !fits(rest)) {
+      let n = rest.length - 1;
+      while (n > 1 && !fits(rest.slice(0, n) + '-')) n--;
+      words.push(rest.slice(0, n) + '-');
+      rest = rest.slice(n);
+    }
+    if (rest) words.push(rest);
+  }
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    if (!cur) cur = w;
+    else if (fits(cur + ' ' + w)) cur += ' ' + w;
+    else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [''];
+}
+const MAP_FONT_BODY = '"Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif';
+// The essential action shows in full on the map: its box grows taller to fit every line, and its lane grows with it.
+const CAP_LH = 14;
+const STEP_LH = 14;
+const capLines = text => wrapPx(text, 154 - 14 - 11 - 6, `600 12px ${MAP_FONT_BODY}`);
+// A step's words fit between its number badge and the box's right edge.
+const stepLinesW = (s, w) => wrapPx(s.text, w - (16 + String(s.num || '').length * 6.2) - 10, `500 12px ${MAP_FONT_BODY}`);
+const stepLines = s => stepLinesW(s, 154);
+const capHeight = lines => Math.max(LV.nodeH, lines.length * CAP_LH + 18);
+
 /* ================================================================
    State
    ================================================================ */
 const S = { project: {}, projectExists: false, loes: new Map(), nodes: new Map(), links: new Map(), phases: new Map(), steps: new Map(), got: new Set() };
+// Several maps share one database. The first map lives at the top level, as it always has; each new map lives under maps/<id>/.
+// The maps collection is the list of maps: one small document each, holding its name.
+const MAPS = new Map();
+const MAIN_MAP = 'main';
+let mapsGot = false;
+const mapPrefix = id => (id && id !== MAIN_MAP ? `maps/${id}/` : '');
 const ui = Object.assign({ step: 0, maxReached: 0, view: 'sequence', tab: 'coach', focus: false, collapse: { auto: true, all: false, status: {} } }, loadUi(), {
   lanesOn: [], selected: null, editNode: null, editStep: null, confirm: null, demo: false, savedStep: null,
   readOnly: false, mode: 'connecting', phaseSel: 'auto',
@@ -852,11 +1084,14 @@ function loadUi() {
 }
 function saveUi() {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify({ step: ui.demo ? (ui.savedStep ?? 0) : ui.step, maxReached: ui.maxReached, view: ui.view, tab: ui.tab, focus: ui.focus, collapse: ui.collapse }));
+    localStorage.setItem(LS_KEY, JSON.stringify({ step: ui.demo ? (ui.savedStep ?? 0) : ui.step, maxReached: ui.maxReached, view: ui.view, tab: ui.tab, focus: ui.focus, collapse: ui.collapse, coachW: ui.coachW || null, coachCollapsed: !!ui.coachCollapsed, mapId: ui.mapId || MAIN_MAP, perMap: ui.perMap || {} }));
   } catch (e) { /* storage unavailable: per-visit only */ }
 }
 const loaded = () => S.got.size >= 6;
-const canWrite = () => !ui.demo && !ui.readOnly && ui.mode !== 'connecting' && loaded();
+const canWrite = () => !ui.demo && !ui.readOnly && ui.mode !== 'connecting' && ui.mode !== 'shared' && loaded();
+// In a shareable copy, a step's status (and why it is blocked) is the one thing that can change.
+const SHARED_KEY = /^step:[^:]+:(status|blockedReason)$/;
+const disFor = key => (ui.shared && !ui.demo && SHARED_KEY.test(String(key || '')) ? '' : dis());
 const dis = () => (canWrite() ? '' : ' disabled');
 
 /* ================================================================
@@ -879,14 +1114,18 @@ function derive(src) {
   const links = [...src.links].map(([id, d]) => ({ id, ...d }))
     .filter(k => LINK_TYPES[k.type] && nodes.has(k.source) && nodes.has(k.target) && k.source !== k.target && (!k.loeId || loeById.has(k.loeId)));
   // Phases: the main effort is set per phase; the center of gravity is not.
-  // A phase has one date: it starts on it and ends when the next phase starts. The last phase ends at the project due date.
-  const phases = [...(src.phases || new Map())].map(([id, d]) => ({ id, ...d, name: d.name || 'Untitled phase', start: ISO_RE.test(d.start || '') ? d.start : '', end: '', mainLoeId: loeById.has(d.mainLoeId) ? d.mainLoeId : null }))
+  // A phase starts on its date. It ends on its own end date if the team set one; otherwise when the next phase starts, or at the project due date for the last.
+  const phases = [...(src.phases || new Map())].map(([id, d]) => ({ id, ...d, name: d.name || 'Untitled phase', start: ISO_RE.test(d.start || '') ? d.start : '', endDate: ISO_RE.test(d.endDate || '') ? d.endDate : '', end: '', mainLoeId: loeById.has(d.mainLoeId) ? d.mainLoeId : null }))
     .sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999') || ((a.order || 0) - (b.order || 0)) || a.name.localeCompare(b.name));
   phases.forEach((ph, i) => {
     ph.index = i;
     const next = phases[i + 1];
-    ph.endsAt = next && next.start ? 'next' : (ISO_RE.test(P.dueDate || '') ? 'due' : 'none');
-    ph.end = ph.endsAt === 'next' ? addDays(next.start, -1) : ph.endsAt === 'due' ? P.dueDate : '';
+    ph.autoEndsAt = next && next.start ? 'next' : (ISO_RE.test(P.dueDate || '') ? 'due' : 'none');
+    ph.autoEnd = ph.autoEndsAt === 'next' ? addDays(next.start, -1) : ph.autoEndsAt === 'due' ? P.dueDate : '';
+    ph.endsAt = ph.endDate ? 'set' : ph.autoEndsAt;
+    ph.end = ph.endDate || ph.autoEnd;
+    ph.endBeforeStart = !!(ph.endDate && ph.start && ph.endDate < ph.start);
+    ph.overlapsNext = !!(ph.endDate && next && next.start && ph.endDate >= next.start);
     ph.sameStart = !!(ph.start && phases.some(o => o.index < i && o.start === ph.start));
   });
   const phaseById = new Map(phases.map(ph => [ph.id, ph]));
@@ -898,15 +1137,58 @@ function derive(src) {
   const steps = [...(src.steps || new Map())].map(([id, d]) => ({ id, ...d, text: String(d.text || '').trim() || 'Untitled step', owner: String(d.owner || ''), order: Number(d.order) || 0,
     status: STATUS[d.status] ? d.status : (d.done ? 'done' : 'todo'), done: STATUS[d.status] ? d.status === 'done' : !!d.done,
     description: String(d.description || ''), notes: String(d.notes || ''), blockedReason: String(d.blockedReason || ''),
-    due: ISO_RE.test(d.due || '') ? d.due : '', feedsStepId: d.feedsStepId || null, feeds: null, feedsVerb: String(d.feedsVerb || '').trim() || 'informs',
-    phaseId: phaseById.has(d.phaseId) ? d.phaseId : null, afterStepId: d.afterStepId || null, after: null, badAfter: null }))
+    due: ISO_RE.test(d.due || '') ? d.due : '', feedsStepId: d.feedsStepId || null, feedsVerb: String(d.feedsVerb || '').trim() || 'informs',
+    phaseId: phaseById.has(d.phaseId) ? d.phaseId : null, afterStepId: d.afterStepId || null, after: null, badAfter: null,
+    row: Number.isInteger(d.row) && d.row >= 0 && d.row < 8 ? d.row : null }))
     .filter(s => loeById.has(s.loeId));
+  for (const s of steps) for (let n = 2; n <= MAX_FEEDS; n++) { s[feedKey(n)] = s[feedKey(n)] || null; s[feedVerbKey(n)] = String(s[feedVerbKey(n)] || '').trim() || 'informs'; }
   for (const s of steps) s.overdue = !!(s.due && s.due < today && s.status !== 'done');
+  // A step starts in its phase and can run on into later ones: through the phase picked as Runs through,
+  // or the phase its due date falls in, whichever is later.
+  const phaseOfDate = iso => (iso ? phases.find(ph => ph.start && ph.end && ph.start <= iso && iso <= ph.end) || null : null);
+  for (const s of steps) {
+    const start = s.phaseId ? phaseById.get(s.phaseId) : null;
+    const until = start ? phaseById.get(s.untilPhaseId) : null;
+    s.untilPhaseId = until && until.index > start.index ? until.id : null;
+    const byDue = start ? phaseOfDate(s.due) : null;
+    s.startIdx = start ? start.index : -1;
+    s.endIdx = Math.max(s.startIdx, s.untilPhaseId ? until.index : -1, byDue ? byDue.index : -1);
+    s.duePhase = byDue && byDue.index === s.endIdx && byDue.index > s.startIdx && !(s.untilPhaseId && until.index >= byDue.index) ? byDue : null;
+    s.lastPhase = start ? phases[s.endIdx] : null;
+    s.multiPhase = s.endIdx > s.startIdx;
+    s.dueInPhase = byDue;
+    // A due date outside the phases the step was placed in is allowed, but the coach asks whether it is right,
+    // until someone says yes for that date and those phases.
+    s.dueAlert = null;
+    if (start && s.due) {
+      const last = s.untilPhaseId ? until : start;
+      const kind = start.start && s.due < start.start ? 'before' : last.end && s.due > last.end ? 'after' : null;
+      s.dueOkKey = `${s.due}@${s.phaseId}@${s.untilPhaseId || ''}`;
+      if (kind && s.dueOk !== s.dueOkKey) {
+        s.dueAlert = kind === 'before'
+          ? { kind, text: `Due ${fmtDate(s.due)}, before ${start.name} starts on ${fmtDate(start.start)}.`, short: `before ${start.name}` }
+          : { kind, text: `Due ${fmtDate(s.due)}, after ${last.name} ends on ${fmtDate(last.end)}${byDue && byDue.index > last.index ? `, in ${byDue.name}` : ''}.`, short: `after ${last.name}`, into: byDue && byDue.index > last.index ? byDue : null };
+      }
+    }
+  }
   const stepById = new Map(steps.map(s => [s.id, s]));
   const stepsByLoe = new Map();
   for (const l of loes) {
-    const arr = steps.filter(s => s.loeId === l.id).sort((a, b) => (a.order - b.order) || a.text.localeCompare(b.text));
+    // A way's steps are numbered in time order: by the phase each starts in (steps with no phase yet come last),
+    // then by the order the team set within a phase.
+    const phaseKey = s => (s.phaseId ? phaseById.get(s.phaseId).index : Infinity);
+    const arr = steps.filter(s => s.loeId === l.id).sort((a, b) => (phaseKey(a) - phaseKey(b)) || (a.order - b.order) || a.text.localeCompare(b.text));
     arr.forEach((s, i) => { s.index = i; s.num = `${l.num}.${i + 1}`; s.prev = arr[i - 1] || null; s.next = arr[i + 1] || null; });
+    // Steps in a way run one after another, except a step set to run with the one before it. Those run at the same time:
+    // both after whatever came before them, and whatever comes next waits for all of them.
+    let group = [], prevGroup = [];
+    for (const s of arr) {
+      s.withPrev = !!(s.withPrev && s.prev);
+      if (s.withPrev) group.push(s); else { prevGroup = group; group = [s]; }
+      s.group = group;
+      s.seqPrevs = prevGroup.slice();
+    }
+    l.lastGroup = group;
     stepsByLoe.set(l.id, arr);
     l.steps = arr;
     l.progress = { total: arr.length, done: arr.filter(s => s.status === 'done').length, doing: arr.filter(s => s.status === 'doing').length, blocked: arr.filter(s => s.status === 'blocked').length, unknown: arr.filter(s => s.status === 'unknown').length };
@@ -917,10 +1199,13 @@ function derive(src) {
     if (!a) s.afterStepId = null;
     else if (a.loeId === s.loeId) s.badAfter = 'same-way';
     else s.after = a;
-    // A feedback link is drawn but never sequenced, so it may point anywhere except at its own step.
-    const f = s.feedsStepId ? stepById.get(s.feedsStepId) : null;
-    s.feeds = f && f.id !== s.id ? f : null;
-    if (!s.feeds) s.feedsStepId = null;
+    // Feedback links are drawn but never sequenced, so they may point anywhere except at their own step.
+    s.feedsList = [];
+    for (let n = 1; n <= MAX_FEEDS; n++) {
+      const f = s[feedKey(n)] ? stepById.get(s[feedKey(n)]) : null;
+      if (f && f.id !== s.id && !s.feedsList.some(x => x.step.id === f.id)) s.feedsList.push({ n, step: f, verb: s[feedVerbKey(n)] });
+      else s[feedKey(n)] = null;
+    }
   }
   // Placement by phase for the Sequence view: a column per phase, steps of one way side by side within it.
   const phaseWidth = phases.map(() => 1).concat([1]);
@@ -943,7 +1228,7 @@ function derive(src) {
     if (visiting.has(s.id)) return null;
     visiting.add(s.id);
     let v = 0;
-    if (s.prev) { const pv = slot(s.prev); if (pv === null) { visiting.delete(s.id); return null; } v = pv + 1; }
+    for (const p of s.seqPrevs) { const pv = slot(p); if (pv === null) { visiting.delete(s.id); return null; } v = Math.max(v, pv + 1); }
     if (s.after) {
       const av = slot(s.after);
       if (av === null) { s.badAfter = 'cycle'; s.after = null; } else v = Math.max(v, av + 1);
@@ -995,7 +1280,7 @@ function derive(src) {
     addAdj(sid, 'cap:' + s.loeId);
     if (s.next) addAdj(sid, 'step:' + s.next.id);
     if (s.after) addAdj(sid, 'step:' + s.after.id);
-    if (s.feeds) addAdj(sid, 'step:' + s.feeds.id);
+    for (const f of s.feedsList) addAdj(sid, 'step:' + f.step.id);
   }
   const rank = { critical: 0, major: 1, minor: 2, peripheral: 3 };
   const tier = new Map();
@@ -1041,6 +1326,18 @@ function reachesStep(from, target) {
   return false;
 }
 function push(map, k, v) { const a = map.get(k); if (a) a.push(v); else map.set(k, [v]); }
+// Does a step take place in a phase? True for the phase it starts in and every phase it runs on through.
+const inPhase = (s, ph) => s.startIdx >= 0 && s.startIdx <= ph.index && ph.index <= s.endIdx;
+function phaseSpanText(M, s) {
+  const start = s.phaseId && M.phaseById.get(s.phaseId);
+  if (!start) return '';
+  return s.multiPhase ? `${start.name} through ${s.lastPhase.name}` : start.name;
+}
+// After a step's name in a phase's list: where it came from, or how far it goes.
+function spanNote(M, s, ph) {
+  if (s.phaseId !== ph.id) return ` (continues from ${esc(M.phaseById.get(s.phaseId).name)})`;
+  return s.multiPhase ? ` (runs through ${esc(s.lastPhase.name)})` : '';
+}
 
 function unlocks(M) {
   const s2 = has(M.P.objective);
@@ -1052,51 +1349,81 @@ function unlocks(M) {
   return [true, true, s2, s3, s4, s5, s6, s7, s7];
 }
 function furthest(M) { const u = unlocks(M); let f = 0; for (let i = 0; i < u.length && u[i]; i++) f = i; return f; }
-function reachable(M) { return ui.demo ? STEPS.length - 1 : Math.max(furthest(M), Math.min(ui.maxReached || 0, STEPS.length - 1)); }
+function reachable(M) { return ui.demo || ui.shared ? STEPS.length - 1 : Math.max(furthest(M), Math.min(ui.maxReached || 0, STEPS.length - 1)); }
 
+// Every open question the coach can see in the answers so far. Each one can be answered right in the Review
+// (`answer` draws the boxes or buttons for it, given a suffix that keeps its box ids unique), and `go` jumps to
+// the exact box where it is answered: [command, arguments, button label].
 function openQuestions(M) {
   const q = [];
   const P = M.P;
-  if (!has(P.objective)) q.push({ step: 1, text: 'What is the objective?' });
+  const add = (text, go, answer) => q.push({ text, go, answer });
+  const fix = (step, focus) => ['fixIt', [step, focus || null], 'Go there'];
+  const open = (kind, id, focus, label) => ['openFocus', [kind, id, focus || null], label || 'Go there'];
+  const ml = (key, value, label, sfx) => field({ key, sfx, label, srLabel: !label, value, multiline: true, rows: 2, placeholder: 'Your answer' });
+  const doerWays = M.loes.filter(l => l.doerNodeId && M.nodes.has(l.doerNodeId));
+  const needOf = (n, sfx) => doerWays.length ? `<div class="addrow-ctl">${draftSelect(`oq-need-${sfx}`, doerWays.map(l => [l.id, `${M.nodes.get(l.doerNodeId).label} (${l.name})`]), doerWays[0].id, 'Whose need')}${btn('Make it their need', 'needOf', [n.id], 'small', { write: true }).replace('data-cmd="needOf"', `data-cmd="needOf" data-from="oq-need-${sfx}"`)}</div>` : '';
+  if (!has(P.objective)) add('What is the objective?', fix(1, fid('project:objective')), sfx => ml('project:objective', P.objective, '', sfx));
   else {
-    if (!/\d/.test(`${P.objective} ${P.target || ''}`) || !P.dueDate) q.push({ step: 1, text: 'Could someone tell from your objective whether you got there? It still lacks a number or a date.' });
-    if (!has(P.objectiveRationale)) q.push({ step: 1, text: 'If you achieved the objective, what would it get you? Not answered yet.' });
+    if (!/\d/.test(`${P.objective} ${P.target || ''}`) || !P.dueDate) add('Could someone tell from your objective whether you got there? It still lacks a number or a date.', fix(1, fid('project:target')),
+      sfx => `<div class="grid-2">${field({ key: 'project:target', sfx, label: 'Target', value: P.target, placeholder: 'Where it needs to be' })}${field({ key: 'project:dueDate', sfx, label: 'Due date', value: P.dueDate, type: 'date' })}</div>`);
+    if (!has(P.objectiveRationale)) add('If you achieved the objective, what would it get you? Not answered yet.', fix(1, fid('project:objectiveRationale')), sfx => ml('project:objectiveRationale', P.objectiveRationale, '', sfx));
   }
   for (const l of M.loes) {
     const doer = M.nodes.get(l.doerNodeId);
-    if (!has(l.capability)) q.push({ step: 2, text: `What is the essential action inside “${l.name}”?` });
-    else if (!doer) q.push({ step: 3, text: `Who or what performs “${mid(l.capability)}”?` });
-    else if (!(M.reqsByLoe.get(l.id) || []).length) q.push({ step: 4, text: `What does the doer, ${doer.label}, use to ${mid(l.capability)}?` });
+    if (!has(l.capability)) add(`What is the essential action inside “${l.name}”?`, fix(2, fid(`loe:${l.id}:capability`)),
+      sfx => field({ key: `loe:${l.id}:capability`, sfx, label: 'Someone must', value: l.capability, placeholder: 'a verb phrase' }));
+    else if (!doer) add(`Who or what performs “${mid(l.capability)}”?`, fix(3, `doer-${l.id}`),
+      sfx => addRow({ id: `oq-doer-${sfx}`, label: 'Doer', srLabel: true, placeholder: 'A person, group, or system', cmd: 'setDoer', pre: [l.id], button: 'Set doer', list: 'dl-nodes' }));
+    else if (!(M.reqsByLoe.get(l.id) || []).length) add(`What does the doer, ${doer.label}, use to ${mid(l.capability)}?`, fix(4, `req-${l.id}`),
+      sfx => addRow({ id: `oq-req-${sfx}`, label: `A need of ${doer.label}`, srLabel: true, placeholder: 'A resource, system, process, or person', cmd: 'addRequirement', pre: [l.id], button: 'Add need', list: 'dl-nodes', extra: draftSelect(`oq-req-type-${sfx}`, typeOptions(), 'resource', 'Kind of need'), extraIds: [`oq-req-type-${sfx}`] }));
   }
   const phaseIdx = id => M.phases.findIndex(ph => ph.id === id);
   for (const l of M.loes) {
-    if (has(l.capability) && !l.steps.length) q.push({ step: 2, text: `What must happen, in order, for someone to ${mid(l.capability)} in “${l.name}”?` });
-    const unplaced = M.phases.length ? l.steps.filter(s => !s.phaseId).length : 0;
-    if (unplaced) q.push({ step: 2, text: `Which phase does each step of “${l.name}” fall in? ${unplaced} not placed yet.` });
+    if (has(l.capability) && !l.steps.length) add(`What must happen, in order, for someone to ${mid(l.capability)} in “${l.name}”?`, fix(2, `new-step-${l.id}`),
+      sfx => addRow({ id: `oq-step-${sfx}`, label: `First step of ${l.name}`, srLabel: true, placeholder: 'What must happen', cmd: 'addStep', pre: [l.id], button: 'Add step' }));
+    const unplaced = M.phases.length ? l.steps.filter(s => !s.phaseId) : [];
+    if (unplaced.length) add(`Which phase does each step of “${l.name}” fall in? ${unplaced.length} not placed yet.`, ['seeSteps', [l.id], 'Go there'],
+      sfx => `<div class="grid-2">${unplaced.map(s => selectField({ key: `step:${s.id}:phaseId`, sfx, label: `${s.num} ${trunc(s.text, 40)}`, value: '', options: [['', 'No phase yet'], ...M.phases.map(ph => [ph.id, ph.name])] })).join('')}</div>`);
     for (const s of l.steps) {
-      if (s.prev && s.prev.phaseId && s.phaseId && phaseIdx(s.phaseId) < phaseIdx(s.prev.phaseId)) q.push({ step: 2, text: `“${s.text}” comes after “${s.prev.text}” but sits in an earlier phase.` });
-      if (s.after && s.after.phaseId && s.phaseId && phaseIdx(s.after.phaseId) > phaseIdx(s.phaseId)) q.push({ step: 2, text: `“${s.text}” waits for “${s.after.text}”, but that step is in a later phase.` });
-      if (s.badAfter === 'cycle') q.push({ step: 2, text: `“${s.text}” waits for “${M.stepById.get(s.afterStepId).text}”, but that step also waits for it through other steps. Which comes first?` });
+      for (const p of s.seqPrevs) if (p.phaseId && s.phaseId && phaseIdx(s.phaseId) < phaseIdx(p.phaseId)) add(`“${s.text}” comes after “${p.text}” but sits in an earlier phase.`, open('step', s.id, fid(`step:${s.id}:phaseId`)));
+      if (s.after && s.after.phaseId && s.phaseId && phaseIdx(s.after.phaseId) > phaseIdx(s.phaseId)) add(`“${s.text}” waits for “${s.after.text}”, but that step is in a later phase.`, open('step', s.id, fid(`step:${s.id}:phaseId`)),
+        () => `<div class="row-actions">${btn(`Move it into ${M.phaseById.get(s.after.phaseId).name}`, 'updateStep', [s.id, { phaseId: s.after.phaseId }], 'small', { write: true })}${btn('It does not wait for it', 'updateStep', [s.id, { afterStepId: null }], 'small ghost', { write: true })}</div>`);
+      if (s.badAfter === 'cycle') add(`“${s.text}” waits for “${M.stepById.get(s.afterStepId).text}”, but that step also waits for it through other steps. Which comes first?`, open('step', s.id, fid(`step:${s.id}:afterStepId`)),
+        () => `<div class="row-actions">${btn('Remove this wait', 'updateStep', [s.id, { afterStepId: null }], 'small', { write: true })}</div>`);
     }
   }
-  if (M.doerLoes.size && !M.cogId) q.push({ step: 3, text: M.cogStale ? `Your center of gravity, ${M.nodes.get(P.cogNodeId).label}, no longer performs any way's action. Which doer is it now?` : 'Which doer is your center of gravity?' });
-  if (M.cogId && !has(P.cogRationale)) q.push({ step: 3, text: 'If your center of gravity vanished, could anyone else achieve the objective? Not answered yet.' });
-  for (const v of M.vulns) if (!has(v.rationale)) q.push({ node: v.id, text: `${v.label}: why is this need vulnerable?` });
-  for (const n of M.atRisk) q.push({ node: n.id, text: `${n.label}: marked at risk, but no doer uses this item. Whose need is this?` });
-  for (const n of M.orphans) q.push({ step: 5, text: `${n.label}: no connections yet. Is this item relevant to the objective?` });
-  if (!M.phases.length) q.push({ step: 6, text: 'What phases will the project move through?' });
+  if (M.doerLoes.size && !M.cogId) add(M.cogStale ? `Your center of gravity, ${M.nodes.get(P.cogNodeId).label}, no longer performs any way's action. Which doer is it now?` : 'Which doer is your center of gravity?',
+    fix(3, fid('project:cogNodeId', [...M.doerLoes.keys()][0])),
+    sfx => selectField({ key: 'project:cogNodeId', sfx, label: 'Center of gravity', srLabel: true, value: '', options: [['', 'Choose a doer'], ...[...M.doerLoes.keys()].map(id => [id, M.nodes.get(id).label])] }));
+  if (M.cogId && !has(P.cogRationale)) add('If your center of gravity vanished, could anyone else achieve the objective? Not answered yet.', fix(3, fid('project:cogRationale')), sfx => ml('project:cogRationale', P.cogRationale, '', sfx));
+  for (const v of M.vulns) if (!has(v.rationale)) add(`${v.label}: why is this need vulnerable?`, open('node', v.id, fid(`node:${v.id}:rationale`)),
+    sfx => field({ key: `node:${v.id}:rationale`, sfx, label: 'Why', srLabel: true, value: v.rationale, placeholder: 'What is deficient, weak, or at risk' }));
+  for (const n of M.atRisk) add(`${n.label}: marked at risk, but no doer uses this item. Whose need is this?`, open('node', n.id, null, 'Open item'),
+    sfx => `${needOf(n, sfx)}<div class="row-actions">${btn('It is not at risk', 'markVulnerable', [n.id, false], 'small ghost', { write: true })}</div>`);
+  for (const n of M.orphans) add(`${n.label}: no connections yet. Is this item relevant to the objective?`, open('node', n.id, 'ed-rel-to', 'Add a relationship'),
+    sfx => `${needOf(n, sfx)}<div class="row-actions">${btn('Not relevant: delete it', 'deleteNode', [n.id], 'small ghost', { write: true, confirm: 'oq-del-' + n.id, confirmLabel: 'Confirm delete' })}</div>`);
+  if (!M.phases.length) add('What phases will the project move through?', fix(6, 'new-phase'),
+    sfx => addRow({ id: `oq-phase-${sfx}`, label: 'First phase', srLabel: true, placeholder: 'Name of the phase', cmd: 'addPhase', button: 'Add phase' }));
   for (const ph of M.phases) {
-    if (!ph.mainLoeId) q.push({ step: 6, text: `Which way is the main effort in ${ph.name}?` });
-    else if (!has(ph.rationale)) q.push({ step: 6, text: `Why is ${M.loeById.get(ph.mainLoeId).name} the main effort in ${ph.name}?` });
-    if (ph.sameStart) q.push({ step: 6, text: `${ph.name} starts on the same date as another phase. Which comes first?` });
+    if (!ph.mainLoeId) add(`Which way is the main effort in ${ph.name}?`, fix(6, fid(`phase:${ph.id}:mainLoeId`)),
+      sfx => selectField({ key: `phase:${ph.id}:mainLoeId`, sfx, label: 'Main effort', srLabel: true, value: '', options: [['', 'Choose a way'], ...M.loes.map(l => [l.id, l.name])] }));
+    else if (!has(ph.rationale)) add(`Why is ${M.loeById.get(ph.mainLoeId).name} the main effort in ${ph.name}?`, fix(6, fid(`phase:${ph.id}:rationale`)), sfx => ml(`phase:${ph.id}:rationale`, ph.rationale, '', sfx));
+    const dates = sfx => `<div class="grid-2">${field({ key: `phase:${ph.id}:start`, sfx, label: 'Starts', value: ph.start, type: 'date' })}${field({ key: `phase:${ph.id}:endDate`, sfx, label: 'Ends', value: ph.endDate, type: 'date' })}</div>`;
+    if (ph.sameStart) add(`${ph.name} starts on the same date as another phase. Which comes first?`, fix(6, fid(`phase:${ph.id}:start`)), dates);
+    if (ph.endBeforeStart) add(`${ph.name} ends before it starts. Which date is right?`, fix(6, fid(`phase:${ph.id}:endDate`)), dates);
+    if (ph.overlapsNext) add(`${ph.name} ends on ${fmtDate(ph.endDate)}, after ${M.phases[ph.index + 1].name} starts. Which date should move?`, fix(6, fid(`phase:${ph.id}:endDate`)), dates);
   }
   for (const l of M.loes) {
-    if (l.steps.length && !has(l.now)) q.push({ step: 7, text: `Where does “${l.name}” stand today?` });
-    if (has(l.capability) && !has(l.endState)) q.push({ step: 7, text: `What does done look like for “${l.name}”?` });
+    if (l.steps.length && !has(l.now)) add(`Where does “${l.name}” stand today?`, fix(7, fid(`loe:${l.id}:now`)), sfx => ml(`loe:${l.id}:now`, l.now, '', sfx));
+    if (has(l.capability) && !has(l.endState)) add(`What does done look like for “${l.name}”?`, fix(7, fid(`loe:${l.id}:endState`)), sfx => ml(`loe:${l.id}:endState`, l.endState, '', sfx));
     for (const s of l.steps) {
-      if (s.overdue) q.push({ step: 7, text: `${s.num} “${s.text}” was due on ${fmtDate(s.due)} and is not done.` });
-      if (s.status === 'blocked' && !has(s.blockedReason)) q.push({ step: 7, text: `${s.num} “${s.text}” is blocked. What is blocking it, and who can clear it?` });
-      if (s.status === 'unknown') q.push({ step: 7, text: `${s.num} “${s.text}”: nobody knows where it stands. Who can find out?` });
+      const statusAndDue = sfx => `<div class="grid-2">${selectField({ key: `step:${s.id}:status`, sfx, label: 'Status', value: s.status, options: Object.entries(STATUS) })}${field({ key: `step:${s.id}:due`, sfx, label: 'Due', value: s.due, type: 'date' })}</div>`;
+      if (s.overdue) add(`${s.num} “${s.text}” was due on ${fmtDate(s.due)} and is not done.`, open('step', s.id, fid(`step:${s.id}:status`)), statusAndDue);
+      if (s.status === 'blocked' && !has(s.blockedReason)) add(`${s.num} “${s.text}” is blocked. What is blocking it, and who can clear it?`, open('step', s.id, fid(`step:${s.id}:blockedReason`)),
+        sfx => field({ key: `step:${s.id}:blockedReason`, sfx, label: 'Blocked by', srLabel: true, value: s.blockedReason, placeholder: 'What is blocking it, and who can clear it' }));
+      if (s.status === 'unknown') add(`${s.num} “${s.text}”: nobody knows where it stands. Who can find out?`, open('step', s.id, fid(`step:${s.id}:status`)), statusAndDue);
+      if (s.dueAlert) add(`${s.num} “${s.text}”: ${s.dueAlert.text} Is that right?`, open('step', s.id, fid(`step:${s.id}:due`)), () => dueAlertActions(s));
     }
   }
   return q;
@@ -1128,9 +1455,11 @@ async function attempt(fn) {
     throw e;
   }
 }
+// Paths are written relative to the open map; the map's prefix is fixed when the change is made.
 function write(path, kind, data) {
-  return enqueue(path, async () => {
-    const ref = db.doc(path);
+  const full = mapPrefix(ui.mapId) + path;
+  return enqueue(full, async () => {
+    const ref = db.doc(full);
     try {
       if (kind === 'delete') { await attempt(() => ref.delete()); known.delete(path); }
       else if (kind === 'set' || !exists(path)) { await attempt(() => ref.set(data)); known.add(path); }
@@ -1150,30 +1479,107 @@ function writeFailed(e, kind) {
   bump();
 }
 
-function subscribe() {
-  const listen = (name, attach) => {
-    let retried = false;
-    const start = () => attach(err => {
+// Listening is per map: switching maps stops the old listeners (gen moves on) and starts new ones.
+let subGen = 0;
+let unsubs = [];
+function listen(attach, gen) {
+  let retried = false;
+  const start = () => {
+    if (gen !== subGen) return;
+    const u = attach(err => {
+      if (gen !== subGen) return;
       if (err && err.code === 'unavailable' && !retried) { retried = true; setTimeout(start, 2000); return; }
       ui.readOnly = true;
       toast('The map stopped updating. Reload the page to reconnect.');
       bump();
     });
-    start();
+    if (typeof u === 'function') unsubs.push(u);
   };
-  listen('project', onErr => db.doc('project/main').onSnapshot(s => {
+  start();
+}
+function subscribe() {
+  const gen = ++subGen;
+  const pre = mapPrefix(ui.mapId);
+  listen(onErr => db.doc(pre + 'project/main').onSnapshot(s => {
+    if (gen !== subGen) return;
     S.project = (s.exists && s.data()) || {};
     S.projectExists = !!s.exists;
     S.got.add('project');
+    syncMapName();
     bump();
-  }, onErr));
+  }, onErr), gen);
   for (const c of ['loes', 'nodes', 'links', 'phases', 'steps']) {
-    listen(c, onErr => db.collection(c).onSnapshot(q => {
+    listen(onErr => db.collection(pre + c).onSnapshot(q => {
+      if (gen !== subGen) return;
       S[c] = new Map(q.docs.map(d => [d.id, d.data()]));
       S.got.add(c);
       bump();
-    }, onErr));
+    }, onErr), gen);
   }
+}
+function subscribeMaps() {
+  const u = db.collection('maps').onSnapshot(q => {
+    MAPS.clear();
+    for (const d of q.docs) MAPS.set(d.id, d.data() || {});
+    mapsGot = true;
+    // The open map was deleted by someone else: go back to the first map.
+    if (ui.mapId !== MAIN_MAP && !MAPS.has(ui.mapId)) { openMap(MAIN_MAP, true); return; }
+    syncMapName();
+    renderTop(model());
+  }, () => { mapsGot = true; });
+  return u;
+}
+function stopListening() {
+  subGen++;
+  for (const u of unsubs.splice(0)) { try { u(); } catch (e) { /* already stopped */ } }
+}
+// The list of maps shows each map's title; keep its entry in step when the title changes here or elsewhere.
+const mapTitle = P => (has(P.title) ? P.title.trim() : has(P.objective) ? trunc(P.objective.trim(), 60) : '');
+function syncMapName() {
+  if (!mapsGot || !db || ui.readOnly || !S.got.has('project')) return;
+  const id = ui.mapId || MAIN_MAP;
+  const entry = MAPS.get(id);
+  const name = mapTitle(S.project);
+  if (!name) return;
+  if (id === MAIN_MAP && !entry && MAPS.size === 0) return; // only one map: no list to keep yet
+  if (entry && entry.name === name) return;
+  const data = { ...(entry || { order: 0, createdAt: new Date().toISOString() }), name };
+  MAPS.set(id, data);
+  db.doc('maps/' + id).set(data).catch(() => {});
+}
+function mapList() {
+  const cur = ui.mapId || MAIN_MAP;
+  const ids = new Set([MAIN_MAP, ...MAPS.keys()]);
+  return [...ids].map(id => {
+    const e = MAPS.get(id) || {};
+    const live = id === cur && !ui.demo ? mapTitle(S.project) : '';
+    return { id, name: live || e.name || (id === MAIN_MAP ? 'First map' : 'Untitled map'), order: id === MAIN_MAP ? -1 : Number(e.order) || 0, createdAt: e.createdAt || '' };
+  }).sort((a, b) => a.order - b.order || String(a.createdAt).localeCompare(String(b.createdAt)));
+}
+// Open another map: finish saving this one, stop listening to it, forget what was on screen, and listen to the new one.
+async function openMap(id, quiet) {
+  id = id || MAIN_MAP;
+  if (id === (ui.mapId || MAIN_MAP) && S.got.size) return true;
+  flushAll();
+  await Promise.all([...queues.values()]).catch(() => {});
+  if (ui.demo) cmd.demo(false);
+  ui.perMap = ui.perMap || {};
+  ui.perMap[ui.mapId || MAIN_MAP] = { step: ui.step, maxReached: ui.maxReached };
+  const mem = ui.perMap[id] || { step: 1, maxReached: 0 };
+  stopListening();
+  S.project = {}; S.projectExists = false;
+  for (const c of ['loes', 'nodes', 'links', 'phases', 'steps']) S[c] = new Map();
+  S.got.clear(); known.clear();
+  ui.mapId = id; ui.step = mem.step; ui.maxReached = mem.maxReached;
+  ui.editNode = null; ui.editStep = null; ui.selected = null; ui.lanesOn = []; ui.confirm = null; ui.phaseSel = 'auto';
+  ui.pending.clear(); ui.drafts.clear(); ui.openDetails.clear(); ui.scrollTop = true; ui.leftOpen = false;
+  ui.userZoomed = { lanes: false, network: false, sequence: false };
+  saveUi();
+  resetGraph(); clearLayers(); force(); version++;
+  subscribe();
+  render();
+  if (!quiet) toast(`Opened ${mapList().find(m => m.id === id)?.name || 'the map'}.`);
+  return true;
 }
 function bump() { version++; ui.coachDirty = true; render(); }
 
@@ -1219,6 +1625,7 @@ class MemDB {
 function guard() {
   if (canWrite()) return true;
   toast(ui.demo ? 'This is the worked example. Leave it to answer for your own project.'
+    : ui.shared ? 'This shared copy is view-only. You can change step statuses: open a step, or use Track.'
     : ui.mode === 'connecting' || !loaded() ? 'Still connecting to your map. Try again in a moment.'
     : 'You have view-only access to this map.');
   return false;
@@ -1230,23 +1637,26 @@ function collapseState(M) {
   const live = M.progress.doing + M.progress.blocked + M.progress.unknown > 0;
   return { all: false, status: live ? { done: true, todo: true } : {} };
 }
+// Run something once the next redraw has happened, so it finds the new page rather than the old one.
+const afterRenderQ = [];
+function afterRender(fn) { afterRenderQ.push(fn); }
 // Put the cursor in a box once the coach has redrawn, scrolled into view. Used when the map sends you to a question.
 function focusLater(id) {
-  requestAnimationFrame(() => requestAnimationFrame(() => {
+  afterRender(() => {
     const el = $(id);
     if (!el || el.disabled) return;
     el.focus({ preventScroll: true });
     el.scrollIntoView({ block: 'center' });
-  }));
+  });
 }
 // Bring a block (a way's card, say) to the top of the coach once it has redrawn, and give it focus so the keyboard and screen reader follow.
 function revealLater(id) {
-  requestAnimationFrame(() => requestAnimationFrame(() => {
+  afterRender(() => {
     const el = $(id);
     if (!el) return;
     el.focus({ preventScroll: true });
     el.scrollIntoView({ block: 'start' });
-  }));
+  });
 }
 function findByLabel(label) {
   const k = String(label || '').trim().toLowerCase();
@@ -1266,7 +1676,7 @@ const cmd = {
   goto(i) {
     i = Math.max(0, Math.min(STEPS.length - 1, Number(i) || 0));
     if (i > reachable(model())) { toast(NEXT_REASON[i - 1] || 'Answer the earlier questions first.'); return false; }
-    ui.step = i; ui.editNode = null; ui.editStep = null; ui.scrollTop = true; ui.tab = 'coach'; force(); saveUi(); render();
+    ui.step = i; ui.editNode = null; ui.editStep = null; ui.scrollTop = true; ui.leftOpen = false; ui.tab = 'coach'; ui.coachCollapsed = false; force(); saveUi(); render();
     return true;
   },
   // Question 2, scrolled to one way's card, so "See steps" lands on the steps instead of at the top of the page.
@@ -1276,6 +1686,108 @@ const cmd = {
     return true;
   },
   next() { return cmd.goto(ui.step + 1); },
+  toggleCoach(on) { ui.coachCollapsed = on === undefined ? !ui.coachCollapsed : !on; saveUi(); render(); return true; },
+  // Coach width in pixels, kept between a readable minimum and leaving the map room; null goes back to the default.
+  coachWidth(px) {
+    if (px == null) { ui.coachW = null; saveUi(); render(); return true; }
+    const app = $('app');
+    const max = Math.max(320, app.clientWidth - 32 - 14 - 360);
+    ui.coachW = Math.round(Math.min(max, Math.max(300, Number(px) || 0)));
+    ui.coachCollapsed = false;
+    saveUi(); render(); return true;
+  },
+  // Open a step or item, then put the cursor in one of its boxes.
+  openFocus(kind, id, focus) {
+    const ok = kind === 'step' ? cmd.editStep(id) : cmd.editNode(id);
+    if (ok && focus) focusLater(focus);
+    return ok;
+  },
+  // Make an existing item a need of the doer of a way.
+  needOf(nodeId, loeId) {
+    const n = model().nodes.get(nodeId);
+    if (!n || !loeId) return false;
+    return cmd.addRequirement(loeId, n.label, n.type);
+  },
+  // Save a shareable copy of the map: one HTML file with the map inside, which runs as a view-only copy anywhere.
+  async exportShare() {
+    const menu = $('share-menu'); if (menu) menu.open = false;
+    if (ui.demo) { toast('Leave the worked example to share your own map.'); return false; }
+    if (!loaded()) { toast('Still connecting to your map. Try again in a moment.'); return false; }
+    const M = model();
+    const title = has(M.P.title) ? M.P.title : 'Lines of Effort Map';
+    const payload = { kind: 'loe-map-share', version: 1, exportId: uid('x'), exportedAt: new Date().toISOString(), title, data: mapData(S) };
+    const html = buildSharedHtml(payload);
+    const filename = `${slugify(title)}-shared-${localISO()}.html`;
+    const c = window.claude;
+    const dl = c && typeof c.use === 'function' ? await c.use('downloads').catch(() => null) : null;
+    if (!dl) { downloadText(filename, html, 'text/html'); toast(`Saved ${filename}. Send it to anyone; they open it in a web browser.`); return true; }
+    try {
+      await dl.save({ filename, data: new Blob([html], { type: 'text/html' }) });
+      toast(`Saved ${filename}. Send it to anyone; they open it in a web browser.`);
+      return true;
+    } catch (e) {
+      const code = e && e.code;
+      toast(code === 'declined' ? 'Not saved.' : code === 'rate_limited' ? 'A save is already waiting for your answer.'
+        : code === 'extension_not_enabled' || code === 'rejected_extension' ? 'This view cannot save web-page files.' : 'The file could not be saved here.');
+      return false;
+    }
+  },
+  // In a shareable copy: change one step's status, or why it is blocked. Kept in this browser until sent.
+  sharedStatus(id, field, value) {
+    const d = S.steps.get(id);
+    if (!d || !['status', 'blockedReason'].includes(field)) return false;
+    if (field === 'status' && !STATUS[value]) return false;
+    const v = field === 'status' ? value : String(value || '').trim();
+    S.steps.set(id, { ...d, [field]: v, ...(field === 'status' ? { done: v === 'done' } : {}) });
+    const orig = (SHARED.data.steps || {})[id] || {};
+    const was = field === 'status' ? (STATUS[orig.status] ? orig.status : orig.done ? 'done' : 'todo') : String(orig.blockedReason || '');
+    const ch = { ...(sharedChanges[id] || {}) };
+    if (v === was) delete ch[field]; else ch[field] = v;
+    if (Object.keys(ch).length) sharedChanges[id] = ch; else delete sharedChanges[id];
+    saveSharedChanges();
+    force(); bump();
+    return true;
+  },
+  sendStatuses() { openStatusExport(); return true; },
+  // Save a read-only copy: a plain page with no scripts, made for reading on a phone, even in an email preview.
+  async exportStatic() {
+    const menu = $('share-menu'); if (menu) menu.open = false;
+    if (ui.demo) { toast('Leave the worked example to share your own map.'); return false; }
+    if (!loaded()) { toast('Still connecting to your map. Try again in a moment.'); return false; }
+    const M = model();
+    const title = has(M.P.title) ? M.P.title : 'Lines of Effort Map';
+    const html = buildStaticHtml(M, captureStaticMap());
+    const filename = `${slugify(title)}-read-only-${localISO()}.html`;
+    const c = window.claude;
+    const dl = c && typeof c.use === 'function' ? await c.use('downloads').catch(() => null) : null;
+    if (!dl) { downloadText(filename, html, 'text/html'); toast(`Saved ${filename}. Email it; it opens on a phone with nothing to install.`); return true; }
+    try {
+      await dl.save({ filename, data: new Blob([html], { type: 'text/html' }) });
+      toast(`Saved ${filename}. Email it; it opens on a phone with nothing to install.`);
+      return true;
+    } catch (e) {
+      const code = e && e.code;
+      toast(code === 'declined' ? 'Not saved.' : code === 'rate_limited' ? 'A save is already waiting for your answer.'
+        : code === 'extension_not_enabled' || code === 'rejected_extension' ? 'This view cannot save web-page files.' : 'The file could not be saved here.');
+      return false;
+    }
+  },
+  importStatuses() {
+    const menu = $('share-menu'); if (menu) menu.open = false;
+    if (ui.demo) { toast('Leave the worked example to bring in status changes.'); return false; }
+    $('import-file').value = ''; $('import-text').value = ''; $('import-preview').innerHTML = ''; $('btn-import-apply').disabled = true;
+    const dlg = $('dlg-import');
+    try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); }
+    return true;
+  },
+  showLeft() { ui.leftOpen = !ui.leftOpen; render(); return true; },
+  // Jump from the "what is left" list to the box where that thing is done.
+  fixIt(step, focus) {
+    ui.leftOpen = false;
+    if (!cmd.goto(step)) return false;
+    if (focus) focusLater(focus);
+    return true;
+  },
   back() { return cmd.goto(ui.step - 1); },
   tab(t) { ui.tab = t === 'map' ? 'map' : 'coach'; saveUi(); render(); return true; },
   view(v) {
@@ -1304,12 +1816,12 @@ const cmd = {
     if (String(id).startsWith('cap:')) return cmd.goto(2);
     if (String(id).startsWith('step:')) return cmd.editStep(id.slice(5));
     if (!model().nodes.has(id)) return false;
-    ui.editNode = id; ui.editStep = null; ui.selected = id; ui.scrollTop = true; ui.tab = 'coach'; force(); saveUi(); render();
+    ui.editNode = id; ui.editStep = null; ui.selected = id; ui.scrollTop = true; ui.tab = 'coach'; ui.coachCollapsed = false; force(); saveUi(); render();
     return true;
   },
   editStep(id) {
     if (!id || !model().stepById.has(id)) return false;
-    ui.editStep = id; ui.editNode = null; ui.selected = 'step:' + id; ui.scrollTop = true; ui.tab = 'coach'; force(); saveUi(); render();
+    ui.editStep = id; ui.editNode = null; ui.selected = 'step:' + id; ui.scrollTop = true; ui.tab = 'coach'; ui.coachCollapsed = false; force(); saveUi(); render();
     return true;
   },
   closeEditor() {
@@ -1318,7 +1830,7 @@ const cmd = {
     if (s && ui.step === 2) {
       // Back to the way the step belongs to, with the cursor in its "Add step" box, so the next step is one tap away.
       ui.scrollTop = false; render();
-      requestAnimationFrame(() => requestAnimationFrame(() => { const el = $(`new-step-${s.loeId}`); if (el) { el.focus(); el.scrollIntoView({ block: 'center' }); } }));
+      afterRender(() => { const el = $(`new-step-${s.loeId}`); if (el) { el.focus(); el.scrollIntoView({ block: 'center' }); } });
     } else { ui.scrollTop = true; render(); }
     return true;
   },
@@ -1342,6 +1854,57 @@ const cmd = {
     return true;
   },
   copyData() { openExport(); return true; },
+  switchMap(id) {
+    const menu = $('map-menu'); if (menu) menu.open = false;
+    if (!id || (id !== MAIN_MAP && !MAPS.has(id))) { toast('That map is no longer there.'); return false; }
+    return openMap(id);
+  },
+  async newMap(name) {
+    name = String(name || '').trim();
+    if (!name) { toast('Name the new map first.'); $('new-map-name') && $('new-map-name').focus(); return false; }
+    if (!db || ui.readOnly || ui.shared || ui.mode === 'connecting') { toast(ui.shared ? 'This shared copy holds one map.' : 'You have view-only access, so you cannot start a map.'); return false; }
+    if (mapList().some(m => m.name.toLowerCase() === name.toLowerCase())) { toast('A map with that name already exists.'); return false; }
+    const now = new Date().toISOString();
+    try {
+      // The first map joins the list the first time a second map is made.
+      if (!MAPS.has(MAIN_MAP)) {
+        const mainName = (ui.mapId || MAIN_MAP) === MAIN_MAP ? mapTitle(S.project) : '';
+        const d = { name: mainName || 'First map', order: 0, createdAt: now };
+        MAPS.set(MAIN_MAP, d);
+        await db.doc('maps/' + MAIN_MAP).set(d);
+      }
+      const id = uid('m');
+      const order = Math.max(0, ...[...MAPS.values()].map(m => Number(m.order) || 0)) + 1;
+      const entry = { name, order, createdAt: now };
+      MAPS.set(id, entry);
+      await db.doc('maps/' + id).set(entry);
+      await db.doc(mapPrefix(id) + 'project/main').set({ title: name });
+      const menu = $('map-menu'); if (menu) menu.open = false;
+      await openMap(id, true);
+      toast(`Started ${name}. Begin with its goal.`);
+      return true;
+    } catch (e) { writeFailed(e, 'set'); return false; }
+  },
+  async deleteMap() {
+    const id = ui.mapId || MAIN_MAP;
+    if (id === MAIN_MAP) { toast('The first map cannot be deleted.'); return false; }
+    if (!guard()) return false;
+    const name = mapList().find(m => m.id === id)?.name || 'this map';
+    flushAll();
+    await Promise.all([...queues.values()]).catch(() => {});
+    const pre = mapPrefix(id);
+    const paths = ['project/main'];
+    for (const c of ['steps', 'links', 'nodes', 'phases', 'loes']) for (const k of S[c].keys()) paths.push(`${c}/${k}`);
+    try {
+      for (const pth of paths) await attempt(() => db.doc(pre + pth).delete());
+      await attempt(() => db.doc('maps/' + id).delete());
+    } catch (e) { writeFailed(e, 'delete'); return false; }
+    MAPS.delete(id);
+    const menu = $('map-menu'); if (menu) menu.open = false;
+    await openMap(MAIN_MAP, true);
+    toast(`Deleted ${name}.`);
+    return true;
+  },
 
   setProject(patch) { if (!guard()) return false; return write('project/main', 'update', patch); },
   addWay(name) {
@@ -1390,22 +1953,31 @@ const cmd = {
     if (M.phases.length >= 8) { toast('Eight phases is the limit. Combine phases where the focus does not change.'); return false; }
     if (M.phases.some(ph => ph.name.trim().toLowerCase() === name.toLowerCase())) { toast('You already have a phase with that name.'); return false; }
     const order = M.phases.reduce((m, ph) => Math.max(m, ph.order || 0), 0) + 1;
+    // A new phase picks up the day after the last phase's own end date, if the team ended it already.
+    const last = M.phases[M.phases.length - 1];
+    const start = last && last.endDate ? addDays(last.endDate, 1) : '';
     force();
-    return write(`phases/${uid('p')}`, 'set', { name, order, start: '', mainLoeId: null, rationale: '' });
+    return write(`phases/${uid('p')}`, 'set', { name, order, start, endDate: '', mainLoeId: null, rationale: '' });
   },
   updatePhase(id, patch) {
     if (!guard()) return false;
     if ('name' in patch && !has(patch.name)) { toast('A phase needs a name.'); return false; }
     delete patch.end;
     if ('start' in patch) patch.start = ISO_RE.test(patch.start || '') ? patch.start : '';
-    if ('mainLoeId' in patch || 'start' in patch) force();
+    if ('endDate' in patch) patch.endDate = ISO_RE.test(patch.endDate || '') ? patch.endDate : '';
+    if ('mainLoeId' in patch || 'start' in patch || 'endDate' in patch) force();
     return write(`phases/${id}`, 'update', patch);
   },
   async deletePhase(id) {
     if (!guard()) return false;
     force();
     if (ui.phaseSel === id) ui.phaseSel = 'auto';
-    for (const s of model().steps) if (s.phaseId === id) await write(`steps/${s.id}`, 'update', { phaseId: null });
+    for (const s of model().steps) {
+      const p = {};
+      if (s.phaseId === id) p.phaseId = null;
+      if (s.untilPhaseId === id) p.untilPhaseId = null;
+      if (Object.keys(p).length) await write(`steps/${s.id}`, 'update', p);
+    }
     return write(`phases/${id}`, 'delete');
   },
   phase(id) { ui.phaseSel = id || 'auto'; render(); return true; },
@@ -1421,7 +1993,7 @@ const cmd = {
       if (mine.has(s.id)) continue;
       const p = {};
       if (mine.has(s.afterStepId)) p.afterStepId = null;
-      if (mine.has(s.feedsStepId)) p.feedsStepId = null;
+      for (let n = 1; n <= MAX_FEEDS; n++) if (mine.has(s[feedKey(n)])) p[feedKey(n)] = null;
       if (Object.keys(p).length) await write(`steps/${s.id}`, 'update', p);
     }
     for (const sid of mine) await write(`steps/${sid}`, 'delete');
@@ -1438,16 +2010,21 @@ const cmd = {
     return write(`loes/${loeId}`, 'update', { doerNodeId: nodeId });
   },
   clearDoer(loeId) { if (!guard()) return false; force(); return write(`loes/${loeId}`, 'update', { doerNodeId: null }); },
-  addStep(loeId, text) {
+  addPhaseStep(phaseId, text, loeId) { return cmd.addStep(loeId, text, phaseId); },
+  placeInPhase(phaseId, stepId) {
+    if (!stepId) { toast('Choose a step first.'); return false; }
+    return cmd.updateStep(stepId, { phaseId });
+  },
+  addStep(loeId, text, phaseId) {
     text = String(text || '').trim();
     if (!text) { toast('Write the step first.'); return false; }
     if (!guard()) return false;
     const l = model().loeById.get(loeId);
     if (!l) return false;
-    if (l.steps.length >= MAX_STEPS) { toast('Twelve steps is the limit. Combine steps that overlap.'); return false; }
+    if (l.steps.length >= MAX_STEPS) { toast(`${l.name} has ${MAX_STEPS} steps, the most a way can hold. Combine steps that overlap.`); return false; }
     const order = l.steps.reduce((m, s) => Math.max(m, s.order || 0), 0) + 1;
     force();
-    return write(`steps/${uid('s')}`, 'set', { loeId, order, text, owner: '', phaseId: null, afterStepId: null, done: false });
+    return write(`steps/${uid('s')}`, 'set', { loeId, order, text, owner: '', phaseId: phaseId && model().phaseById.has(phaseId) ? phaseId : null, afterStepId: null, done: false });
   },
   updateStep(id, patch) {
     if (!guard()) return false;
@@ -1465,19 +2042,28 @@ const cmd = {
       }
     }
     if ('phaseId' in patch) patch.phaseId = patch.phaseId || null;
+    if ('untilPhaseId' in patch) patch.untilPhaseId = patch.untilPhaseId || null;
+    if ('dueOk' in patch) patch.dueOk = String(patch.dueOk || '');
+    if ('row' in patch) patch.row = Number.isInteger(patch.row) && patch.row >= 0 && patch.row < 8 ? patch.row : null;
     if ('done' in patch && !('status' in patch)) patch.status = patch.done ? 'done' : 'todo';
     if ('status' in patch) {
       if (!STATUS[patch.status]) { toast('Pick a status.'); return false; }
       patch.done = patch.status === 'done';
     }
-    if ('feedsStepId' in patch) {
-      patch.feedsStepId = patch.feedsStepId || null;
-      if (patch.feedsStepId === id) { toast('A step cannot feed back into itself.'); return false; }
-      if (patch.feedsStepId && !M.stepById.has(patch.feedsStepId)) { toast('That step is no longer on the map.'); return false; }
+    let feedsChanged = false;
+    for (const k of Object.keys(patch)) {
+      const m = FEED_RE.exec(k);
+      if (!m || Number(m[1] || 1) > MAX_FEEDS) continue;
+      if (m[2] === 'Verb') { patch[k] = String(patch[k] || '').trim(); continue; }
+      feedsChanged = true;
+      patch[k] = patch[k] || null;
+      if (patch[k] === id) { toast('A step cannot feed back into itself.'); return false; }
+      if (patch[k] && !M.stepById.has(patch[k])) { toast('That step is no longer on the map.'); return false; }
+      if (patch[k] && s.feedsList.some(f => f.step.id === patch[k] && feedKey(f.n) !== k)) { toast('This step already feeds into that one.'); return false; }
     }
     if ('due' in patch) patch.due = ISO_RE.test(patch.due || '') ? patch.due : '';
-    for (const f of ['owner', 'description', 'notes', 'blockedReason', 'feedsVerb']) if (f in patch) patch[f] = String(patch[f] || '').trim();
-    if ('phaseId' in patch || 'afterStepId' in patch || 'status' in patch || 'order' in patch || 'feedsStepId' in patch || 'due' in patch) force();
+    for (const f of ['owner', 'description', 'notes', 'blockedReason']) if (f in patch) patch[f] = String(patch[f] || '').trim();
+    if ('phaseId' in patch || 'untilPhaseId' in patch || 'dueOk' in patch || 'row' in patch || 'afterStepId' in patch || 'status' in patch || 'order' in patch || feedsChanged || 'due' in patch) force();
     return write(`steps/${id}`, 'update', patch);
   },
   async deleteStep(id) {
@@ -1486,14 +2072,15 @@ const cmd = {
     for (const s of model().steps) {
       const p = {};
       if (s.afterStepId === id) p.afterStepId = null;
-      if (s.feedsStepId === id) p.feedsStepId = null;
+      for (let n = 1; n <= MAX_FEEDS; n++) if (s[feedKey(n)] === id) p[feedKey(n)] = null;
       if (Object.keys(p).length) await write(`steps/${s.id}`, 'update', p);
     }
     if (ui.selected === 'step:' + id) ui.selected = null;
     if (ui.editStep === id) ui.editStep = null;
     return write(`steps/${id}`, 'delete');
   },
-  async placeStep(id, afterId, phaseId) {
+  // Move a step within its way: after another step (or first), into a phase, and onto a row of its lane on the map.
+  async placeStep(id, afterId, phaseId, row, withPrev) {
     if (!guard()) return false;
     const M = model();
     const s = M.stepById.get(id);
@@ -1503,15 +2090,72 @@ const cmd = {
     const after = afterId ? M.stepById.get(afterId) : null;
     if (afterId && (!after || after.loeId !== s.loeId)) { toast('Pick a step in the same way.'); return false; }
     const rest = M.stepsByLoe.get(s.loeId).filter(x => x.id !== id);
+    const moved = (afterId || null) !== (s.prev ? s.prev.id : null);
     const at = after ? rest.indexOf(after) + 1 : 0;
     rest.splice(at, 0, s);
+    // Steps are numbered by phase. Placed after a step in a later phase (or before one in an earlier phase),
+    // the step joins that phase so it lands where it was put.
+    if (phaseId === undefined && moved) {
+      const key = x => (x.phaseId ? x.startIdx : Infinity);
+      const next = rest[at + 1];
+      if (after && after.phaseId && key(after) > key(s)) phaseId = after.phaseId;
+      else if (next && next.phaseId && key(next) < key(s)) phaseId = next.phaseId;
+      if (phaseId !== undefined) toast(`Moved into ${M.phaseById.get(phaseId).name} to keep the steps in time order.`);
+    }
     force();
     for (let i = 0; i < rest.length; i++) {
       const p = {};
       if (rest[i].order !== i + 1) p.order = i + 1;
       if (rest[i].id === id && phaseId !== undefined && (phaseId || null) !== s.phaseId) p.phaseId = phaseId || null;
+      if (rest[i].id === id && Number.isInteger(row) && row >= 0 && row < 8 && row !== s.row) p.row = row;
+      // Running "with" a step only holds next to it: a step moved elsewhere runs after its new neighbour unless told otherwise.
+      if (rest[i].id === id) {
+        const wantWith = withPrev !== undefined ? !!(withPrev && afterId) : (moved ? false : s.withPrev);
+        if (wantWith !== s.withPrev) p.withPrev = wantWith;
+      }
+      // The step that ran alongside the moved one now leads its group instead of joining the step before.
+      if (moved && s.next && rest[i].id === s.next.id && s.next.withPrev && !s.withPrev) p.withPrev = false;
       if (Object.keys(p).length) await write(`steps/${rest[i].id}`, 'update', p);
     }
+    return true;
+  },
+  // Move a step into another way: after a given step there (null: first; left out: at the end), optionally into a phase and onto a row.
+  // The way it leaves closes ranks, and any "then" that would now point inside one way is cleared.
+  async moveStepToWay(id, loeId, afterId, phaseId, row) {
+    if (!guard()) return false;
+    const M = model();
+    const s = M.stepById.get(id);
+    const to = M.loeById.get(loeId);
+    if (!s || !to) return false;
+    if (to.id === s.loeId) return cmd.placeStep(id, afterId === undefined ? (s.prev ? s.prev.id : null) : afterId, phaseId, row);
+    if (to.steps.length >= MAX_STEPS) { toast(`${to.name} has ${MAX_STEPS} steps, the most a way can hold.`); return false; }
+    force();
+    const list = to.steps.slice();
+    const after = afterId ? M.stepById.get(afterId) : null;
+    const at = afterId === undefined ? list.length : after && after.loeId === to.id ? list.indexOf(after) + 1 : 0;
+    list.splice(at, 0, s);
+    const left = M.stepsByLoe.get(s.loeId).filter(x => x.id !== id);
+    for (let i = 0; i < left.length; i++) {
+      const p = {};
+      if (left[i].order !== i + 1) p.order = i + 1;
+      if (s.next && left[i].id === s.next.id && s.next.withPrev && !s.withPrev) p.withPrev = false;
+      if (Object.keys(p).length) await write(`steps/${left[i].id}`, 'update', p);
+    }
+    const waitsFor = s.afterStepId ? M.stepById.get(s.afterStepId) : null;
+    for (let i = 0; i < list.length; i++) {
+      const x = list[i];
+      const p = {};
+      if (x.id === id) {
+        Object.assign(p, { loeId: to.id, order: i + 1, withPrev: false, row: Number.isInteger(row) && row >= 0 && row < 8 ? row : null });
+        if (phaseId !== undefined) p.phaseId = phaseId || null;
+        if (waitsFor && waitsFor.loeId === to.id) p.afterStepId = null;
+      } else {
+        if (x.order !== i + 1) p.order = i + 1;
+        if (x.afterStepId === id) p.afterStepId = null;
+      }
+      if (Object.keys(p).length) await write(`steps/${x.id}`, 'update', p);
+    }
+    toast(`Moved to ${to.name} as step ${to.num}.${at + 1}.`);
     return true;
   },
   async moveStep(id, dir) {
@@ -1521,6 +2165,11 @@ const cmd = {
     if (!s) return false;
     const other = Number(dir) < 0 ? s.prev : s.next;
     if (!other) return false;
+    // Steps are numbered by phase, so a step can only trade places with a neighbour in the same phase.
+    if ((s.phaseId || null) !== (other.phaseId || null)) {
+      toast(`${other.num} is in ${other.phaseId ? M.phaseById.get(other.phaseId).name : 'no phase yet'}. Change this step's phase to move it past.`);
+      return false;
+    }
     force();
     // Swap the two, then renumber the way 1..n so stored orders stay unambiguous.
     const list = [...M.stepsByLoe.get(s.loeId)];
@@ -1713,10 +2362,27 @@ function dispatch(name, ...args) {
    Coach: builders
    ================================================================ */
 function fieldVal(key, stored) { return ui.pending.has(key) ? ui.pending.get(key) : (stored ?? ''); }
+const cap1 = t => String(t || '').charAt(0).toUpperCase() + String(t || '').slice(1);
+// The step editor's feedback rows: every slot in use, then one empty slot to add another (up to MAX_FEEDS).
+function feedRows(s, id, ways, stepOpts) {
+  const used = [];
+  for (let n = 1; n <= MAX_FEEDS; n++) if (s[feedKey(n)]) used.push(n);
+  let empty = 0;
+  for (let n = 1; n <= MAX_FEEDS && !empty; n++) if (!s[feedKey(n)]) empty = n;
+  const slots = used.length < MAX_FEEDS && empty ? used.concat([empty]) : used;
+  return slots.map((n, i) => {
+    const cur = s[feedKey(n)];
+    const skip = new Set(s.feedsList.filter(f => f.n !== n).map(f => f.step.id));
+    const opts = [['', i === 0 && !cur ? 'Nothing' : cur ? 'Nothing (remove this link)' : 'Nothing else'], ...stepOpts(ways, skip)];
+    const sel = selectField({ key: `step:${id}:${feedKey(n)}`, label: i === 0 ? 'Feeds back into' : 'Also feeds into', value: cur || '', options: opts });
+    const how = cur || slots.length === 1 ? field({ key: `step:${id}:${feedVerbKey(n)}`, label: 'How', value: s[feedVerbKey(n)], placeholder: 'informs' }) : '';
+    return `<div class="grid-2">${sel}${how}</div>`;
+  }).join('');
+}
 function field(o) {
   const id = fid(o.key, o.sfx);
   const v = fieldVal(o.key, o.value);
-  const common = `id="${id}" data-bind="${esc(o.key)}"${o.placeholder ? ` placeholder="${esc(o.placeholder)}"` : ''}${dis()}`;
+  const common = `id="${id}" data-bind="${esc(o.key)}"${o.placeholder ? ` placeholder="${esc(o.placeholder)}"` : ''}${disFor(o.key)}`;
   const ctl = o.type === 'date'
     ? `<input type="date" ${common} value="${esc(v)}"${o.min ? ` min="${esc(o.min)}"` : ''}>`
     : `<textarea ${common} rows="${o.multiline ? o.rows || 3 : 1}" data-autosize${o.multiline ? '' : ' data-oneline'}>${esc(v)}</textarea>`;
@@ -1727,7 +2393,7 @@ function selectField(o) {
   const cur = String(o.value ?? '');
   const opt = ([v, l]) => `<option value="${esc(v)}"${cur === v ? ' selected' : ''}>${esc(l)}</option>`;
   const opts = o.options.map(x => (x.group ? `<optgroup label="${esc(x.group)}">${x.items.map(opt).join('')}</optgroup>` : opt(x))).join('');
-  return `<div class="field"><label for="${id}"${o.srLabel ? ' class="sr"' : ''}>${esc(o.label)}</label><select id="${id}" data-bind="${esc(o.key)}"${dis()}>${opts}</select></div>`;
+  return `<div class="field"><label for="${id}"${o.srLabel ? ' class="sr"' : ''}>${esc(o.label)}</label><select id="${id}" data-bind="${esc(o.key)}"${disFor(o.key)}>${opts}</select></div>`;
 }
 function checkField(o) {
   const id = fid(o.key, o.sfx);
@@ -1753,7 +2419,7 @@ function btn(label, name, args, cls, opts) {
     const armed = ui.confirm === opts.confirm;
     return `<button type="button" class="btn ${cls || ''}${armed ? ' danger' : ''}" data-cmd="${name}" ${dargs(...(args || []))} data-confirm="${esc(opts.confirm)}"${write}>${esc(armed ? opts.confirmLabel || 'Confirm' : label)}</button>`;
   }
-  return `<button type="button" class="btn ${cls || ''}" data-cmd="${name}" ${dargs(...(args || []))}${write}>${esc(label)}</button>`;
+  return `<button type="button" class="btn ${cls || ''}" data-cmd="${name}" ${dargs(...(args || []))}${opts.id ? ` id="${esc(opts.id)}"` : ''}${write}>${esc(label)}</button>`;
 }
 function ask(question, body, tag) {
   return `<section class="ask"><p class="ask-tag${tag ? ' reflect' : ''}">${tag || 'Coach asks'}</p>${question ? `<p class="ask-q">${question}</p>` : ''}${body || ''}</section>`;
@@ -1849,6 +2515,7 @@ function buildStart() {
   <div class="row-actions">${btn('Start with question 1', 'goto', [1], 'primary')}${ui.demo ? '' : btn('See a worked example', 'demo', [true])}</div>
   <p class="fine">Everyone who opens this page sees and edits the same map. Do not enter personal or confidential information. On a phone, tap the microphone on your keyboard to answer by voice.</p>
   <p class="fine">Source: <a href="https://www.armyupress.army.mil/Journals/Military-Review/Online-Exclusive/2017-Online-Exclusive-Articles/The-Center-of-Gravity/" target="_blank" rel="noopener">“The Center of Gravity: Still Relevant After All These Years?”</a> Military Review, online exclusive, May 2017.</p>
+  <p class="fine">“All models are wrong but some are useful.” George E. P. Box, “Robustness in the strategy of scientific model building,” in <i>Robustness in Statistics</i>, edited by R. L. Launer and G. N. Wilkinson, Academic Press, 1979. This map is a model of your plan: useful, never complete.</p>
   <p class="fine">On drag and traction: <a href="https://arxiv.org/abs/2603.27550" target="_blank" rel="noopener">“Drag or Traction: Understanding How Designers Appropriate Friction in AI Ideation Outputs”</a>, 2026.</p>`;
 }
 
@@ -1930,35 +2597,44 @@ function stepsBlock(M, l) {
   else if (l.steps.length >= 2 && M.loes.some(o => o.id !== l.id && o.steps.length)) coach = '<p class="coach-line"><span class="tag">Coach asks</span>Does any step here have to wait for a step in another way? Mark it with Starts after.</p>';
   return `<div class="steps"><p class="card-sub">${sub}</p>
     ${rows ? `<ol class="step-list">${rows}</ol>` : ''}
-    ${l.steps.length >= MAX_STEPS ? '<p class="fine">Twelve steps is the limit. Combine steps that overlap.</p>' : addRow({ id: `new-step-${l.id}`, label: `Add a step to ${l.name}`, srLabel: true, placeholder: 'What must happen', cmd: 'addStep', pre: [l.id], button: 'Add step' })}
+    ${l.steps.length >= MAX_STEPS ? `<p class="fine">${MAX_STEPS} steps is the most a way can hold. Combine steps that overlap.</p>` : addRow({ id: `new-step-${l.id}`, label: `Add a step to ${l.name}`, srLabel: true, placeholder: 'What must happen', cmd: 'addStep', pre: [l.id], button: 'Add step' })}
     ${coach}</div>`;
 }
 function stepMeta(M, s) {
   const bits = [];
   if (has(s.owner)) bits.push(esc(s.owner));
-  if (s.phaseId) bits.push(esc(M.phaseById.get(s.phaseId).name));
+  if (s.phaseId) bits.push(esc(phaseSpanText(M, s)));
   if (s.due) bits.push(`due ${esc(fmtDate(s.due))}`);
+  if (s.withPrev) bits.push(`with ${s.prev.num}`);
   if (s.after) bits.push(`after ${s.after.num} “${esc(s.after.text)}”`);
-  if (s.feeds) bits.push(`${esc(s.feedsVerb)} ${s.feeds.num} “${esc(s.feeds.text)}”`);
+  for (const f of s.feedsList) bits.push(`${esc(f.verb)} ${f.step.num} “${esc(f.step.text)}”`);
   if (s.status !== 'todo') bits.push(STATUS[s.status].toLowerCase());
   return bits.length ? ` <span class="fine">(${bits.join(' · ')})</span>` : '';
 }
 function phaseStepsList(M, ph) {
-  const items = M.loes.map(l => ({ l, steps: l.steps.filter(s => s.phaseId === ph.id) })).filter(x => x.steps.length);
+  const items = M.loes.map(l => ({ l, steps: l.steps.filter(s => inPhase(s, ph)) })).filter(x => x.steps.length);
   const body = items.length
-    ? `<ul class="fine-list">${items.map(x => `<li><b>${esc(x.l.name)}</b>: ${x.steps.map(s => `${s.index + 1}. ${esc(s.text)}${s.done ? ' ✓' : ''}`).join('; ')}</li>`).join('')}</ul>`
+    ? `<ul class="fine-list">${items.map(x => `<li><b>${esc(x.l.name)}</b>: ${x.steps.map(s => `${s.index + 1}. ${esc(s.text)}${s.done ? ' ✓' : ''}${spanNote(M, s, ph)}`).join('; ')}</li>`).join('')}</ul>`
     : '<p class="fine">No steps placed in this phase yet.</p>';
-  return `<div class="phase-steps"><p class="fine"><b>Steps in this phase</b></p>${body}${M.steps.length ? `<div class="row-actions">${btn('Place steps in question 2', 'goto', [2], 'small ghost')}</div>` : ''}</div>`;
+  // Bring a step in from another phase or from "not placed", or write a new one, without leaving the phase card.
+  const elsewhere = M.loes.map(l => ({ group: `${l.num} ${l.name}`, items: l.steps.filter(s => s.phaseId !== ph.id).map(s => [s.id, `${s.num} ${trunc(s.text, 40)} (${s.phaseId ? M.phaseById.get(s.phaseId).name : 'no phase'})`]) })).filter(g => g.items.length);
+  const pick = elsewhere.length ? `<div class="addrow"><label for="ph-pick-${ph.id}">Move a step into ${esc(ph.name)}</label><div class="addrow-ctl">${draftSelect(`ph-pick-${ph.id}`, [['', 'Choose a step'], ...elsewhere], '', `Step to move into ${ph.name}`)}<button type="button" class="btn" data-cmd="placeInPhase" ${dargs(ph.id)} data-from="ph-pick-${ph.id}" data-clear="ph-pick-${ph.id}"${dis()}>Move here</button></div></div>` : '';
+  // Every way is offered; a full one says so, and adding to it explains why it cannot take more.
+  const ways = M.loes;
+  const add = ways.length ? addRow({ id: `ph-new-${ph.id}`, label: `Add a new step to ${ph.name}`, placeholder: 'What must happen', cmd: 'addPhaseStep', pre: [ph.id], button: 'Add step', extra: draftSelect(`ph-way-${ph.id}`, ways.map(l => [l.id, `${l.num} ${l.name}${l.steps.length >= MAX_STEPS ? ' (full)' : ''}`]), ways[0].id, 'Way the step belongs to'), extraIds: [`ph-way-${ph.id}`] }) : '';
+  return `<div class="phase-steps"><p class="fine"><b>Steps in this phase</b></p>${body}${pick}${add}<p class="fine">A new step goes after its way's other steps in this phase. Change its order in question 2 or by dragging it on the map.</p></div>`;
 }
-function phaseEndText(M, ph) {
+// Plain text under the Ends box: what a blank end date means for this phase.
+function phaseEndHint(M, ph) {
   const next = M.phases[ph.index + 1];
-  if (ph.endsAt === 'next') return `When ${esc(next.name)} starts${ph.end ? `, so on ${esc(fmtDate(ph.end))}` : ''}.`;
-  if (ph.endsAt === 'due') return `At the project due date, ${esc(fmtDate(ph.end))}.`;
-  return 'At the project due date, which question 1 does not have yet.';
+  const lead = ph.endDate ? 'Clear the date to end it' : 'Blank: ends';
+  if (ph.autoEndsAt === 'next') return `${lead} when ${next.name} starts, on ${fmtDate(ph.autoEnd)}.`;
+  if (ph.autoEndsAt === 'due') return `${lead} at the project due date, ${fmtDate(ph.autoEnd)}.`;
+  return `${lead} at the project due date, which question 1 does not have yet.`;
 }
 function phaseStepsLine(M, ph) {
-  const ss = M.steps.filter(s => s.phaseId === ph.id);
-  return ss.length ? `<p class="fine">Steps: ${ss.map(s => `${esc(M.loeById.get(s.loeId).name)} ${s.index + 1}. ${esc(s.text)}${s.done ? ' ✓' : ''}`).join('; ')}</p>` : '';
+  const ss = M.steps.filter(s => inPhase(s, ph));
+  return ss.length ? `<p class="fine">Steps: ${ss.map(s => `${esc(M.loeById.get(s.loeId).name)} ${s.index + 1}. ${esc(s.text)}${s.done ? ' ✓' : ''}${spanNote(M, s, ph)}`).join('; ')}</p>` : '';
 }
 
 function buildDoers(M) {
@@ -2083,7 +2759,7 @@ function buildLinks(M) {
   ${orph}${shared}
   ${ask('Have you mapped the relationships that matter?', reviewed
     ? okNote('Marked as reviewed. You can keep adding relationships at any time.') + `<div class="row-actions">${btn('Mark not reviewed', 'reviewLinks', [false], 'small ghost', { write: true })}</div>`
-    : `<p class="muted">The Lanes and Network views of the map draw these relationships. When they show the dependencies and frictions your team knows about, mark this step reviewed to open phases.</p><div class="row-actions">${btn('Mark relationships reviewed', 'reviewLinks', [true], 'primary', { write: true })}</div>`)}
+    : `<p class="muted">The Lanes and Network views of the map draw these relationships. When they show the dependencies and frictions your team knows about, mark this step reviewed to open phases.</p><div class="row-actions">${btn('Mark relationships reviewed', 'reviewLinks', [true], 'primary', { write: true, id: 'btn-review-links' })}</div>`)}
   ${examples('links')}`;
 }
 
@@ -2094,7 +2770,7 @@ function buildPhases(M) {
   return `${eyebrow('Sequence the ways')}
   ${prereq(M, 6)}
   <h2 class="question">What phases will the project move through, and which way leads in each?</h2>
-  <p class="hint">A phase is a stretch of time with its own focus, such as Prepare, Launch, and Sustain. In each phase, the main effort is the one way that matters most right then. The other ways support it. Give each phase its start date only: a phase ends when the next one begins, and the last ends at the project due date, so moving one date moves the boundary for both.</p>
+  <p class="hint">A phase is a stretch of time with its own focus, such as Prepare, Launch, and Sustain. In each phase, the main effort is the one way that matters most right then. The other ways support it. Give each phase a start date. Leave its end date blank and it ends when the next phase begins, or at the project due date if it is the last. Set an end date to close a phase now, even before you add the next one; a phase added after it starts the next day.</p>
   ${cog ? `<p class="recap"><b>Center of gravity in every phase:</b> ${esc(cog.label)}</p>` : ''}
   <div class="stack">${M.phases.map((ph, i) => phaseCard(M, ph, i)).join('') || '<p class="muted">No phases yet. Add the first one below.</p>'}</div>
   ${M.phases.length >= 8 ? '<p class="muted">Eight phases is the limit.</p>' : addRow({ id: 'new-phase', label: 'Add a phase', placeholder: 'Name of the phase', cmd: 'addPhase', button: 'Add phase' })}
@@ -2108,9 +2784,11 @@ function phaseCard(M, ph, i) {
   const notes = [];
   if (main && cog && doer && doer.id !== cog.id) notes.push(`<p class="coach-line"><span class="tag">Coach asks</span>In this phase the main effort is led by ${esc(doer.label)}, not your center of gravity, ${esc(cog.label)}. What keeps ${esc(cog.label)} ready while the focus is elsewhere?</p>`);
   if (ph.sameStart) notes.push('<p class="coach-line"><span class="tag">Coach asks</span>This phase starts on the same date as another. Which comes first?</p>');
+  if (ph.endBeforeStart) notes.push('<p class="coach-line"><span class="tag">Coach asks</span>This phase ends before it starts. Which date is right?</p>');
+  if (ph.overlapsNext) notes.push(`<p class="coach-line"><span class="tag">Coach asks</span>This phase ends after ${esc(M.phases[i + 1].name)} starts. Which date should move?</p>`);
   return `<div class="card" ${main ? laneStyle(main) : ''}>
     <div class="card-head"><span class="phase-num">${i + 1}</span>${main ? '<span class="swatch"></span>' : ''}<div class="grow">${field({ key: `phase:${ph.id}:name`, label: 'Phase name', srLabel: true, value: ph.name })}</div></div>
-    <div class="grid-2">${field({ key: `phase:${ph.id}:start`, label: 'Starts', value: ph.start, type: 'date' })}<div class="field"><label>Ends</label><p class="muted">${phaseEndText(M, ph)}</p></div></div>
+    <div class="grid-2">${field({ key: `phase:${ph.id}:start`, label: 'Starts', value: ph.start, type: 'date' })}${field({ key: `phase:${ph.id}:endDate`, label: 'Ends', value: ph.endDate, type: 'date', min: ph.start || undefined, hint: phaseEndHint(M, ph) })}</div>
     ${selectField({ key: `phase:${ph.id}:mainLoeId`, label: 'Main effort in this phase', value: ph.mainLoeId || '', options: [['', 'Choose a way'], ...M.loes.map(l => [l.id, l.name])] })}
     ${main ? field({ key: `phase:${ph.id}:rationale`, label: `Why is ${main.name} the main effort here, and what must be true before the next phase starts?`, value: ph.rationale, multiline: true, rows: 2, placeholder: 'Your answer' }) : ''}
     ${phaseStepsList(M, ph)}
@@ -2162,7 +2840,7 @@ function buildReview(M) {
     ${cog ? `<p class="muted">Center of gravity in every phase: <b>${esc(cog.label)}</b>.</p>` : ''}</section>
   ${ask('Do these tiers match what your team believes?', `<p class="muted">Based on your links. Critical items serve the center of gravity. Major items serve the other doers. Minor items connect to something. Peripheral items connect to nothing.</p><div class="tiers">${tiers}</div><div class="row-actions">${ui.view !== 'sequence' ? btn(ui.focus ? 'Focus is on' : 'Fade minor and peripheral items on the map', 'focus', [true], 'small') : ''}${isPhone() ? btn('Show the map', 'tab', ['map'], 'small') : ''}</div>`, 'From your answers')}
   ${ask(oq.length ? `${oq.length} open question${oq.length > 1 ? 's' : ''}` : 'No open questions', oq.length
-    ? `<ul class="oq">${oq.map(q => `<li><span>${esc(q.text)}</span>${q.node ? btn('Open item', 'editNode', [q.node], 'small') : btn(`Go to ${stepLabel(q.step)}`, 'goto', [q.step], 'small')}</li>`).join('')}</ul>`
+    ? `<p class="muted">Answer each one here, or go straight to the box where it is asked.</p>${nodesDatalist(M)}<ul class="oq">${oq.map((q, i) => `<li><div class="oq-top"><span>${esc(q.text)}</span>${q.go ? btn(q.go[2] || 'Go there', q.go[0], q.go[1], 'small') : ''}</div>${q.answer ? `<div class="oq-answer">${q.answer('oq' + i)}</div>` : ''}</li>`).join('')}</ul>`
     : okNote('Every question has an answer. Revisit them as the project changes.'))}
   <div class="row-actions">${btn('Copy data', 'copyData', [], 'small')}</div>`;
 }
@@ -2213,18 +2891,19 @@ function buildStepEditor(M, id) {
   const facts = [];
   facts.push(has(s.owner) ? `Owner: ${s.owner}.` : doer ? `Owner: ${doer.label}, the doer of this way.` : 'No owner yet, and this way has no doer yet.');
   facts.push(`Status: ${STATUS[s.status]}${s.status === 'blocked' && has(s.blockedReason) ? `. ${s.blockedReason}` : ''}.`);
-  if (ph) facts.push(`Phase: ${ph.name}${ph.start ? ` (${fmtRange(ph.start, ph.end)})` : ''}.`);
+  if (ph) facts.push(`${s.multiPhase ? 'Phases' : 'Phase'}: ${phaseSpanText(M, s)}${ph.start ? ` (${fmtRange(ph.start, s.lastPhase.end)})` : ''}.`);
   else if (M.phases.length) facts.push('Not placed in a phase yet.');
   if (s.due) facts.push(`${s.overdue ? 'Was due' : 'Due'} ${fmtDate(s.due)}.`);
-  if (s.prev) facts.push(`Comes after ${s.prev.num} “${s.prev.text}” in this way.`);
+  if (s.withPrev) facts.push(`Runs at the same time as ${s.prev.num} “${s.prev.text}”${s.seqPrevs.length ? `, after ${s.seqPrevs.map(p => p.num).join(' and ')}` : ''}.`);
+  else if (s.prev) facts.push(`Comes after ${s.seqPrevs.map(p => `${p.num} “${p.text}”`).join(' and ')} in this way.`);
   if (s.after) facts.push(`Starts after ${s.after.num} “${s.after.text}” in ${M.loeById.get(s.after.loeId).name}.`);
   const w = M.waitsOn.get(s.id);
   if (w) facts.push(`Waited on by ${w.map(x => `${x.num} “${x.text}”`).join('; ')}.`);
-  if (s.feeds) facts.push(`${s.feedsVerb.charAt(0).toUpperCase() + s.feedsVerb.slice(1)} ${s.feeds.num} “${s.feeds.text}”.`);
-  const fedBy = M.steps.filter(x => x.feeds && x.feeds.id === s.id);
+  for (const f of s.feedsList) facts.push(`${cap1(f.verb)} ${f.step.num} “${f.step.text}”.`);
+  const fedBy = M.steps.filter(x => x.feedsList.some(f => f.step.id === s.id));
   if (fedBy.length) facts.push(`Fed by ${fedBy.map(x => `${x.num} “${x.text}”`).join('; ')}.`);
   const ownerKey = `step:${id}:owner`;
-  const stepOpts = ways => ways.map(o => ({ group: `${o.num} ${o.name}`, items: o.steps.filter(x => x.id !== s.id).map(x => [x.id, `${x.num} ${trunc(x.text, 44)}`]) })).filter(g => g.items.length);
+  const stepOpts = (ways, skip) => ways.map(o => ({ group: `${o.num} ${o.name}`, items: o.steps.filter(x => x.id !== s.id && !(skip && skip.has(x.id))).map(x => [x.id, `${x.num} ${trunc(x.text, 44)}`]) })).filter(g => g.items.length);
   const others = M.loes.filter(o => o.id !== l.id && o.steps.length);
   const any = M.loes.filter(o => o.steps.some(x => x.id !== s.id));
   return `${eyebrow(`Step ${s.num} of ${l.name}`)}
@@ -2236,18 +2915,40 @@ function buildStepEditor(M, id) {
     <div class="field"><label for="${fid(ownerKey)}">Owner</label><input type="text" id="${fid(ownerKey)}" data-bind="${ownerKey}" value="${esc(fieldVal(ownerKey, s.owner))}" placeholder="${esc(doer ? 'Blank means ' + doer.label : 'Who does this step')}" list="dl-nodes" autocomplete="off"${dis()}></div>
     ${selectField({ key: `step:${id}:status`, label: 'Status', value: s.status, options: Object.entries(STATUS) })}
   </div>
+  ${s.dueAlert ? dueAlertBlock(M, s) : ''}
   ${s.status === 'blocked' ? field({ key: `step:${id}:blockedReason`, label: 'What is blocking it, and who can clear it?', value: s.blockedReason, placeholder: 'Your answer' }) : ''}
   <div class="grid-2">
     ${field({ key: `step:${id}:due`, label: 'Due', value: s.due, type: 'date' })}
-    ${M.phases.length ? selectField({ key: `step:${id}:phaseId`, label: 'Phase', value: s.phaseId || '', options: [['', 'No phase yet'], ...M.phases.map(p => [p.id, p.name])] }) : ''}
+    ${M.phases.length ? selectField({ key: `step:${id}:phaseId`, label: 'Starts in phase', value: s.phaseId || '', options: [['', 'No phase yet'], ...M.phases.map(p => [p.id, p.name])] }) : ''}
+    ${ph && M.phases.length > ph.index + 1 ? selectField({ key: `step:${id}:untilPhaseId`, label: 'Runs through', value: s.untilPhaseId || '', options: [['', `${ph.name} only`], ...M.phases.slice(ph.index + 1).map(p => [p.id, p.name])] }) : ''}
   </div>
-  ${l.steps.length > 1 ? selectField({ key: `step:${id}:position`, label: 'Position in this way', value: s.prev ? s.prev.id : '', options: [['', 'First'], ...l.steps.filter(x => x.id !== s.id).map(x => [x.id, `After ${x.num} ${trunc(x.text, 40)}`])] }) : ''}
+  ${s.duePhase ? `<p class="fine">Its due date falls in ${esc(s.duePhase.name)}, so it runs through ${esc(s.duePhase.name)}. A step can span phases.</p>`
+    : ph && M.phases.length > ph.index + 1 && !s.multiPhase ? '<p class="fine">A step can span phases: pick the last phase it runs through, or give it a due date in a later phase.</p>' : ''}
+  ${M.loes.length > 1 ? selectField({ key: `step:${id}:loeId`, label: 'Way', value: s.loeId, options: M.loes.map(o => [o.id, `${o.num} ${o.name}${o.id !== s.loeId && o.steps.length >= MAX_STEPS ? ' (full)' : ''}`]) }) : ''}
+  ${l.steps.length > 1 ? selectField({ key: `step:${id}:position`, label: 'Position in this way', value: s.prev ? `${s.withPrev ? 'with' : 'after'}:${s.prev.id}` : '', options: [['', 'First'],
+    { group: 'After a step', items: l.steps.filter(x => x.id !== s.id).map(x => [`after:${x.id}`, `After ${x.num} ${trunc(x.text, 40)}`]) },
+    { group: 'At the same time as a step', items: l.steps.filter(x => x.id !== s.id).map(x => [`with:${x.id}`, `With ${x.num} ${trunc(x.text, 40)}`]) }] }) : ''}
+  ${l.steps.length > 1 ? '<p class="fine">“With” runs this step alongside that one: no arrow between them, both follow the step before, and the next step waits for both.</p>' : ''}
   ${others.length ? selectField({ key: `step:${id}:afterStepId`, label: 'Starts after a step in another way', value: s.afterStepId || '', options: [['', 'Nothing in another way'], ...stepOpts(others)] }) : ''}
-  ${any.length ? `<div class="grid-2">${selectField({ key: `step:${id}:feedsStepId`, label: 'Feeds back into', value: s.feedsStepId || '', options: [['', 'Nothing'], ...stepOpts(any)] })}${field({ key: `step:${id}:feedsVerb`, label: 'How', value: s.feedsVerb, placeholder: 'informs' })}</div>
-  <p class="fine">A feedback link is drawn on the map as a dotted arrow. It does not change the order of steps.</p>` : ''}
+  ${any.length ? `${feedRows(s, id, any, stepOpts)}
+  <p class="fine">A feedback link is drawn on the map as a dotted arrow. It does not change the order of steps.${s.feedsList.length && s.feedsList.length < MAX_FEEDS ? ' Pick another step in the next box to add one more.' : ''}</p>` : ''}
   ${field({ key: `step:${id}:notes`, label: 'Notes', value: s.notes, multiline: true, rows: 3 })}
   ${nodesDatalist(M)}
   <div class="row-actions">${btn('Done', 'closeEditor', [], 'primary')}${btn('Delete step', 'deleteStep', [id], 'ghost', { write: true, confirm: 'del-step-' + id, confirmLabel: 'Confirm: delete step' })}</div>`;
+}
+
+// The coach's question when a step's due date falls outside its phases: say yes (and stretch the step, or just stop asking), or change the date.
+function dueAlertActions(s) {
+  const a = s.dueAlert;
+  const actions = [];
+  if (a.into) actions.push(btn(`Yes, it runs through ${a.into.name}`, 'updateStep', [s.id, { untilPhaseId: a.into.id }], 'small primary', { write: true }));
+  actions.push(btn(a.into ? 'Yes, but keep its phases' : 'Yes, keep it', 'updateStep', [s.id, { dueOk: s.dueOkKey }], 'small', { write: true }));
+  return `<div class="row-actions">${actions.join('')}</div>`;
+}
+function dueAlertBlock(M, s) {
+  return `<section class="ask warn"><p class="ask-tag">Check the date</p><p class="ask-q">${esc(s.dueAlert.text)} Is that right?</p>
+    <p class="muted">That is allowed. If it is right, say so and the coach stops asking about this date. If not, change the due date or the phase below.</p>
+    ${dueAlertActions(s)}</section>`;
 }
 
 // Track: the tracker side. Every step by way with its status, plus where each way stands and what done looks like.
@@ -2274,6 +2975,7 @@ function trackCard(M, l) {
       </div>
       ${s.status === 'blocked' ? `<p class="status-blocked">${has(s.blockedReason) ? `Blocked: ${esc(s.blockedReason)}` : 'Blocked. What is blocking it, and who can clear it?'}</p>` : ''}
       ${s.overdue ? `<p class="status-blocked">Was due ${esc(fmtDate(s.due))} and is not done.</p>` : ''}
+      ${s.dueAlert ? `<p class="status-warn">${esc(s.dueAlert.text)} Is that right? Open the step to answer.</p>` : ''}
     </div>`;
   }).join('');
   const p = l.progress;
@@ -2305,7 +3007,13 @@ function renderCoach(M) {
   try { if (aid && typeof a.selectionStart === 'number') { s0 = a.selectionStart; s1 = a.selectionEnd; } } catch (e) { /* not a text control */ }
   const top = els.scroll.scrollTop;
   const build = [buildStart, buildGoal, buildWays, buildDoers, buildNeeds, buildLinks, buildPhases, buildTrack, buildReview][ui.step] || buildStart;
-  els.body.innerHTML = mergeBlock(M) + (ui.editNode ? buildNodeEditor(M, ui.editNode) : ui.editStep ? buildStepEditor(M, ui.editStep) : build(M));
+  const html = mergeBlock(M) + (ui.editNode ? buildNodeEditor(M, ui.editNode) : ui.editStep ? buildStepEditor(M, ui.editStep) : build(M));
+  // Never pull a box out from under someone typing in it: on the same page, if the redraw would remove the focused
+  // text box (an open question in Review that their answer just settled, say), wait until they leave the box.
+  const page = `${ui.step}|${ui.editNode || ''}|${ui.editStep || ''}`;
+  if (aid && coachTextFocused() && page === ui.lastPage && !html.includes(`id="${aid}"`)) { ui.coachDirty = true; return; }
+  ui.lastPage = page;
+  els.body.innerHTML = html;
   autosizeAll();
   if (ui.scrollTop) { els.scroll.scrollTop = 0; ui.scrollTop = false; } else els.scroll.scrollTop = top;
   if (aid) {
@@ -2334,19 +3042,59 @@ function renderRail(M) {
     return `<button type="button" class="rail-step" data-cmd="goto" ${dargs(i)}${locked ? ' disabled' : ''}${cur ? ' aria-current="step"' : ''}${locked ? ` title="${esc(NEXT_REASON[i - 1] || '')}"` : ''}>${s.n ? `<span class="num">${s.n}</span>` : ''}<span>${s.short}</span>${locked ? LOCK_SVG : ''}</button>`;
   }).join('');
 }
+// What is left before the step after `s` opens: each item names one thing to do and jumps to the box where it is done.
+// `any` means doing one of them is enough.
+function blockersFor(M, s) {
+  const item = (text, step, focus) => ({ text, step, focus });
+  if (s === 1) return { any: false, items: [item('Write the objective', 1, fid('project:objective'))] };
+  if (s === 2) {
+    if (!M.loes.length) return { any: false, items: [item('Add a way', 2, 'new-way')] };
+    return { any: true, items: M.loes.filter(l => !has(l.capability)).map(l => item(`Name the essential action of ${l.name}`, 2, fid(`loe:${l.id}:capability`))) };
+  }
+  if (s === 3) {
+    if (!M.doerLoes.size) return { any: true, items: M.loes.filter(l => has(l.capability)).map(l => item(`Name who must ${mid(l.capability)} (${l.name})`, 3, `doer-${l.id}`)) };
+    const first = [...M.doerLoes.keys()][0];
+    return { any: false, items: [item('Choose your center of gravity from the doers', 3, fid('project:cogNodeId', first))] };
+  }
+  if (s === 4) {
+    const cog = M.cogId && M.nodes.get(M.cogId);
+    return { any: true, items: M.cogLoes.map(l => item(`Add a need ${cog ? `of ${cog.label} ` : ''}in ${l.name}`, 4, `req-${l.id}`)) };
+  }
+  if (s === 5) return { any: false, items: [item('Mark the relationships reviewed, at the end of this step', 5, 'btn-review-links')] };
+  if (s === 6 || s === 7) {
+    if (!M.phases.length) return { any: false, items: [item('Add a phase', 6, 'new-phase')] };
+    return { any: false, items: M.phases.filter(ph => !ph.mainLoeId).map(ph => item(`Choose the main effort for ${ph.name}`, 6, fid(`phase:${ph.id}:mainLoeId`))) };
+  }
+  return { any: false, items: [] };
+}
 function renderFoot(M) {
   if (ui.editNode || ui.editStep) { els.foot.innerHTML = `${btn('Back to the question', 'closeEditor', [], '')}`; return; }
   const reach = reachable(M);
   const s = ui.step;
   const last = s >= STEPS.length - 1;
   const nextOpen = !last && s + 1 <= reach;
+  // A blocked Next still answers: hover, focus or tap it to see what is left, each item a jump to where it is done.
+  let next = '';
+  if (!last && nextOpen) next = '<button type="button" class="btn primary" data-cmd="next">Next</button>';
+  else if (!last) {
+    const b = blockersFor(M, s);
+    const list = b.items.length ? `<ul>${b.items.map(i => `<li><button type="button" class="linklike" data-cmd="fixIt" ${dargs(i.step, i.focus || null)}>${esc(i.text)}</button></li>`).join('')}</ul>` : `<p class="muted">${esc(NEXT_REASON[s] || '')}</p>`;
+    next = `<div class="next-wrap${ui.leftOpen ? ' open' : ''}">
+      <button type="button" class="btn primary is-blocked" data-cmd="showLeft" aria-disabled="true" aria-expanded="${!!ui.leftOpen}" aria-controls="left-panel">Next</button>
+      <div class="left-panel" id="left-panel" role="group" aria-label="What is left before ${esc(STEPS[s + 1].short)}">
+        <p class="left-h">${b.any && b.items.length > 1 ? `To open ${esc(STEPS[s + 1].short)}, do any one of these` : `Still to do before ${esc(STEPS[s + 1].short)}`}</p>${list}</div></div>`;
+  }
   els.foot.innerHTML = `<button type="button" class="btn" data-cmd="back"${s === 0 ? ' disabled' : ''}>Back</button>
     <span class="why">${!last && !nextOpen ? esc(NEXT_REASON[s] || '') : ''}</span>
-    ${last ? '' : `<button type="button" class="btn primary" data-cmd="next"${nextOpen ? '' : ' disabled'}>Next</button>`}`;
+    ${next}`;
 }
 function renderBanners() {
   let h = '';
   if (ui.demo) h = `<div class="banner demo"><p><b>Worked example.</b> Nothing here is saved.<span class="long"> It is a finished map for a hospital project to cut emergency CT report turnaround. Step through the questions to see its answers. Your team's map is untouched.</span></p>${btn('Back to your map', 'demo', [false], 'small')}</div>`;
+  else if (ui.shared) {
+    const n = Object.keys(sharedChanges).length;
+    h = `<div class="banner demo"><p><b>Shared copy</b>${SHARED && SHARED.exportedAt ? `, saved ${esc(fmtDate(String(SHARED.exportedAt).slice(0, 10)))}` : ''}. Look around freely. You can change step statuses: open any step, or use Track. Your changes stay in this browser until you send them.${n ? ` <b>${n} step${n > 1 ? 's' : ''} changed.</b> Use Send my changes, at the top, to send them back.` : ''}</p></div>`;
+  }
   else if (ui.mode === 'connecting' || (ui.mode === 'live' && !loaded())) h = '<div class="banner"><p>Connecting to your team\'s map…</p></div>';
   else if (ui.mode === 'local') h = '<div class="banner warn"><p>Shared saving is not available in this view. Answers on this page will be lost when you close it.</p></div>';
   else if (ui.readOnly) h = '<div class="banner"><p>You can view this map but not change it. To answer, ask the owner to invite you as an Editor.</p></div>';
@@ -2423,7 +3171,17 @@ function ensureG(parent, cls) {
 function initMap() {
   if (!HAS_D3) return;
   svgSel = d3.select('#map-svg');
-  zoom = d3.zoom().scaleExtent([0.25, 2.5]).on('zoom', e => {
+  // Panning stops at the map's edges: a little above the column headers, a little below the last lane, and a little past
+  // either side. A map smaller than the window can move around inside it but not off it.
+  zoom = d3.zoom().scaleExtent([0.25, 2.5]).constrain((t, extent, bounds) => {
+    const [[vx0, vy0], [vx1, vy1]] = extent;
+    const [[cx0, cy0], [cx1, cy1]] = bounds;
+    if (!isFinite(cx0) || !isFinite(cy0) || !isFinite(cx1) || !isFinite(cy1)) return t;
+    const fit = (s0, s1, v0, v1) => (s1 - s0 > v1 - v0 ? (s0 > v0 ? v0 - s0 : s1 < v1 ? v1 - s1 : 0) : (s0 < v0 ? v0 - s0 : s1 > v1 ? v1 - s1 : 0));
+    const dx = fit(t.applyX(cx0), t.applyX(cx1), vx0, vx1);
+    const dy = fit(t.applyY(cy0), t.applyY(cy1), vy0, vy1);
+    return dx || dy ? t.translate(dx / t.k, dy / t.k) : t;
+  }).on('zoom', e => {
     $('zoom-root').setAttribute('transform', e.transform);
     if (e.sourceEvent) ui.userZoomed[ui.view] = true;
     stickyLabels(e.transform);
@@ -2492,7 +3250,16 @@ function renderMap(M) {
     msg.hidden = any;
     if (!any) msg.textContent = 'Answer question 1 to start the map.';
   }
+  setPanBounds();
   if (!ui.userZoomed[ui.view]) fitView(false);
+  else svgSel.call(zoom.transform, d3.zoomTransform(svgSel.node()));
+}
+// The area the map can be panned over: everything drawn, plus a small margin, most of it below the last lane.
+function setPanBounds() {
+  let box;
+  try { box = $('zoom-root').getBBox(); } catch (e) { return; }
+  if (!box || !box.width || !box.height) { zoom.translateExtent([[-Infinity, -Infinity], [Infinity, Infinity]]); return; }
+  zoom.translateExtent([[box.x - 60, box.y - 20], [box.x + box.width + 60, box.y + box.height + 40]]);
 }
 
 /* ================================================================
@@ -2539,7 +3306,9 @@ function layoutLanes(M) {
     const count = c => cells.get(c).length + ph.filter(p => p.col === c).length;
     const rows = Math.max(1, ...cols.map(count));
     const h = rows * (LV.nodeH + LV.gapY) - LV.gapY + 2 * LV.padY;
-    lane.y = y; lane.h = Math.max(h, 92);
+    const capL = !lane.cross && lane.loe && has(lane.loe.capability) ? capLines(lane.loe.capability) : null;
+    const capH = capL ? capHeight(capL) : LV.nodeH;
+    lane.y = y; lane.h = Math.max(h, 92, capH + 2 * 14);
     for (const c of cols) {
       const n = count(c);
       let yy = y + (lane.h - (n * (LV.nodeH + LV.gapY) - LV.gapY)) / 2;
@@ -2549,7 +3318,7 @@ function layoutLanes(M) {
     if (!lane.cross) {
       const cx = cell('C'), cy = y + (lane.h - LV.nodeH) / 2;
       const l = lane.loe;
-      if (l && has(l.capability)) caps.push({ id: 'cap:' + l.id, loe: l, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, text: l.capability });
+      if (l && has(l.capability)) caps.push({ id: 'cap:' + l.id, loe: l, x: cx, y: y + (lane.h - capH) / 2, w: LV.nodeW, h: capH, text: l.capability, lines: capL });
       else placeholders.push({ key: `${lane.key}:C`, col: 'C', q: 2, text: 'What is the action?', focus: l ? fid(`loe:${l.id}:capability`) : 'new-way', chevron: true, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, lane });
     }
     y += lane.h + LV.laneGap;
@@ -2567,6 +3336,19 @@ function lanePath(a, b) {
   if (b.x + b.w <= a.x - 2) { const x1 = a.x, x2 = b.x + b.w, dx = (x1 - x2) / 2; return `M${x1},${ay}C${x1 - dx},${ay} ${x2 + dx},${by} ${x2},${by}`; }
   const x1 = a.x + a.w, x2 = b.x + b.w, bulge = 24 + Math.min(36, Math.abs(by - ay) * 0.12);
   return `M${x1},${ay}C${x1 + bulge},${ay} ${x2 + bulge},${by} ${x2},${by}`;
+}
+
+// Sequence view links. When the two boxes overlap side to side, as when a step spans phases above or below the next one,
+// the link runs from the bottom of one to the top of the other, on the right where it clears the owner tag.
+function seqPath(a, b) {
+  const apart = a.x + a.w <= b.x - 2 || b.x + b.w <= a.x - 2;
+  const above = a.y + a.h <= b.y - 2, below = b.y + b.h <= a.y - 2;
+  if (apart || !(above || below)) return lanePath(a, b);
+  const x2 = b.x + b.w - 16;
+  const x1 = Math.min(Math.max(x2, a.x + 8), a.x + a.w - 8);
+  const y1 = above ? a.y + a.h : a.y, y2 = above ? b.y : b.y + b.h;
+  const dy = (y2 - y1) / 2;
+  return `M${x1},${y1}C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
 }
 
 function renderLanes(M) {
@@ -2621,16 +3403,17 @@ function renderLanes(M) {
   sel.each(function (d) { drawLaneItem(this, d, M); });
   stickyLabels(d3.zoomTransform(svgSel.node()));
 }
-// Lane bands, labels, and sticky mini-labels. Shared by the Lanes and Sequence views. extraLine adds a third label line.
-function drawLaneBands(bandG, L, M, H, AP, extraLine) {
+// Lane bands, labels, and sticky mini-labels. Shared by the Lanes and Sequence views.
+// The Lanes view shows a main-effort line under each name. The Sequence view leaves it out (each phase shades its own
+// main effort) and instead shows the doer and progress lines it worked out in its layout, wrapped in full.
+function drawLaneBands(bandG, L, M, H, AP, seq) {
   const lanes = d3.select(bandG).selectAll('g.lane').data(L.lanes, d => d.key).join(enter => {
     const g = enter.append('g');
     g.append('rect').attr('class', 'lane-band');
     g.append('circle').attr('class', 'lane-swatch').attr('r', 5);
     g.append('text').attr('class', 'lane-name');
     g.append('text').attr('class', 'lane-effort');
-    g.append('text').attr('class', 'lane-effort lane-extra lane-extra-1');
-    g.append('text').attr('class', 'lane-effort lane-extra lane-extra-2');
+    g.append('text').attr('class', 'lane-effort lane-info');
     const mini = g.append('g').attr('class', 'lane-mini').attr('display', 'none');
     mini.append('rect').attr('rx', 5).attr('height', 19);
     mini.append('circle').attr('class', 'lane-swatch').attr('r', 4);
@@ -2644,17 +3427,16 @@ function drawLaneBands(bandG, L, M, H, AP, extraLine) {
     const mains = M.mainIn.get(d.key);
     return mains ? trunc('Main in ' + mains.map(ph => ph.name).join(', '), 24) : (M.phases.length ? 'Supporting' : '');
   };
-  const nameLines = d => wrap(d.name, 16, d.compact ? 2 : 3).length;
+  const nameOf = d => d.nameLines || wrap(d.name, 16, d.compact ? 2 : 3);
+  const nameLines = d => nameOf(d).length;
   lanes.attr('data-key', d => d.key)
     .attr('class', d => `lane${d.cross ? ' cross' : ''}${d.ph ? ' ph' : ''}${AP && d.key === AP.mainLoeId ? ' is-main-now' : ''}${ui.lanesOn.length && !ui.lanesOn.includes(d.key) && !H.sel ? ' is-dim' : ''}`)
     .attr('style', d => (d.color != null ? `--lc:var(--lane-${d.color})` : null));
   lanes.select('rect.lane-band').attr('x', 0).attr('y', d => d.y).attr('width', L.obj.x - LV.objGap / 2).attr('height', d => d.h).attr('rx', 7);
   lanes.select('circle.lane-swatch').attr('cx', 16).attr('cy', d => d.y + (d.compact ? 15 : 22)).attr('display', d => (d.color == null ? 'none' : null));
-  lanes.select('text.lane-name').attr('y', d => d.y + (d.compact ? 20 : 27)).each(function (d) { setLines(this, wrap(d.name, 16, d.compact ? 2 : 3), 28, 17); });
-  lanes.select('text.lane-effort:not(.lane-extra)').attr('x', 28).attr('y', d => d.y + (d.compact ? 20 : 27) + nameLines(d) * 17 + 1).text(effortText);
-  const extras = d => { const v = extraLine ? extraLine(d) : ''; return Array.isArray(v) ? v : [v || '']; };
-  lanes.select('text.lane-extra-1').attr('x', 28).attr('y', d => d.y + 27 + nameLines(d) * 17 + 14).text(d => (d.compact ? '' : extras(d)[0] || ''));
-  lanes.select('text.lane-extra-2').attr('x', 28).attr('y', d => d.y + 27 + nameLines(d) * 17 + 27).text(d => (d.compact ? '' : extras(d)[1] || ''));
+  lanes.select('text.lane-name').attr('y', d => d.y + (d.compact ? 20 : 27)).each(function (d) { setLines(this, nameOf(d), 28, 17); });
+  lanes.select('text.lane-effort:not(.lane-info)').attr('x', 28).attr('y', d => d.y + (d.compact ? 20 : 27) + nameLines(d) * 17 + 1).text(d => (seq ? '' : effortText(d)));
+  lanes.select('text.lane-info').attr('y', d => d.y + (d.compact ? 20 : 27) + nameLines(d) * 17 + 1).each(function (d) { setLines(this, seq && !d.compact ? d.infoLines || [] : [], 28, 13); });
   lanes.select('g.lane-mini rect').attr('x', 4).attr('y', d => d.y + 3).attr('width', d => 26 + trunc(d.name, 26).length * 6.6);
   lanes.select('g.lane-mini circle').attr('cx', 15).attr('cy', d => d.y + 12.5).attr('display', d => (d.color == null ? 'none' : null));
   lanes.select('g.lane-mini text').attr('x', 24).attr('y', d => d.y + 17).text(d => trunc(d.name, 26));
@@ -2716,17 +3498,83 @@ function layoutSequence(M) {
   const GAP = 24, PADX = 12, SMALL_W = 56;
   const cs = collapseState(M);
   const collapsed = s => !!(cs.all || cs.status[s.status]);
-  for (const s of M.steps) { s.collapsed = collapsed(s); s.bw = s.collapsed ? SMALL_W : LV.nodeW; }
+  // A step box shows its whole wording: it keeps its width and grows taller, one line at a time, so the font never shrinks.
+  for (const s of M.steps) {
+    s.collapsed = collapsed(s); s.bw = s.collapsed ? SMALL_W : LV.nodeW;
+    s.lines = s.collapsed ? [] : stepLines(s);
+    s.bh = s.collapsed ? 30 : Math.max(LV.nodeH, s.lines.length * STEP_LH + 18);
+  }
   const colOf = s => (byPhase ? s.phaseIdx : s.slot);
-  // Each column is as wide as the widest run of a way's boxes in it, so collapsed boxes tighten the map.
+  // Left to right is time. Inside a column, a step sits to the right of the step before it in its way and of any step it
+  // starts after ("then"), so every arrow between steps points rightward. Each step gets a row in its lane and an offset
+  // into its column, worked out in the order steps can happen; then each column is sized to fit what is in it.
+  // A step that spans phases stretches to the end of its last phase, unless a step in that phase follows it:
+  // then it stops a short way in, and the next step sits after it.
+  const SPAN_TAIL = SMALL_W;
+  const pos = new Map();
+  const laneRows = new Map(M.loes.map(l => [l.id, []]));
+  const order = [...M.steps].sort((a, b) => (a.slot - b.slot) || (M.loeById.get(a.loeId).num - M.loeById.get(b.loeId).num) || (a.index - b.index));
+  const startAfter = (dep, c) => {
+    const p = dep && pos.get(dep.id);
+    if (!p || p.c1 !== c) return 0;
+    if (p.c1 > p.c0) {
+      if (p.tail == null) {
+        p.tail = SPAN_TAIL;
+        const row = laneRows.get(p.lane)[p.ri];
+        row.closed.delete(c);
+        row.off.set(c, Math.max(row.off.get(c) || 0, SPAN_TAIL + GAP));
+      }
+      return p.tail + GAP;
+    }
+    return p.off + p.w + GAP;
+  };
+  for (const s of order) {
+    const rows = laneRows.get(s.loeId);
+    const c0 = colOf(s), c1 = byPhase && s.multiPhase ? Math.min(s.endIdx, cols.length - 1) : c0;
+    const min = Math.max(0, ...s.seqPrevs.map(p => startAfter(p, c0)), startAfter(s.after, c0));
+    // Steps of a way share a row; a step that spans phases needs its row clear across them, or it takes the next row down.
+    // A step the team dragged onto a row goes there when that row has room.
+    const free = row => !row.closed.has(c0) && Array.from({ length: c1 - c0 }, (_, i) => c0 + 1 + i).every(c => !row.closed.has(c) && !row.off.get(c));
+    const newRow = () => ({ off: new Map(), closed: new Set(), h: 0, n: 0 });
+    // A step with no chosen row keeps clear of rows that a later step was dragged onto, where the two would overlap.
+    const span = t => [colOf(t), byPhase && t.multiPhase ? Math.min(t.endIdx, cols.length - 1) : colOf(t)];
+    const reserved = i => s.row == null && M.stepsByLoe.get(s.loeId).some(t => t !== s && t.row === i && !pos.has(t.id) && (() => {
+      const [t0, t1] = span(t);
+      return t0 <= c1 && c0 <= t1 && (t1 > t0 || c1 > c0);
+    })());
+    let ri = -1;
+    if (s.row != null) { while (rows.length <= s.row) rows.push(newRow()); if (free(rows[s.row])) ri = s.row; }
+    // Steps that run at the same time stack in separate rows, lined up, rather than side by side.
+    const mateRows = new Set(s.group.filter(t => t !== s && pos.has(t.id)).map(t => pos.get(t.id).ri));
+    if (ri < 0) ri = rows.findIndex((r, i) => free(r) && !reserved(i) && (s.row != null || !mateRows.has(i)));
+    if (ri < 0) { while (reserved(rows.length)) rows.push(newRow()); ri = rows.length; rows.push(newRow()); }
+    const row = rows[ri];
+    row.n++;
+    const off = Math.max(row.off.get(c0) || 0, min);
+    if (c1 > c0) for (let c = c0; c <= c1; c++) row.closed.add(c);
+    else row.off.set(c0, off + s.bw + GAP);
+    pos.set(s.id, { lane: s.loeId, ri, c0, c1, off, w: s.bw, tail: null });
+  }
+  // Drop rows left empty (a step asked for row 3 when there were only two), keeping the order of the rest.
+  for (const [lid, rows] of laneRows) {
+    const keep = rows.map((r, i) => (r.n ? i : -1)).filter(i => i >= 0);
+    if (keep.length === rows.length) continue;
+    const to = new Map(keep.map((old, i) => [old, i]));
+    for (const p of pos.values()) if (p.lane === lid) p.ri = to.get(p.ri);
+    laneRows.set(lid, keep.map(i => rows[i]));
+  }
   const need = cols.map(() => SMALL_W);
-  for (const l of M.loes) {
-    const run = new Map();
-    for (const s of l.steps) { const ci = colOf(s); run.set(ci, (run.has(ci) ? run.get(ci) + GAP : 0) + s.bw); }
-    for (const [ci, w] of run) need[ci] = Math.max(need[ci], w);
+  for (const p of pos.values()) {
+    need[p.c0] = Math.max(need[p.c0], p.off + p.w);
+    if (p.c1 > p.c0 && p.tail != null) need[p.c1] = Math.max(need[p.c1], p.tail);
   }
   let x = LV.labelW;
   cols.forEach((c, i) => { c.x = x; c.width = need[i] + 2 * PADX; x += c.width; });
+  const boxX = p => {
+    const x0 = cols[p.c0].x + PADX + p.off;
+    const right = p.c1 > p.c0 ? (p.tail != null ? cols[p.c1].x + PADX + p.tail : cols[p.c1].x + cols[p.c1].width - PADX) : x0 + p.w;
+    return { x: x0, w: right - x0 };
+  };
   const actX = x, actW = LV.colW;
   const top = LV.headH + 26;
   const boxes = new Map();
@@ -2738,29 +3586,54 @@ function layoutSequence(M) {
   for (const lane of lanes) {
     // A lane whose boxes are all collapsed takes less height, so a folded map needs less scrolling.
     lane.compact = !!(lane.loe && lane.loe.steps.length && lane.loe.steps.every(s => s.collapsed));
-    lane.y = y; lane.h = lane.compact ? SEQ_LANE_COMPACT_H : SEQ_LANE_H;
-    const cy = y + (lane.h - LV.nodeH) / 2;
+    const capL = lane.loe && has(lane.loe.capability) ? capLines(lane.loe.capability) : null;
+    const capH = capL ? capHeight(capL) : LV.nodeH;
+    // The rows and offsets were worked out above; here each box gets its width, and wide boxes rewrap their words.
+    const rows = lane.loe ? laneRows.get(lane.loe.id) : [];
+    const placed = (lane.loe ? lane.loe.steps : []).map(s => {
+      const p = pos.get(s.id);
+      const { x, w } = boxX(p);
+      if (p.c1 > p.c0 && !s.collapsed) { s.lines = stepLinesW(s, w); s.bh = Math.max(LV.nodeH, s.lines.length * STEP_LH + 18); }
+      rows[p.ri].h = Math.max(rows[p.ri].h, s.bh);
+      return { s, ri: p.ri, x, w };
+    });
+    // The lane's label: its name, then who does it and how far along it is, each wrapped in full, never cut short.
+    lane.nameLines = wrapWords(lane.name, 16);
+    lane.infoLines = [];
+    if (lane.loe && !lane.compact) {
+      const n = lane.loe.doerNodeId && M.nodes.get(lane.loe.doerNodeId);
+      const pr = lane.loe.progress;
+      const info = [n ? `${n.id === M.cogId ? 'COG' : 'Doer'} · ${n.label}` : '',
+        pr.total ? `${pr.done}/${pr.total} done${pr.blocked ? ` · ${pr.blocked} blocked` : ''}${pr.unknown ? ` · ${pr.unknown} ?` : ''}${pr.doing ? ` · ${pr.doing} going` : ''}` : ''];
+      lane.infoLines = info.filter(Boolean).flatMap(t => wrapUnits(t, 16));
+    }
+    const labelH = (lane.compact ? 20 : 27) + lane.nameLines.length * 17 + lane.infoLines.length * 13 + 10;
+    // Rows stack with room between them for the owner tag above a box and the due date below it.
+    const ROW_GAP = lane.compact ? 12 : 30;
+    const total = rows.length ? rows.reduce((t, r) => t + r.h, 0) + (rows.length - 1) * ROW_GAP : LV.nodeH;
+    lane.y = y; lane.h = Math.max(lane.compact ? SEQ_LANE_COMPACT_H : SEQ_LANE_H, capH + 2 * 12, total + (lane.compact ? 36 : 66), labelH);
+    const mid = y + lane.h / 2;
+    const cy = mid - LV.nodeH / 2;
+    let ry = mid - total / 2;
+    for (const r of rows) { r.y = ry; ry += r.h + ROW_GAP; }
+    lane.rowsY = rows.map(r => ({ y: r.y, h: r.h }));
     const cx = actX + (actW - LV.nodeW) / 2;
     if (lane.ph) {
       placeholders.push({ key: '__ph:0', q: 2, text: 'What ways will you use?', focus: 'new-way', x: cellX(0, 0), y: cy, w: LV.nodeW, h: LV.nodeH, lane });
       placeholders.push({ key: '__ph:C', q: 2, text: 'What is the action?', focus: 'new-way', chevron: true, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, lane });
     } else {
       const l = lane.loe;
-      let prev = null;
-      const offset = new Map();
-      for (const s of l.steps) {
-        const ci = colOf(s);
-        const off = offset.get(ci) || 0;
-        const r = { x: cols[ci].x + PADX + off, y: cy + (s.collapsed ? (LV.nodeH - 30) / 2 : 0), w: s.bw, h: s.collapsed ? 30 : LV.nodeH, step: s, lane };
-        offset.set(ci, off + s.bw + GAP);
-        boxes.set(s.id, r);
-        if (prev) segs.push({ id: 'seq:' + prev.step.id, type: 'seq', a: prev, b: r, s: 'step:' + prev.step.id, t: 'step:' + s.id });
-        prev = r;
+      for (const pl of placed) {
+        const s = pl.s, row = rows[pl.ri];
+        boxes.set(s.id, { x: pl.x, y: row.y + (row.h - s.bh) / 2, w: pl.w, h: s.bh, step: s, lane, row: pl.ri });
       }
+      // An arrow from each step to each step that follows it; steps that run together get none between them.
+      for (const s of l.steps) for (const p of s.seqPrevs) segs.push({ id: `seq:${p.id}:${s.id}`, type: 'seq', a: boxes.get(p.id), b: boxes.get(s.id), s: 'step:' + p.id, t: 'step:' + s.id });
+      const last = l.steps.length ? l.lastGroup : [];
       if (has(l.capability)) {
-        const c = { id: 'cap:' + l.id, loe: l, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, text: l.capability };
+        const c = { id: 'cap:' + l.id, loe: l, x: cx, y: mid - capH / 2, w: LV.nodeW, h: capH, text: l.capability, lines: capL };
         caps.push(c);
-        if (prev) segs.push({ id: 'seq:last:' + l.id, type: 'seq', a: prev, b: c, s: 'step:' + prev.step.id, t: c.id });
+        if (last.length) for (const m of last) segs.push({ id: `seq:last:${l.id}:${m.id}`, type: 'seq', a: boxes.get(m.id), b: c, s: 'step:' + m.id, t: c.id });
         else placeholders.push({ key: `${lane.key}:0`, q: 2, text: 'What steps come first?', focus: `new-step-${l.id}`, x: cellX(0, 0), y: cy, w: LV.nodeW, h: LV.nodeH, lane });
       } else placeholders.push({ key: `${lane.key}:C`, q: 2, text: 'What is the action?', focus: fid(`loe:${l.id}:capability`), chevron: true, x: cx, y: cy, w: LV.nodeW, h: LV.nodeH, lane });
     }
@@ -2768,7 +3641,7 @@ function layoutSequence(M) {
   }
   for (const s of M.steps) {
     if (s.after && boxes.has(s.id) && boxes.has(s.after.id)) segs.push({ id: 'waits:' + s.id, type: 'waits', a: boxes.get(s.after.id), b: boxes.get(s.id), s: 'step:' + s.after.id, t: 'step:' + s.id, lc: boxes.get(s.after.id).lane.color, label: 'then', tip: `${s.num} starts after ${s.after.num}` });
-    if (s.feeds && boxes.has(s.id) && boxes.has(s.feeds.id)) segs.push({ id: 'feeds:' + s.id, type: 'feeds', a: boxes.get(s.id), b: boxes.get(s.feeds.id), s: 'step:' + s.id, t: 'step:' + s.feeds.id, lc: boxes.get(s.id).lane.color, label: s.feedsVerb, tip: `${s.num} ${s.feedsVerb} ${s.feeds.num}` });
+    for (const f of s.feedsList) if (boxes.has(s.id) && boxes.has(f.step.id)) segs.push({ id: `feeds:${s.id}:${f.n}`, type: 'feeds', a: boxes.get(s.id), b: boxes.get(f.step.id), s: 'step:' + s.id, t: 'step:' + f.step.id, lc: boxes.get(s.id).lane.color, label: f.verb, tip: `${s.num} ${f.verb} ${f.step.num}` });
   }
   const height = y - LV.laneGap;
   const objX = actX + actW + LV.objGap;
@@ -2815,35 +3688,60 @@ function renderSequence(M) {
     return g;
   });
   heads.attr('tabindex', d => (d.phase || d.none ? 0 : null)).attr('role', d => (d.phase || d.none ? 'button' : null))
-    .attr('aria-label', d => (d.phase ? `Phase ${d.text}: change its start date` : d.none ? 'Steps not placed in a phase: place them in question 2' : null))
+    .attr('aria-label', d => (d.phase ? `Phase ${d.text}: change its dates` : d.none ? 'Steps not placed in a phase: place them in question 2' : null))
     .attr('class', d => `col-btn${d.phase || d.none ? ' is-link' : ''}`);
   heads.select('rect.col-hit').attr('x', d => (d.left != null ? d.left : d.x - 60)).attr('y', 4).attr('width', d => (d.width != null ? d.width : 120)).attr('height', 36);
   heads.select('text.col-head').attr('x', d => d.x).text(d => trunc(d.text, Math.max(5, Math.min(22, Math.floor((d.width || 150) / 6.6)))));
   heads.select('text.col-sub').attr('x', d => d.x).text(d => headSub(d));
+  heads.attr('data-phase', d => (d.phase ? d.phase.id : null));
   d3.select(headG).selectAll('text.seq-caption').data(L.caption ? [L.caption] : []).join('text')
     .attr('class', 'seq-caption').attr('x', LV.labelW + 12).attr('y', L.top - 6).text(d => d);
   d3.select(headG).selectAll('line.col-sep').data(L.seps).join('line')
     .attr('class', 'col-sep').attr('x1', d => d).attr('x2', d => d).attr('y1', L.top).attr('y2', L.height);
-  d3.select(headG).selectAll('rect.col-active').data(L.activeCol ? [L.activeCol] : []).join('rect')
-    .attr('class', 'col-active').attr('x', d => d.x).attr('y', L.top).attr('width', d => d.width).attr('height', L.height - L.top);
-  const laneLines = d => {
-    if (!d.loe) return ['', ''];
-    const n = d.loe.doerNodeId && M.nodes.get(d.loe.doerNodeId);
-    const p = d.loe.progress;
-    return [n ? trunc(`${n.id === M.cogId ? 'COG' : 'Doer'} · ${n.label}`, 20) : '', p.total ? trunc(`${p.done}/${p.total} done${p.blocked ? ` · ${p.blocked} blocked` : ''}${p.unknown ? ` · ${p.unknown} ?` : ''}${p.doing && !p.blocked && !p.unknown ? ` · ${p.doing} going` : ''}`, 20) : ''];
-  };
-  drawLaneBands(bandG, L, M, H, AP, laneLines);
+  // The phase shown (today's, unless another is picked) is marked only by its header in the accent color; nothing is drawn over the lanes.
+  d3.select(headG).selectAll('rect.col-active').remove();
+  heads.classed('is-now', d => !!(L.activeCol && d.key === L.activeCol.key));
+  drawLaneBands(bandG, L, M, H, AP, true);
+  // In this view the main effort is shown per phase (below), so no whole lane is recolored for the phase shown.
+  d3.select(bandG).selectAll('g.lane').classed('is-main-now', false);
+  // In each phase's column, the main effort's stretch of lane is a brighter shade of that way's color.
+  // Each cell sits inside its own lane, just above the lane's band and below its labels, so the lane's name
+  // (and the sticky name that follows you as you slide along) always shows on top of it.
+  const mains = L.cols.filter(c => c.phase && c.phase.mainLoeId).map(c => ({ c, lane: L.lanes.find(ln => ln.key === c.phase.mainLoeId) })).filter(m => m.lane);
+  d3.select(bandG).selectAll('g.lane').each(function (d) {
+    d3.select(this).selectAll('rect.main-cell').data(mains.filter(m => m.lane.key === d.key), m => m.c.key)
+      .join(enter => { const r = enter.insert('rect', 'circle.lane-swatch').attr('class', 'main-cell'); r.append('title'); return r; })
+      .attr('x', m => m.c.x).attr('width', m => m.c.width).attr('y', m => m.lane.y).attr('height', m => m.lane.h)
+      .select('title').text(m => `${m.lane.name} is the main effort in ${m.c.phase.name}`);
+  });
   drawObjective(objG, L.obj, M, H);
   const linkLayer = d3.select('#link-layer');
   const paths = linkLayer.selectAll('path.link').data(L.segs, d => d.id).join('path')
     .attr('class', d => `link t-${d.type}${H.hotLink(d.s, d.t) ? ' is-hot' : ''}${H.dimLink(d.s, d.t) ? ' is-dim' : ''}`)
     .attr('style', d => (d.lc != null ? `--lc:var(--lane-${d.lc})` : null))
-    .attr('d', d => lanePath(d.a, d.b))
+    .attr('d', d => seqPath(d.a, d.b))
     .attr('marker-end', d => `url(#mk-${d.type})`)
     .each(function (d) { d3.select(this).selectAll('title').data(d.tip ? [d.tip] : []).join('title').text(t => t); });
   // A word on each cross-way connection, at the middle of its curve.
+  // A word on each cross-way connection. It sits at the middle of its curve unless that spot would cover another
+  // label or a step box; then it slides along the curve to the nearest clear spot, or as a last resort steps up a line.
   const labelled = [];
-  paths.each(function (d) { if (d.label) { const len = this.getTotalLength(); const m = this.getPointAtLength(len / 2); labelled.push({ ...d, mx: m.x, my: m.y }); } });
+  const taken = [...L.boxes.values()].map(r => ({ x: r.x - 2, y: r.y - 12, w: r.w + 4, h: r.h + 14 }));
+  const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  paths.each(function (d) {
+    if (!d.label) return;
+    const len = this.getTotalLength();
+    const w = trunc(d.label, 18).length * 6.4 + 8, h = 13;
+    const at = t => { const m = this.getPointAtLength(len * t); return { mx: m.x, my: m.y, box: { x: m.x - w / 2, y: m.y - 5 - h + 2, w, h } }; };
+    let spot = null;
+    for (const t of [0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74, 0.18, 0.82]) { const c = at(t); if (!taken.some(b => hit(b, c.box))) { spot = c; break; } }
+    if (!spot) {
+      spot = at(0.5);
+      while (taken.some(b => hit(b, spot.box))) { spot.my -= h; spot.box.y -= h; }
+    }
+    taken.push(spot.box);
+    labelled.push({ ...d, mx: spot.mx, my: spot.my });
+  });
   linkLayer.selectAll('text.link-lbl').data(labelled, d => d.id).join('text')
     .attr('class', d => `link-lbl${H.dimLink(d.s, d.t) ? ' is-dim' : ''}`)
     .attr('style', d => (d.lc != null ? `--lc:var(--lane-${d.lc})` : null))
@@ -2884,7 +3782,7 @@ const stepDrag = HAS_D3 ? d3.drag()
   .on('drag', function (e, d) {
     if (d.cancelled) return;
     d.dragX += e.dx; d.dragY += e.dy;
-    if (d.armed) d3.select(this).attr('transform', `translate(${d.r.x + d.dragX},${d.r.y})`);
+    if (d.armed) d3.select(this).attr('transform', `translate(${d.r.x + d.dragX},${d.r.y + d.dragY})`);
   })
   .on('end', function (e, d) {
     clearTimeout(d.timer);
@@ -2899,20 +3797,59 @@ const stepDrag = HAS_D3 ? d3.drag()
       return;
     }
     const L = lastLanes;
-    if (!L || !L.boxes || Math.abs(dx) < 8) { render(); return; }
+    if (!L || !L.boxes || (Math.abs(dx) < 8 && Math.abs(dy) < 8)) { render(); return; }
     const s = d.s;
-    const cx = d.r.x + dx + d.r.w / 2;
-    const mates = [...L.boxes.values()].filter(r => r.step.loeId === s.loeId && r.step.id !== s.id).sort((a, b) => a.x - b.x);
-    const before = mates.filter(r => r.x + r.w / 2 < cx);
-    const afterId = before.length ? before[before.length - 1].step.id : null;
-    let phaseId;
-    if (L.cols && L.cols.some(c => c.phase)) {
-      const col = L.cols.find(c => cx >= c.x && cx < c.x + c.width);
-      if (col) phaseId = col.phase ? col.phase.id : null;
+    // Dropped on another way's lane: the step moves into that way, at the place, phase and row it was dropped on.
+    const dropCy = d.r.y + dy + d.r.h / 2;
+    const target = Math.abs(dy) >= 8 && L.lanes ? L.lanes.find(ln => ln.loe && dropCy >= ln.y && dropCy <= ln.y + ln.h) : null;
+    if (target && target.loe.id !== s.loeId) {
+      const halfW = r => Math.min(r.w, LV.nodeW) / 2;
+      const cx = d.r.x + dx + halfW(d.r);
+      const there = [...L.boxes.values()].filter(r => r.step.loeId === target.loe.id).sort((a, b) => a.x - b.x);
+      const before = there.filter(r => r.x + halfW(r) < cx);
+      let phaseId;
+      if (L.cols && L.cols.some(c => c.phase)) {
+        const col = L.cols.find(c => cx >= c.x && cx < c.x + c.width);
+        if (col) phaseId = col.phase ? col.phase.id : null;
+      }
+      let row;
+      const rowsY = target.rowsY || [];
+      if (rowsY.length) {
+        const last = rowsY[rowsY.length - 1];
+        row = dropCy > last.y + last.h + 6 ? rowsY.length : rowsY.reduce((best, r, i) => (Math.abs(dropCy - (r.y + r.h / 2)) < Math.abs(dropCy - (rowsY[best].y + rowsY[best].h / 2)) ? i : best), 0);
+        if (row === 0) row = undefined;
+      }
+      cmd.moveStepToWay(s.id, target.loe.id, before.length ? before[before.length - 1].step.id : null, phaseId, row);
+      return;
     }
-    const samePlace = afterId === (s.prev ? s.prev.id : null) && (phaseId === undefined || (phaseId || null) === s.phaseId);
+    // Left or right changes the step's place in its way, and its phase if it lands in another column.
+    // A step box that spans phases is judged by its first box-width, where it starts.
+    let afterId = s.prev ? s.prev.id : null, phaseId;
+    if (Math.abs(dx) >= 8) {
+      const half = r => Math.min(r.w, LV.nodeW) / 2;
+      const cx = d.r.x + dx + half(d.r);
+      const mates = [...L.boxes.values()].filter(r => r.step.loeId === s.loeId && r.step.id !== s.id).sort((a, b) => a.x - b.x);
+      const before = mates.filter(r => r.x + half(r) < cx);
+      afterId = before.length ? before[before.length - 1].step.id : null;
+      if (L.cols && L.cols.some(c => c.phase)) {
+        const col = L.cols.find(c => cx >= c.x && cx < c.x + c.width);
+        if (col) phaseId = col.phase ? col.phase.id : null;
+      }
+    }
+    // Up or down, inside its own lane, moves it to another row: onto the nearest row, or below the last one to start a new row.
+    let row;
+    const lane = d.r.lane, rowsY = lane && lane.rowsY;
+    if (rowsY && rowsY.length && Math.abs(dy) >= 8) {
+      const cy = d.r.y + dy + d.r.h / 2;
+      if (cy >= lane.y - 10 && cy <= lane.y + lane.h + 10) {
+        const last = rowsY[rowsY.length - 1];
+        if (cy > last.y + last.h + 6) row = rowsY.length;
+        else row = rowsY.reduce((best, r, i) => (Math.abs(cy - (r.y + r.h / 2)) < Math.abs(cy - (rowsY[best].y + rowsY[best].h / 2)) ? i : best), 0);
+      }
+    }
+    const samePlace = afterId === (s.prev ? s.prev.id : null) && (phaseId === undefined || (phaseId || null) === s.phaseId) && (row === undefined || row === d.r.row);
     if (samePlace) { render(); return; }
-    cmd.placeStep(s.id, afterId, phaseId);
+    cmd.placeStep(s.id, afterId, phaseId, row);
   }) : null;
 function stickyLabels(t) {
   if (ui.view === 'network') return;
@@ -2997,9 +3934,9 @@ function drawLaneItem(el, d, M) {
   }
   if (d.kind === 'cap') {
     g.append('path').attr('class', 'cbox').attr('d', `M0,0H${w - 14}L${w},${h / 2}L${w - 14},${h}H0Z`);
-    const lines = wrap(d.text, 20, 2);
-    const t = g.append('text').attr('class', 'clabel').attr('y', h / 2 - (lines.length - 1) * 7 + 4);
-    setLines(t.node(), lines, 11, 14);
+    const lines = d.r.lines || capLines(d.text);
+    const t = g.append('text').attr('class', 'clabel').attr('y', h / 2 - (lines.length - 1) * (CAP_LH / 2) + 4);
+    setLines(t.node(), lines, 11, CAP_LH);
     g.append('title').text(`Someone must ${d.text}${d.loe.steps.length ? `. Steps: ${d.loe.steps.map(s => s.text).join('; ')}` : ''}`);
     return;
   }
@@ -3021,9 +3958,9 @@ function drawLaneItem(el, d, M) {
     const num = g.append('g').attr('class', 'snum').attr('transform', `translate(6,${h / 2 - 8})`);
     num.append('rect').attr('width', numW).attr('height', 16).attr('rx', 8);
     num.append('text').attr('x', numW / 2).attr('text-anchor', 'middle').attr('y', 11.5).text(s.num);
-    const lines = wrap(s.text, 17, 2);
-    const t = g.append('text').attr('class', 'nlabel').attr('y', h / 2 - (lines.length - 1) * 7 + 4);
-    setLines(t.node(), lines, 10 + numW, 14);
+    const lines = s.lines && s.lines.length ? s.lines : stepLines(s);
+    const t = g.append('text').attr('class', 'nlabel').attr('y', h / 2 - (lines.length - 1) * (STEP_LH / 2) + 4);
+    setLines(t.node(), lines, 10 + numW, STEP_LH);
     drawStatusBadge(g, s, w);
     const doer = d.loe.doerNodeId && M.nodes.get(d.loe.doerNodeId);
     const who = has(s.owner) ? s.owner : doer ? doer.label : '';
@@ -3033,8 +3970,8 @@ function drawLaneItem(el, d, M) {
       tg.append('rect').attr('width', 12 + label.length * 5.6).attr('height', 15).attr('rx', 3);
       tg.append('text').attr('x', 6).attr('y', 11).text(label);
     }
-    if (s.due) g.append('text').attr('class', `due-tag${s.overdue ? ' is-late' : ''}`).attr('x', 6).attr('y', h + 12).text(`${s.overdue ? 'Was due' : 'Due'} ${fmtDate(s.due)}`);
-    g.append('title').text(`${s.num} ${s.text}. ${STATUS[s.status]}${s.status === 'blocked' && has(s.blockedReason) ? ': ' + s.blockedReason : ''}. Owner: ${who || 'no owner yet'}.${s.after ? ` Starts after ${s.after.num}.` : ''}${s.feeds ? ` ${s.feedsVerb} ${s.feeds.num}.` : ''}`);
+    if (s.due) g.append('text').attr('class', `due-tag${s.overdue ? ' is-late' : s.dueAlert ? ' is-off' : ''}`).attr('x', 6).attr('y', h + 12).text(`${s.overdue ? 'Was due' : 'Due'} ${fmtDate(s.due)}${s.dueAlert ? ' ⚠' : ''}`);
+    g.append('title').text(`${s.num} ${s.text}. ${STATUS[s.status]}${s.status === 'blocked' && has(s.blockedReason) ? ': ' + s.blockedReason : ''}. Owner: ${who || 'no owner yet'}.${s.dueAlert ? ` ⚠ ${s.dueAlert.text} Is that right?` : ''}${s.multiPhase ? ` Runs through ${s.lastPhase.name}.` : ''}${s.after ? ` Starts after ${s.after.num}.` : ''}${s.feedsList.map(f => ` ${cap1(f.verb)} ${f.step.num}.`).join('')}`);
     return;
   }
   const n = d.n;
@@ -3197,12 +4134,12 @@ function describe(M, id) {
     const l = M.loeById.get(s.loeId);
     const doer = l.doerNodeId && M.nodes.get(l.doerNodeId);
     const lines = [STATUS[s.status], has(s.owner) ? `Owner: ${s.owner}` : doer ? `Owner: ${doer.label}, the doer` : 'No owner yet'];
-    if (s.phaseId) lines.push(`Phase: ${M.phaseById.get(s.phaseId).name}`);
+    if (s.phaseId) lines.push(`${s.multiPhase ? 'Phases' : 'Phase'}: ${phaseSpanText(M, s)}`);
     if (s.due) lines.push(`${s.overdue ? 'Was due' : 'Due'} ${fmtDate(s.due)}`);
     if (s.after) lines.push(`Starts after ${s.after.num} “${s.after.text}”`);
     const w = M.waitsOn.get(s.id);
     if (w) lines.push(`${w.length === 1 ? 'A step waits' : w.length + ' steps wait'} for this: ${w.map(x => x.num).join(', ')}`);
-    if (s.feeds) lines.push(`${s.feedsVerb} ${s.feeds.num} “${s.feeds.text}”`);
+    for (const f of s.feedsList) lines.push(`${cap1(f.verb)} ${f.step.num} “${f.step.text}”`);
     lines.push(TIER_LABEL[M.tier.get(id)]);
     return { title: `Step ${s.num} of ${l.name}: ${s.text}`, lines, action: [canWrite() ? 'Open step' : 'Details', 'editStep', [s.id]] };
   }
@@ -3263,9 +4200,37 @@ function renderTop(M) {
   b.setAttribute('aria-pressed', String(ui.demo));
   b.setAttribute('data-args', JSON.stringify([!ui.demo]));
   b.textContent = ui.demo ? 'Leave example' : 'Worked example';
+  $('share-menu').hidden = !!ui.shared;
+  $('btn-send').hidden = !ui.shared;
+  renderMapMenu();
+}
+function renderMapMenu() {
+  const menu = $('map-menu');
+  if (!menu) return;
+  const fixed = !!ui.shared || !db;
+  menu.classList.toggle('is-fixed', fixed);
+  if (fixed) { if (menu.open) menu.open = false; return; }
+  const cur = ui.mapId || MAIN_MAP;
+  const list = mapList();
+  const html = list.map(m => `<button type="button" class="map-item" data-cmd="switchMap" ${dargs(m.id)} aria-current="${m.id === cur}"><span class="tick" aria-hidden="true">✓</span><span>${esc(m.name)}${m.id === cur && ui.demo ? '<span class="sub">Showing the worked example</span>' : ''}</span></button>`).join('');
+  const lst = $('map-list');
+  if (lst.innerHTML !== html) lst.innerHTML = html;
+  const canMake = !ui.readOnly && ui.mode !== 'connecting';
+  $('new-map-name').disabled = !canMake; $('btn-new-map').disabled = !canMake;
+  const curName = list.find(m => m.id === cur)?.name || 'this map';
+  const del = cur !== MAIN_MAP && canWrite() ? btn(`Delete ${trunc(curName, 40)}`, 'deleteMap', [], 'small ghost', { write: true, confirm: 'del-map-' + cur, confirmLabel: 'Confirm: delete this map and everything in it' }) : '';
+  const dl = $('map-del');
+  if (dl.innerHTML !== del) dl.innerHTML = del;
 }
 function renderTabs() {
-  $('app').dataset.tab = ui.tab;
+  const app = $('app');
+  app.dataset.tab = ui.tab;
+  app.classList.toggle('coach-collapsed', !!ui.coachCollapsed);
+  if (ui.coachW) app.style.setProperty('--coach-w', ui.coachW + 'px'); else app.style.removeProperty('--coach-w');
+  const sb = $('split-btn');
+  sb.textContent = ui.coachCollapsed ? '›' : '‹';
+  sb.title = ui.coachCollapsed ? 'Show the coach' : 'Hide the coach';
+  sb.setAttribute('aria-expanded', String(!ui.coachCollapsed));
   $('tab-coach').setAttribute('aria-pressed', String(ui.tab === 'coach'));
   $('tab-map').setAttribute('aria-pressed', String(ui.tab === 'map'));
 }
@@ -3274,7 +4239,15 @@ function renderTabs() {
    Render loop
    ================================================================ */
 let raf = 0;
-function render() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderNow(); }); }
+// A click is a press and a release on the same button, and a dropdown stays open only while its box exists.
+// Redrawing the coach in between swallows the click or shuts the dropdown, so the first try fails and the second works.
+// While a press inside the coach is down, or one of its dropdowns is open, redraws wait and run right after.
+const hold = { press: false, select: null, pending: false, pressTimer: 0, selectTimer: 0 };
+function render() {
+  if (hold.press || hold.select) { hold.pending = true; return; }
+  if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderNow(); });
+}
+function releaseHold() { if (!hold.press && !hold.select && hold.pending) { hold.pending = false; render(); } }
 function reconcilePending(M) {
   for (const [key, v] of ui.pending) {
     if (timers.has(key)) continue;
@@ -3307,6 +4280,7 @@ function renderNow() {
   renderTools(M);
   renderInfo(M);
   renderMap(M);
+  if (afterRenderQ.length) { const q = afterRenderQ.splice(0); requestAnimationFrame(() => q.forEach(f => f())); }
 }
 
 /* ================================================================
@@ -3314,11 +4288,16 @@ function renderNow() {
    ================================================================ */
 function commitField(key, value) {
   const [kind, a, b] = key.split(':');
+  if (ui.shared && !ui.demo) return SHARED_KEY.test(key) ? cmd.sharedStatus(a, b, value) : guard();
   if (key === 'project:cogNodeId') return cmd.setCog(value);
   if (kind === 'phase') return cmd.updatePhase(a, { [b]: value });
   if (kind === 'project') return cmd.setProject({ [a]: value });
   if (kind === 'loe') return cmd.updateWay(a, { [b]: value });
-  if (kind === 'step' && b === 'position') return cmd.placeStep(a, value);
+  if (kind === 'step' && b === 'loeId') return value ? cmd.moveStepToWay(a, value) : false;
+  if (kind === 'step' && b === 'position') {
+    const [how, ref] = String(value || '').includes(':') ? String(value).split(':') : ['after', value];
+    return cmd.placeStep(a, ref || null, undefined, undefined, how === 'with' && !!ref);
+  }
   if (kind === 'step') return cmd.updateStep(a, { [b]: value });
   if (kind === 'node') return cmd.updateNode(a, { [b]: value });
   return false;
@@ -3424,25 +4403,89 @@ function bindEvents() {
     const d = e.target;
     if (d.dataset && d.dataset.details) { if (d.open) ui.openDetails.add(d.dataset.details); else ui.openDetails.delete(d.dataset.details); }
   }, true);
+  // Hold redraws while a press in the coach is down, and while one of its dropdowns is open (see render).
+  const endPress = () => { clearTimeout(hold.pressTimer); hold.press = false; releaseHold(); };
+  const endSelect = () => { clearTimeout(hold.selectTimer); hold.select = null; releaseHold(); };
+  $('coach').addEventListener('pointerdown', e => {
+    hold.press = true;
+    clearTimeout(hold.pressTimer);
+    hold.pressTimer = setTimeout(endPress, 4000);
+    const sel = e.target.closest ? e.target.closest('select') : null;
+    if (sel && body.contains(sel)) { hold.select = sel; clearTimeout(hold.selectTimer); hold.selectTimer = setTimeout(endSelect, 15000); }
+  }, true);
+  // A mouse clicks as it lets go; a touch screen sends the click a moment after the finger lifts.
+  const liftPress = e => { if (hold.press) { clearTimeout(hold.pressTimer); hold.pressTimer = setTimeout(endPress, e.pointerType === 'mouse' ? 0 : 80); } };
+  document.addEventListener('pointerup', liftPress, true);
+  document.addEventListener('pointercancel', liftPress, true);
+  body.addEventListener('change', e => { if (e.target === hold.select) setTimeout(endSelect, 0); }, true);
+  body.addEventListener('focusout', e => { if (e.target === hold.select) endSelect(); }, true);
+  body.addEventListener('keydown', e => { if (e.key === 'Escape' && e.target === hold.select) endSelect(); }, true);
   document.addEventListener('visibilitychange', () => { if (document.hidden) flushAll(); });
   window.addEventListener('pagehide', flushAll);
   let sizing = 0;
   window.addEventListener('resize', () => { if (!sizing) sizing = requestAnimationFrame(() => { sizing = 0; autosizeAll(); }); });
   if (PHONE_MQ.addEventListener) PHONE_MQ.addEventListener('change', () => render());
   $('phase-select').addEventListener('change', e => cmd.phase(e.target.value));
+  // The splitter: drag to resize the coach, arrow keys to nudge it, double-click to reset, its button to hide or show the coach.
+  const split = $('splitter');
+  $('split-btn').addEventListener('click', e => { e.stopPropagation(); cmd.toggleCoach(); });
+  $('split-btn').addEventListener('pointerdown', e => e.stopPropagation());
+  split.addEventListener('dblclick', e => { if (e.target === split) cmd.coachWidth(null); });
+  split.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const cur = $('coach').getBoundingClientRect().width || 432;
+    cmd.coachWidth(cur + (e.key === 'ArrowRight' ? 32 : -32));
+  });
+  split.addEventListener('pointerdown', e => {
+    if (e.button || ui.coachCollapsed) return;
+    e.preventDefault();
+    const app = $('app');
+    const left = app.getBoundingClientRect().left + parseFloat(getComputedStyle(app).paddingLeft || '0');
+    split.setPointerCapture(e.pointerId);
+    split.classList.add('is-dragging'); document.body.classList.add('is-resizing');
+    let w = null;
+    const move = ev => {
+      const max = Math.max(320, app.clientWidth - 32 - 14 - 360);
+      w = Math.round(Math.min(max, Math.max(300, ev.clientX - left - 7)));
+      app.style.setProperty('--coach-w', w + 'px');
+    };
+    const up = () => {
+      split.removeEventListener('pointermove', move); split.removeEventListener('pointerup', up); split.removeEventListener('pointercancel', up);
+      split.classList.remove('is-dragging'); document.body.classList.remove('is-resizing');
+      if (w != null) cmd.coachWidth(w);
+    };
+    split.addEventListener('pointermove', move); split.addEventListener('pointerup', up); split.addEventListener('pointercancel', up);
+  });
   // The Collapse and Key menus close when you tap anywhere outside them, or press Escape.
-  const closeMenus = e => { for (const d of document.querySelectorAll('#maptools details.key[open]')) if (!e || !d.contains(e.target)) d.open = false; };
+  const closeMenus = e => {
+    for (const d of document.querySelectorAll('#maptools details.key[open], details.share-menu[open], details.map-menu[open]')) if (!e || !d.contains(e.target)) d.open = false;
+    if (ui.leftOpen && (!e || !(e.target.closest && e.target.closest('.next-wrap')))) { ui.leftOpen = false; render(); }
+  };
   document.addEventListener('pointerdown', closeMenus, true);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
+  $('import-text').addEventListener('input', previewImport);
+  const mm = $('map-menu');
+  mm.addEventListener('toggle', () => {
+    if (mm.open && mm.classList.contains('is-fixed')) { mm.open = false; return; }
+    if (mm.open) renderMapMenu();
+  });
+  $('new-map-name').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runButton($('btn-new-map')); } });
+  $('import-file').addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    try { $('import-text').value = await f.text(); } catch (err) { $('import-text').value = ''; }
+    previewImport();
+  });
+  $('btn-import-apply').addEventListener('click', applyImport);
   $('btn-copy').addEventListener('click', async () => {
     const ta = $('export-text');
     try { await navigator.clipboard.writeText(ta.value); $('copy-status').textContent = 'Copied.'; }
     catch (e) { ta.focus(); ta.select(); $('copy-status').textContent = 'Copying was blocked here. The text is selected, so copy it with your keyboard or the long-press menu.'; }
   });
 }
-function openExport() {
-  const src = ui.demo ? DEMO : S;
-  const data = {
+function mapData(src) {
+  return {
     project: src.project || {},
     loes: Object.fromEntries(src.loes),
     nodes: Object.fromEntries(src.nodes),
@@ -3450,10 +4493,280 @@ function openExport() {
     phases: Object.fromEntries(src.phases || []),
     steps: Object.fromEntries(src.steps || []),
   };
-  $('export-text').value = JSON.stringify(data, null, 2);
+}
+const slugify = t => (String(t || 'map').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'map');
+function downloadText(filename, text, type) {
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    return true;
+  } catch (e) { return false; }
+}
+// The shareable copy: this same page, as it was before drawing anything, with the map's data inside it.
+function buildSharedHtml(payload) {
+  const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+  return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n'
+    + `<title>${esc(payload.title)} (shared copy)</title>\n`
+    + '<style>:root{color-scheme:light;box-sizing:border-box}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>\n'
+    + BOOT.head + '\n</head><body>\n' + BOOT.app + '\n' + BOOT.dialogs + '\n'
+    + `<script type="application/json" id="loe-shared-data">${json}<\/script>\n`
+    + '<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"><\/script>\n'
+    + '<script>' + BOOT.script + '<\/script>\n</body></html>\n';
+}
+// The Sequence map as a still picture: drawn once with nothing collapsed, filtered or selected, then copied out as plain SVG.
+// Each step box becomes a link to its card further down the page; each phase heading, to its phase.
+function captureStaticMap() {
+  if (!HAS_D3) return '';
+  const keep = { view: ui.view, collapse: ui.collapse, lanesOn: ui.lanesOn, selected: ui.selected, phaseSel: ui.phaseSel, focus: ui.focus };
+  const app = $('app');
+  const tab = app.dataset.tab;
+  const t = d3.zoomTransform(svgSel.node());
+  const NS = 'http://www.w3.org/2000/svg';
+  try {
+    Object.assign(ui, { view: 'sequence', collapse: { auto: false, all: false, status: {} }, lanesOn: [], selected: null, phaseSel: 'all', focus: false });
+    app.dataset.tab = 'map';
+    clearLayers();
+    renderSequence(model());
+    const root = $('zoom-root');
+    const box = root.getBBox();
+    if (!box.width || !box.height) return '';
+    const clone = root.cloneNode(true);
+    clone.removeAttribute('transform');
+    clone.querySelectorAll('g.lane-mini, rect.col-hit, text.seq-caption, g.lnode.ph, title').forEach(e => e.remove());
+    clone.querySelectorAll('[tabindex]').forEach(e => e.removeAttribute('tabindex'));
+    clone.querySelectorAll('[role="button"]').forEach(e => e.removeAttribute('role'));
+    const wrapLink = (g, href) => { const a = document.createElementNS(NS, 'a'); a.setAttribute('href', href); g.parentNode.insertBefore(a, g); a.appendChild(g); };
+    clone.querySelectorAll('g.lnode.step').forEach(g => wrapLink(g, '#step-' + String(g.getAttribute('data-key') || '').slice(5)));
+    clone.querySelectorAll('g.col-btn[data-phase]').forEach(g => wrapLink(g, '#phase-' + g.getAttribute('data-phase')));
+    const pad = 10;
+    const vb = [box.x - pad, box.y - pad, box.width + 2 * pad, box.height + 2 * pad].map(v => Math.round(v));
+    const defs = $('map-svg').querySelector('defs').outerHTML;
+    return `<svg xmlns="${NS}" viewBox="${vb.join(' ')}" width="${vb[2]}" height="${vb[3]}" role="img" aria-label="Map of the lines of effort, by phase">${defs}${clone.outerHTML}</svg>`;
+  } catch (e) {
+    return '';
+  } finally {
+    Object.assign(ui, keep);
+    app.dataset.tab = tab;
+    clearLayers();
+    renderNow();
+    if (ui.userZoomed[ui.view]) svgSel.call(zoom.transform, t);
+  }
+}
+// The read-only copy: a plain page, no scripts, laid out for a phone first. Summary, then the map, then each way's
+// steps by phase, then the phases. Everything is information; nothing on it can be changed.
+function buildStaticHtml(M, svg) {
+  const P = M.P;
+  const title = has(P.title) ? P.title : 'Lines of Effort Map';
+  const today = fmtDate(localISO());
+  const cog = M.cogId && M.nodes.get(M.cogId);
+  const pr = M.progress;
+  const pct = n => (pr.total ? (100 * n / pr.total).toFixed(2) : 0);
+  const stepLink = s => `<a href="#step-${esc(s.id)}">${esc(s.num)}</a>`;
+  const statusPill = s => `<span class="ro-st st-${esc(s.status)}">${esc(STATUS[s.status])}</span>`;
+  const facts = [['Measure', P.measure], ['Baseline', P.baseline], ['Target', P.target], ['Due', P.dueDate ? fmtDate(P.dueDate) : '']].filter(([, v]) => has(v));
+  const stepCard = (l, s) => {
+    const doer = l.doerNodeId && M.nodes.get(l.doerNodeId);
+    const who = has(s.owner) ? s.owner : doer ? doer.label : '';
+    const meta = [];
+    if (who) meta.push(`Owner: ${esc(who)}`);
+    if (s.phaseId) meta.push(esc(phaseSpanText(M, s)));
+    if (s.due) meta.push(s.overdue ? `<span class="ro-late">Was due ${esc(fmtDate(s.due))}</span>` : `Due ${esc(fmtDate(s.due))}`);
+    const rel = [];
+    if (s.withPrev) rel.push(`Runs at the same time as ${stepLink(s.prev)} ${esc(s.prev.text)}`);
+    if (s.after) rel.push(`Starts after ${stepLink(s.after)} ${esc(s.after.text)} (${esc(M.loeById.get(s.after.loeId).name)})`);
+    for (const w of M.waitsOn.get(s.id) || []) rel.push(`${stepLink(w)} ${esc(w.text)} waits for this`);
+    for (const f of s.feedsList) rel.push(`${esc(cap1(f.verb))} ${stepLink(f.step)} ${esc(f.step.text)}`);
+    for (const x of M.steps) for (const f of x.feedsList) if (f.step.id === s.id) rel.push(`${stepLink(x)} ${esc(x.text)} ${esc(f.verb)} this`);
+    return `<div class="ro-step" id="step-${esc(s.id)}">
+      <p class="ro-step-head"><span class="ro-num">${esc(s.num)}</span><b>${esc(s.text)}</b>${statusPill(s)}</p>
+      ${meta.length ? `<p class="ro-meta">${meta.join(' · ')}</p>` : ''}
+      ${has(s.description) ? `<p>${esc(s.description)}</p>` : ''}
+      ${s.status === 'blocked' && has(s.blockedReason) ? `<p class="ro-blocked">Blocked: ${esc(s.blockedReason)}</p>` : ''}
+      ${rel.length ? `<ul class="ro-rel">${rel.map(r => `<li>${r}</li>`).join('')}</ul>` : ''}
+      ${has(s.notes) ? `<p class="ro-notes">${esc(s.notes)}</p>` : ''}
+      ${svg ? '<a class="ro-back" href="#map">↑ Back to the map</a>' : ''}
+    </div>`;
+  };
+  const wayCard = l => {
+    const doer = l.doerNodeId && M.nodes.get(l.doerNodeId);
+    const mains = M.mainIn.get(l.id);
+    const groups = [];
+    for (const ph of M.phases) { const ss = l.steps.filter(s => s.phaseId === ph.id); if (ss.length) groups.push([ph, ss]); }
+    const loose = l.steps.filter(s => !s.phaseId);
+    if (loose.length) groups.push([null, loose]);
+    const p = l.progress;
+    return `<article class="ro-way" id="way-${esc(l.id)}" style="--lc:var(--lane-${l.color ?? 0})">
+      <h3><span class="ro-dot"></span>${l.num}. ${esc(l.name)}</h3>
+      ${has(l.capability) ? `<p>Someone must <b>${esc(mid(l.capability))}</b>.${doer ? ` Doer: <b>${esc(doer.label)}</b>${doer.id === M.cogId ? ', the center of gravity' : ''}.` : ''}</p>` : ''}
+      <p class="ro-meta">${p.total ? `${p.done} of ${p.total} steps done${p.doing ? ` · ${p.doing} in progress` : ''}${p.blocked ? ` · ${p.blocked} blocked` : ''}` : 'No steps yet'}${mains ? ` · Main effort in ${esc(mains.map(ph => ph.name).join(', '))}` : ''}</p>
+      ${has(l.now) ? `<p><span class="ro-k">Where it stands</span>${esc(l.now)}</p>` : ''}
+      ${has(l.endState) ? `<p><span class="ro-k">Done looks like</span>${esc(l.endState)}</p>` : ''}
+      ${groups.map(([ph, ss]) => `<h4 class="ro-phase-h">${ph ? `${esc(ph.name)}${ph.start ? ` · ${esc(fmtRange(ph.start, ph.end))}` : ''}` : 'No phase yet'}</h4>${ss.map(s => stepCard(l, s)).join('')}`).join('')}
+    </article>`;
+  };
+  const phaseCard = ph => {
+    const main = ph.mainLoeId && M.loeById.get(ph.mainLoeId);
+    const ss = M.steps.filter(s => inPhase(s, ph));
+    return `<article class="ro-phase" id="phase-${esc(ph.id)}"${main ? ` style="--lc:var(--lane-${main.color ?? 0})"` : ''}>
+      <h3>${ph.index + 1}. ${esc(ph.name)}</h3>
+      ${ph.start || ph.end ? `<p class="ro-meta">${esc(fmtRange(ph.start, ph.end))}</p>` : ''}
+      ${main ? `<p><span class="ro-k">Main effort</span><span class="ro-dot"></span>${esc(main.name)}</p>` : ''}
+      ${has(ph.rationale) ? `<p>${esc(ph.rationale)}</p>` : ''}
+      ${ss.length ? `<p class="ro-meta">Steps: ${ss.map(s => stepLink(s)).join(', ')}</p>` : ''}
+    </article>`;
+  };
+  const css = `
+.ro { max-width: 860px; margin: 0 auto; padding: 18px 16px 56px; display: grid; gap: 28px; font-size: 16px; line-height: 1.5; }
+.ro section { display: grid; gap: 12px; min-width: 0; }
+.ro p { margin: 0; }
+.ro a { color: var(--accent); text-underline-offset: 2px; }
+.ro h1 { margin: 2px 0 0; font: 700 32px/1.05 var(--font-display); letter-spacing: .01em; text-wrap: balance; }
+.ro h2 { margin: 0; font: 600 21px var(--font-display); letter-spacing: .06em; text-transform: uppercase; }
+.ro h3 { margin: 0; font: 600 21px/1.15 var(--font-display); letter-spacing: .01em; display: flex; align-items: center; gap: 8px; }
+.ro-hero { display: grid; gap: 12px; }
+.ro-objective { font-size: 18px; }
+.ro-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 8px; margin: 0; }
+.ro-facts div { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.ro-facts dt, .ro-k { display: block; font: 500 10.5px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.ro-facts dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.ro-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--rule-soft); }
+.ro-bar span { display: block; height: 100%; }
+.ro-jump { display: flex; flex-wrap: wrap; gap: 8px; }
+.ro-jump a { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border: 1px solid var(--rule); border-radius: 999px; background: var(--surface); color: var(--ink); text-decoration: none; font-weight: 600; font-size: 14px; }
+.ro-key { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; }
+.ro-key li { display: flex; align-items: center; gap: 6px; }
+.ro-dot { flex: none; display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: var(--lc, var(--ink-3)); margin-right: 2px; vertical-align: middle; }
+.ro-map { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
+.ro-map svg { display: block; max-width: none; height: auto; }
+.ro-map a { cursor: pointer; }
+.ro-way, .ro-phase { background: var(--surface); border: 1px solid var(--rule); border-left: 5px solid var(--lc, var(--rule)); border-radius: 10px; padding: 14px; display: grid; gap: 10px; min-width: 0; scroll-margin-top: 12px; }
+.ro-phase-h { margin: 8px 0 -2px; font: 500 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.ro-step { border: 1px solid var(--rule-soft); border-radius: 8px; padding: 10px 12px; display: grid; gap: 5px; scroll-margin-top: 12px; min-width: 0; overflow-wrap: anywhere; }
+.ro-step:target { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.ro-step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 8px; }
+.ro-num { font: 600 11.5px var(--font-mono); background: var(--lc); color: var(--surface); border-radius: 9px; padding: 1px 7px; }
+.ro-st { font: 600 10.5px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; white-space: nowrap; }
+.ro-st.st-done { color: var(--good); } .ro-st.st-doing { color: var(--accent); } .ro-st.st-blocked { color: var(--crit); } .ro-st.st-unknown { color: var(--warn); } .ro-st.st-todo { color: var(--ink-3); }
+.ro-meta { font-size: 14px; color: var(--ink-2); }
+.ro-late, .ro-blocked { color: var(--crit); }
+.ro-rel { margin: 0; padding-left: 1.1em; font-size: 14px; color: var(--ink-2); display: grid; gap: 2px; }
+.ro-notes { font-size: 14px; color: var(--ink-2); font-style: italic; }
+.ro-back { font-size: 13.5px; justify-self: start; padding: 4px 0; }
+.ro-foot { font-size: 13px; color: var(--ink-3); display: grid; gap: 6px; border-top: 1px solid var(--rule); padding-top: 14px; }
+@media (min-width: 821px) { .ro { padding-top: 28px; } .ro h1 { font-size: 38px; } }
+`;
+  const body = `<main class="ro">
+  <header class="ro-hero">
+    <p class="eyebrow">Lines of effort map · read-only · as of ${esc(today)}</p>
+    <h1>${esc(title)}</h1>
+    ${has(P.objective) ? `<p class="ro-objective">${esc(P.objective)}</p>` : ''}
+    ${facts.length ? `<dl class="ro-facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
+    ${cog ? `<p><span class="ro-k">Center of gravity</span><b>${esc(cog.label)}</b></p>` : ''}
+    ${pr.total ? `<div><p class="ro-meta">${pr.done} of ${pr.total} steps done · ${pr.doing} in progress · ${pr.blocked} blocked${pr.unknown ? ` · ${pr.unknown} unknown` : ''}</p>
+      <div class="ro-bar" aria-hidden="true"><span style="width:${pct(pr.done)}%;background:var(--good)"></span><span style="width:${pct(pr.doing)}%;background:var(--accent)"></span><span style="width:${pct(pr.blocked)}%;background:var(--crit)"></span><span style="width:${pct(pr.unknown)}%;background:var(--warn)"></span></div></div>` : ''}
+    <nav class="ro-jump" aria-label="On this page">${svg ? '<a href="#map">Map</a>' : ''}<a href="#ways">Ways and steps</a>${M.phases.length ? '<a href="#phases">Phases</a>' : ''}</nav>
+  </header>
+  ${svg ? `<section id="map" aria-labelledby="map-h">
+    <h2 id="map-h">Map</h2>
+    <p class="ro-meta">Columns are phases, left to right in time. Swipe or scroll sideways to follow them. Tap a step to read about it.</p>
+    <ul class="ro-key">${M.loes.map(l => `<li style="--lc:var(--lane-${l.color ?? 0})"><span class="ro-dot"></span>${l.num}. ${esc(l.name)}</li>`).join('')}</ul>
+    <div class="ro-map">${svg}</div>
+  </section>` : ''}
+  <section id="ways" aria-labelledby="ways-h">
+    <h2 id="ways-h">Ways and steps</h2>
+    ${M.loes.map(wayCard).join('') || '<p class="ro-meta">No ways yet.</p>'}
+  </section>
+  ${M.phases.length ? `<section id="phases" aria-labelledby="phases-h">
+    <h2 id="phases-h">Phases</h2>
+    ${M.phases.map(phaseCard).join('')}
+  </section>` : ''}
+  <footer class="ro-foot">
+    <p>A read-only copy of this plan as it stood on ${esc(today)}.</p>
+    <p>“All models are wrong but some are useful.” George E. P. Box, 1979.</p>
+  </footer>
+</main>`;
+  return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n'
+    + `<title>${esc(title)}</title>\n` + BOOT.head + `\n<style>${css}</style>\n</head><body>\n${body}\n</body></html>\n`;
+}
+// Status changes made in a shareable copy, kept in that browser under the copy's own id.
+let sharedChanges = {};
+const sharedKey = () => `loe-map-shared-${SHARED && SHARED.exportId}`;
+function loadSharedChanges() {
+  try { const o = JSON.parse(localStorage.getItem(sharedKey()) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; }
+}
+function saveSharedChanges() {
+  try { localStorage.setItem(sharedKey(), JSON.stringify(sharedChanges)); } catch (e) { /* storage blocked: changes last until the page closes */ }
+}
+function statusPayload() {
+  const M = model();
+  const changes = {};
+  for (const [id, ch] of Object.entries(sharedChanges)) {
+    const s = M.stepById.get(id);
+    changes[id] = { ...ch, ...(s ? { num: s.num, text: s.text, way: M.loeById.get(s.loeId).name } : {}) };
+  }
+  return { kind: 'loe-map-statuses', version: 1, map: SHARED.title, exportId: SHARED.exportId, mapSavedAt: SHARED.exportedAt, sentAt: new Date().toISOString(), changes };
+}
+function setExportDialog(head, text, value, download) {
+  $('export-h').textContent = head;
+  $('export-p').textContent = text;
+  $('export-text').value = value;
   $('copy-status').textContent = '';
+  const b = $('btn-download-export');
+  b.hidden = !download;
+  b.onclick = download ? () => { $('copy-status').textContent = downloadText(download.filename, value, download.type) ? `Saved ${download.filename}.` : 'Saving was blocked here. Copy the text instead.'; } : null;
   const dlg = $('dlg-export');
   try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); }
+}
+function openExport() {
+  setExportDialog("Copy your map's data", 'This is everything your team has entered, as text. Paste it into a file to keep a backup.', JSON.stringify(mapData(ui.demo ? DEMO : S), null, 2), null);
+}
+function openStatusExport() {
+  const n = Object.keys(sharedChanges).length;
+  if (!n) { toast('No statuses changed yet. Change a step\'s status first: open a step, or use Track.'); return; }
+  setExportDialog('Send your status changes', `${n} step${n > 1 ? 's' : ''} changed. Download the file and send it to the person who shared this map, or copy the text into an email. They bring it into their map with Share, then Bring in status changes.`,
+    JSON.stringify(statusPayload(), null, 2), { filename: `${slugify(SHARED.title)}-status-changes-${localISO()}.json`, type: 'application/json' });
+}
+// Bringing status changes into the live map: read the file, show each change, apply on confirm.
+let importPlan = [];
+function previewImport() {
+  const txt = $('import-text').value.trim();
+  const out = $('import-preview');
+  const apply = $('btn-import-apply');
+  importPlan = []; apply.disabled = true;
+  if (!txt) { out.innerHTML = ''; return; }
+  let obj = null;
+  try { obj = JSON.parse(txt); } catch (e) { obj = null; }
+  if (!obj || obj.kind !== 'loe-map-statuses' || !obj.changes || typeof obj.changes !== 'object') { out.innerHTML = '<p class="missing">That is not a status-changes file from a shareable copy of this map.</p>'; return; }
+  const M = model();
+  const rows = [];
+  let missing = 0;
+  for (const [id, ch] of Object.entries(obj.changes)) {
+    const s = M.stepById.get(id);
+    if (!s || !ch || typeof ch !== 'object') { missing++; continue; }
+    const patch = {};
+    if (STATUS[ch.status] && ch.status !== s.status) patch.status = ch.status;
+    if (typeof ch.blockedReason === 'string' && ch.blockedReason.trim() !== s.blockedReason) patch.blockedReason = ch.blockedReason.trim();
+    if (!Object.keys(patch).length) continue;
+    importPlan.push({ id, patch });
+    const bits = [];
+    if (patch.status) bits.push(`${esc(STATUS[s.status])} → <b>${esc(STATUS[patch.status])}</b>`);
+    if (patch.blockedReason !== undefined) bits.push(patch.blockedReason ? `blocked because “${esc(trunc(patch.blockedReason, 70))}”` : 'blocked reason cleared');
+    rows.push(`<li><b>${esc(s.num)}</b> ${esc(trunc(s.text, 50))}: ${bits.join('; ')}</li>`);
+  }
+  const from = obj.mapSavedAt ? ` from the copy saved ${esc(fmtDate(String(obj.mapSavedAt).slice(0, 10)))}` : '';
+  out.innerHTML = `<p class="muted">${rows.length ? `${rows.length} change${rows.length > 1 ? 's' : ''}${from} to apply:` : `Nothing new${from}: your map already has these statuses.`}${missing ? ` ${missing} step${missing > 1 ? 's are' : ' is'} no longer on your map and will be skipped.` : ''}</p>${rows.length ? `<ul>${rows.join('')}</ul>` : ''}`;
+  apply.disabled = !rows.length;
+}
+async function applyImport() {
+  if (!guard()) return;
+  let n = 0;
+  for (const it of importPlan) if (await cmd.updateStep(it.id, { ...it.patch })) n++;
+  importPlan = [];
+  try { $('dlg-import').close(); } catch (e) { $('dlg-import').removeAttribute('open'); }
+  toast(`Applied ${n} status change${n === 1 ? '' : 's'}.`);
 }
 
 /* ================================================================
@@ -3468,6 +4781,7 @@ async function boot() {
   ui.step = Math.max(0, Math.min(STEPS.length - 1, Number(ui.step) || 0));
   bindEvents();
   initMap();
+  if (SHARED && SHARED.data) { startShared(); return; }
   renderNow();
   const c = window.claude;
   let dbNs = null, userNs = null;
@@ -3478,14 +4792,45 @@ async function boot() {
     ]);
   }
   if (dbNs) { db = dbNs; ui.mode = 'live'; } else { db = new MemDB(); ui.mode = 'local'; }
+  ui.mapId = typeof ui.mapId === 'string' && /^[A-Za-z0-9_-]{1,60}$/.test(ui.mapId) ? ui.mapId : MAIN_MAP;
+  if (!ui.perMap || typeof ui.perMap !== 'object') ui.perMap = {};
+  subscribeMaps();
   if (userNs && typeof userNs.can === 'function') {
     try { if ((await userNs.can('data.write')) === false) ui.readOnly = true; } catch (e) { /* keep inputs; a refused write decides */ }
   }
   subscribe();
   render();
+  // The map wraps words by measuring them; once the web fonts arrive, measure again in the real font.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { measureCache.clear(); render(); }).catch(() => {});
 }
 
-window.LOEMap = { dispatch, model, ui, reachable: () => reachable(model()), unlocks: () => unlocks(model()) };
+// Run as a shareable copy: the map comes from the page, nothing is saved anywhere but this browser, and only statuses change.
+function startShared() {
+  const d = SHARED.data;
+  S.project = d.project || {}; S.projectExists = true;
+  for (const c of ['loes', 'nodes', 'links', 'phases', 'steps']) S[c] = new Map(Object.entries(d[c] || {}));
+  for (const c of ['project', 'loes', 'nodes', 'links', 'phases', 'steps']) S.got.add(c);
+  sharedChanges = loadSharedChanges();
+  for (const [id, ch] of Object.entries(sharedChanges)) {
+    const st = S.steps.get(id);
+    if (!st) { delete sharedChanges[id]; continue; }
+    S.steps.set(id, { ...st, ...ch, ...(ch.status ? { done: ch.status === 'done' } : {}) });
+  }
+  ui.shared = true; ui.mode = 'shared';
+  // A first visit opens on Track, where statuses are changed; after that, wherever the viewer left off.
+  if ((() => { try { return !localStorage.getItem(sharedKey() + '-seen'); } catch (e) { return true; } })()) {
+    ui.step = 7;
+    try { localStorage.setItem(sharedKey() + '-seen', '1'); } catch (e) { /* fine */ }
+  }
+  document.title = `${SHARED.title || 'Lines of Effort Map'} (shared copy)`;
+  version++; ui.coachDirty = true;
+  renderNow();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { measureCache.clear(); render(); }).catch(() => {});
+}
+
+window.LOEMap = { dispatch, model, ui, reachable: () => reachable(model()), unlocks: () => unlocks(model()), maps: () => mapList(), _db: () => db };
 boot();
 })();
 </script>
+
+</body></html>
