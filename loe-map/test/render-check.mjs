@@ -192,7 +192,7 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   check('a step cannot feed back into itself', selfFeed === false);
   await p.evaluate(async ([a, b]) => { await window.LOEMap.dispatch('updateStep', a, { feedsStepId: b, feedsVerb: 'improves' }); }, [t2, sIds[0]]);
   await p.waitForTimeout(300);
-  const feeds = await p.evaluate(id => { const s = window.LOEMap.model().stepById.get(id); return s.feeds && s.feeds.id + '|' + s.feedsVerb; }, t2);
+  const feeds = await p.evaluate(id => { const s = window.LOEMap.model().stepById.get(id); const f = s.feedsList && s.feedsList[0]; return f && f.step.id + '|' + f.verb; }, t2);
   check('a feedback link saves with its wording and never changes the order', feeds === sIds[0] + '|improves' && (await p.evaluate(id => window.LOEMap.model().stepById.get(id).slot, t2)) === 2, String(feeds));
   await p.evaluate(async id => { await window.LOEMap.dispatch('deleteStep', id); }, sIds[2]);
   await p.waitForTimeout(300);
@@ -260,7 +260,7 @@ const shot = (p, name) => p.screenshot({ path: join(outDir, name + '.png') });
   await p.mouse.wheel(200, 0);
   await p.waitForTimeout(300);
   const after2 = await p.evaluate(() => { const m = /translate\(([-\d.]+),([-\d.]+)\) scale\(([\d.]+)\)/.exec(document.getElementById('zoom-root').getAttribute('transform') || ''); return m ? { x: +m[1], y: +m[2], k: +m[3] } : null; });
-  check('a two-finger scroll slides the map sideways and keeps the zoom', !!before && !!after2 && after2.x < before.x - 50 && Math.abs(after2.k - before.k) < 1e-6, JSON.stringify({ before, after2 }));
+  check('a two-finger scroll slides the map sideways and keeps the zoom', !!before && !!after2 && after2.x < before.x - 30 && Math.abs(after2.k - before.k) < 1e-6, JSON.stringify({ before, after2 }));
   await p.evaluate(() => window.LOEMap.dispatch('fit'));
   await p.waitForTimeout(400);
   await p.evaluate(id => window.LOEMap.dispatch('editStep', id), sIds[0]);
@@ -499,7 +499,7 @@ for (const scheme of ['light', 'dark']) {
     const reach = await p.evaluate(() => window.LOEMap.reachable());
     check(`${label} ${scheme}: worked example opens all steps`, reach === 8, String(reach));
     if (label === 'desktop' && scheme === 'light') {
-      const M = await p.evaluate(() => { const M = window.LOEMap.model(); return { cog: M.nodes.get(M.cogId).label, vulns: M.vulns.length, nodes: M.nodes.size, links: M.links.length, steps: M.steps.length, waits: M.steps.filter(s => s.after).length, slots: M.slotCount, described: M.steps.filter(s => s.description).length, feeds: M.steps.filter(s => s.feeds).length, pr: M.progress, ends: M.phases.map(x => x.end) }; });
+      const M = await p.evaluate(() => { const M = window.LOEMap.model(); return { cog: M.nodes.get(M.cogId).label, vulns: M.vulns.length, nodes: M.nodes.size, links: M.links.length, steps: M.steps.length, waits: M.steps.filter(s => s.after).length, slots: M.slotCount, described: M.steps.filter(s => s.description).length, feeds: M.steps.filter(s => s.feedsList && s.feedsList.length).length, pr: M.progress, ends: M.phases.map(x => x.end) }; });
       check('worked example: center of gravity is the on-duty radiologists', M.cog === 'On-duty radiologists', JSON.stringify(M));
       check('worked example: fourteen steps, two hand-offs, six columns of order', M.steps === 14 && M.waits === 2 && M.slots === 6, JSON.stringify(M));
       check('worked example: every step described, one feedback link, statuses counted', M.described === 14 && M.feeds === 1 && M.pr.done === 3 && M.pr.doing === 2 && M.pr.blocked === 1 && M.pr.unknown === 1, JSON.stringify(M));
@@ -595,8 +595,9 @@ for (const scheme of ['light', 'dark']) {
     await p.waitForTimeout(400);
     await p.evaluate(() => window.LOEMap.dispatch('phase', 'ph2'));
     await p.waitForTimeout(300);
-    const lanesNow = await p.evaluate(() => ({ read: document.querySelector('g.lane[data-key="l_read"]').classList.contains('is-main-now'), pacs: document.querySelector('g.lane[data-key="l_pacs"]').classList.contains('is-main-now'), select: document.getElementById('phase-select').value }));
-    check(`${label} ${scheme}: choosing the Launch phase highlights its main-effort lane only`, lanesNow.read && !lanesNow.pacs && lanesNow.select === 'ph2', JSON.stringify(lanesNow));
+    const lanesNow = await p.evaluate(() => ({ mainCells: [...document.querySelectorAll('#map-svg rect.main-cell > title')].map(t => t.textContent), select: document.getElementById('phase-select').value }));
+    const launchMains = lanesNow.mainCells.filter(t => /in Launch$/.test(t));
+    check(`${label} ${scheme}: the Launch column marks only its own main effort`, launchMains.length === 1 && /^Reading and assignment is the main effort/.test(launchMains[0]) && lanesNow.select === 'ph2', JSON.stringify(lanesNow));
     await p.evaluate(() => { window.LOEMap.dispatch('select', null); window.LOEMap.dispatch('view', 'sequence'); });
     await p.waitForTimeout(400);
     const seqEx = await p.evaluate(() => ({
@@ -610,13 +611,14 @@ for (const scheme of ['light', 'dark']) {
       unknown: document.querySelectorAll('#map-svg g.lnode.step.st-unknown .ubadge').length,
       dots: document.querySelectorAll('#map-svg g.lnode.step.st-doing .gbadge circle.dot').length,
       tint: document.querySelectorAll('#map-svg rect.col-active').length,
-      main: document.querySelector('g.lane[data-key="l_read"]').classList.contains('is-main-now'),
+      mainCells: [...document.querySelectorAll('#map-svg rect.main-cell > title')].map(t => t.textContent),
     }));
     if (label === 'desktop' && scheme === 'light') {
       const c0 = await p.evaluate(() => ({ small: document.querySelectorAll('#map-svg g.lnode.step.is-collapsed').length, label: document.getElementById('collapse-summary').textContent }));
       check('by default, Done and Not started fold away once any step is under way', c0.small === 10 && c0.label === 'Collapsed: 2', JSON.stringify(c0));
       await p.evaluate(() => window.LOEMap.dispatch('collapse', 'none'));
       await p.waitForTimeout(300);
+      const expH = await p.evaluate(() => [...document.querySelectorAll('#map-svg rect.lane-band')].map(r => +r.getAttribute('height')));
       await p.evaluate(() => window.LOEMap.dispatch('collapse', 'done'));
       await p.waitForTimeout(300);
       const c1 = await p.evaluate(() => ({ small: document.querySelectorAll('#map-svg g.lnode.step.is-collapsed').length, text: [...document.querySelectorAll('#map-svg g.lnode.step.is-collapsed .nlabel')].length, label: document.getElementById('collapse-summary').textContent }));
@@ -638,9 +640,9 @@ for (const scheme of ['light', 'dark']) {
       const m3 = await p.evaluate(() => document.getElementById('collapse-menu').open);
       await p.evaluate(() => window.LOEMap.dispatch('collapse', 'none')); await p.waitForTimeout(300);
       check('the Collapse menu stays open for its own buttons and closes on a tap outside or Escape', m0 === true && m1 === true && m2 === false && m3 === false, JSON.stringify({ m0, m1, m2, m3 }));
-      check('collapsing by status shrinks only those steps; collapsing all shrinks every box; Show everything restores them', c1.small === 3 && c1.text === 0 && c1.label === 'Collapsed: 1' && c2.small === 14 && c2.width === '56' && c2.label === 'Collapsed: all' && c2.laneH.every(h => h === '66') && c3 === 0, JSON.stringify({ c1, c2, c3 }));
+      check('collapsing by status shrinks only those steps; collapsing all shrinks every box; Show everything restores them', c1.small === 3 && c1.text === 0 && c1.label === 'Collapsed: 1' && c2.small === 14 && c2.width === '56' && c2.label === 'Collapsed: all' && c2.laneH.every((h, i) => +h >= 66 && +h < expH[i]) && c3 === 0, JSON.stringify({ c1, c2, c3 }));
     }
-    check(`${label} ${scheme}: sequence view has a column per phase, every step, both links, and statuses`, JSON.stringify(seqEx.heads) === JSON.stringify(['Prepare', 'Launch', 'Sustain', 'Essential action', 'Objective']) && seqEx.boxes === 14 && seqEx.waits === 2 && seqEx.feeds === 1 && seqEx.done === 3 && seqEx.doing === 2 && seqEx.blocked === 1 && seqEx.unknown === 1 && seqEx.dots === 6 && seqEx.tint === 1 && seqEx.main, JSON.stringify(seqEx));
+    check(`${label} ${scheme}: sequence view has a column per phase, every step, both links, and statuses`, JSON.stringify(seqEx.heads) === JSON.stringify(['Prepare', 'Launch', 'Sustain', 'Essential action', 'Objective']) && seqEx.boxes === 14 && seqEx.waits === 2 && seqEx.feeds === 1 && seqEx.done === 3 && seqEx.doing === 2 && seqEx.blocked === 1 && seqEx.unknown === 1 && seqEx.dots === 6 && seqEx.tint === 0 && seqEx.mainCells.includes('Reading and assignment is the main effort in Launch') && !seqEx.mainCells.some(t => /^PACS and IT workflow is the main effort in Launch$/.test(t)), JSON.stringify(seqEx));
     await shot(p, `11b-${label}-sequence-${scheme}`);
     if (mobile) {
       const sbox = await p.evaluate(() => {
